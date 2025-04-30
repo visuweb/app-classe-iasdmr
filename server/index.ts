@@ -1,6 +1,8 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import { db } from "./db";
+import { storage } from "./storage";
 
 const app = express();
 app.use(express.json());
@@ -37,6 +39,19 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  // Verificar se o banco de dados está online e semear dados iniciais
+  try {
+    await db.execute("SELECT 1");
+    console.log("Database connection established");
+    
+    // Semear dados de teste apenas se for uma instância de DatabaseStorage
+    if ('seedTestTeacher' in storage) {
+      await (storage as any).seedTestTeacher();
+    }
+  } catch (error) {
+    console.error("Database connection failed:", error);
+  }
+  
   const server = await registerRoutes(app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
