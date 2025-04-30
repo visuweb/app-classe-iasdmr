@@ -298,24 +298,36 @@ const AdminHome = () => {
     return null;
   }
 
+  const isMobile = useIsMobile();
+
   return (
     <div className="min-h-screen bg-gray-50">
-      <header className="bg-primary-500 text-white py-4 px-6 flex justify-between items-center">
+      <header className="bg-primary-500 text-white py-3 px-4 flex justify-between items-center">
         <div>
-          <h1 className="text-xl font-bold">CLASSE ALUNOS - Administração</h1>
-          <p className="text-sm">Bem-vindo, {teacher.name}</p>
+          <h1 className={`${isMobile ? 'text-lg' : 'text-xl'} font-bold`}>Administração</h1>
+          <p className="text-xs">Bem-vindo, {teacher.name}</p>
         </div>
-        <Button variant="outline" onClick={handleLogout}>
-          Sair
+        <Button variant="outline" size="sm" onClick={handleLogout} className="gap-2">
+          <LogOut className="h-4 w-4" />
+          {!isMobile && "Sair"}
         </Button>
       </header>
 
-      <main className="container mx-auto py-8 px-4">
+      <main className="py-4 px-4 max-w-5xl mx-auto">
         <Tabs defaultValue="classes">
-          <TabsList className="mb-6">
-            <TabsTrigger value="classes">Gerenciar Classes</TabsTrigger>
-            <TabsTrigger value="teachers">Gerenciar Professores</TabsTrigger>
-            <TabsTrigger value="reports">Visualizar Registros</TabsTrigger>
+          <TabsList className={`mb-4 ${isMobile ? 'w-full' : ''}`}>
+            <TabsTrigger value="classes" className={isMobile ? "text-xs" : ""}>
+              {isMobile ? <School className="h-4 w-4 mr-1" /> : null}
+              Classes
+            </TabsTrigger>
+            <TabsTrigger value="teachers" className={isMobile ? "text-xs" : ""}>
+              {isMobile ? <User className="h-4 w-4 mr-1" /> : null}
+              Professores
+            </TabsTrigger>
+            <TabsTrigger value="reports" className={isMobile ? "text-xs" : ""}>
+              {isMobile ? <BarChart className="h-4 w-4 mr-1" /> : null}
+              Registros
+            </TabsTrigger>
           </TabsList>
           
           {/* Classes Tab */}

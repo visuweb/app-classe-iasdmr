@@ -142,11 +142,7 @@ const Header: React.FC = () => {
                 <h1 className="text-lg font-semibold text-gray-800">CLASSE ALUNOS</h1>
               </div>
             </Link>
-            {isWizard ? (
-              <div className="w-8"></div>
-            ) : (
-              <div className="w-8"></div>
-            )}
+            <div className="w-8" aria-hidden="true"></div>
           </div>
         ) : (
           <>

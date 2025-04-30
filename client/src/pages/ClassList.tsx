@@ -159,172 +159,190 @@ const ClassList: React.FC = () => {
   
   // Render class list
   const renderClasses = () => {
+    const isMobile = useIsMobile();
+    
     if (isLoading) {
       return Array(3).fill(0).map((_, i) => (
-        <Card key={i} className="mb-4">
-          <CardHeader className="pb-2">
+        <Card key={i} className="mb-3 shadow-sm">
+          <div className="p-4">
             <Skeleton className="h-5 w-3/4 mb-2" />
-            <Skeleton className="h-4 w-1/2" />
-          </CardHeader>
-          <CardContent>
-            <Skeleton className="h-4 w-full mb-2" />
-            <Skeleton className="h-4 w-2/3" />
-          </CardContent>
-          <CardFooter>
-            <Skeleton className="h-9 w-1/3 mr-2" />
-            <Skeleton className="h-9 w-1/3" />
-          </CardFooter>
+            <Skeleton className="h-4 w-1/2 mb-3" />
+            <div className="flex items-center justify-between mt-2">
+              <Skeleton className="h-8 w-20 mr-2" />
+              <Skeleton className="h-8 w-28" />
+            </div>
+          </div>
         </Card>
       ));
     }
     
     if (!classes || classes.length === 0) {
       return (
-        <Card className="text-center p-8">
+        <Card className="text-center p-6 shadow-sm">
           <CardContent>
-            <School className="h-12 w-12 mx-auto mb-4 text-gray-400" />
-            <p className="text-gray-500">Nenhuma classe cadastrada. Crie sua primeira classe!</p>
+            <School className="h-12 w-12 mx-auto mb-3 text-gray-400" />
+            <p className="text-gray-500 text-sm">
+              {teacher?.isAdmin 
+                ? "Nenhuma classe cadastrada. Crie sua primeira classe!" 
+                : "Você não possui classes atribuídas."}
+            </p>
           </CardContent>
         </Card>
       );
     }
     
     return classes.map(classObj => (
-      <Card key={classObj.id} className="mb-4 hover:shadow-md transition-shadow">
-        <CardHeader>
+      <Card key={classObj.id} className="mb-3 shadow-sm hover:shadow-md transition-shadow">
+        <div className="p-4">
           <div className="flex justify-between items-start">
             <div>
-              <CardTitle>{classObj.name}</CardTitle>
-              <CardDescription>
-                <div className="flex items-center mt-1">
-                  <Users className="h-4 w-4 mr-1" />
-                  <span>Alunos cadastrados: 0</span>
-                </div>
-              </CardDescription>
+              <h3 className="font-medium text-base">{classObj.name}</h3>
+              <div className="flex items-center mt-1 text-sm text-gray-500">
+                <Users className="h-3.5 w-3.5 mr-1" />
+                <span>Alunos cadastrados: 0</span>
+              </div>
             </div>
             <Button 
-              variant="outline" 
+              variant="ghost" 
               size="icon" 
               onClick={() => handleSelectClass(classObj)}
+              className="h-8 w-8"
             >
               <UserPlus className="h-4 w-4" />
             </Button>
           </div>
-        </CardHeader>
-        <CardFooter className="flex justify-between">
-          <Button 
-            variant="outline" 
-            size="sm" 
-            className="flex items-center"
-            onClick={() => setLocation(`/classes/${classObj.id}`)}
-          >
-            <PenSquare className="h-4 w-4 mr-2" />
-            Editar
-          </Button>
           
-          {!teacher?.isAdmin && (
+          <div className="flex items-center justify-between mt-4 pt-3 border-t border-gray-100">
             <Button 
+              variant="outline" 
               size="sm" 
               className="flex items-center"
-              onClick={() => goToWizard(classObj)}
+              onClick={() => setLocation(`/classes/${classObj.id}`)}
             >
-              Iniciar Registro
-              <ChevronRight className="h-4 w-4 ml-2" />
+              <PenSquare className="h-3.5 w-3.5 mr-1.5" />
+              {isMobile ? "Editar" : "Gerenciar"}
             </Button>
-          )}
-        </CardFooter>
+            
+            {!teacher?.isAdmin && (
+              <Button 
+                size="sm" 
+                className="flex items-center"
+                onClick={() => goToWizard(classObj)}
+              >
+                {isMobile ? "Iniciar" : "Iniciar Registro"}
+                <ChevronRight className="h-3.5 w-3.5 ml-1.5" />
+              </Button>
+            )}
+          </div>
+        </div>
       </Card>
     ));
   };
   
+  const isMobile = useIsMobile();
+  
   return (
-    <div className="container mx-auto py-8 px-4">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Classes</h1>
-        
-        {teacher?.isAdmin && (
-          <Dialog>
-            <DialogTrigger asChild>
-              <Button>
-                <School className="h-4 w-4 mr-2" />
-                Nova Classe
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Adicionar Nova Classe</DialogTitle>
-                <DialogDescription>
-                  Digite o nome da classe para criar um novo registro.
-                </DialogDescription>
-              </DialogHeader>
-              
-              <Form {...classForm}>
-                <form onSubmit={classForm.handleSubmit(onSubmitClass)} className="space-y-4">
-                  <FormField
-                    control={classForm.control}
-                    name="name"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Nome da Classe</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Ex: Classe Adultos" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <DialogFooter>
-                    <Button type="submit" disabled={createClassMutation.isPending}>
-                      {createClassMutation.isPending ? 'Criando...' : 'Criar Classe'}
-                    </Button>
-                  </DialogFooter>
-                </form>
-              </Form>
-            </DialogContent>
-          </Dialog>
-        )}
-      </div>
+    <div className="flex flex-col min-h-screen bg-gray-50">
+      <Header />
       
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {renderClasses()}
-      </div>
-      
-      {/* Add Student Dialog */}
-      <Dialog open={isAddStudentOpen} onOpenChange={setIsAddStudentOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Adicionar Novo Aluno</DialogTitle>
-            <DialogDescription>
-              {selectedClass && `Adicionar aluno à classe: ${selectedClass.name}`}
-            </DialogDescription>
-          </DialogHeader>
+      <main className="flex-1 p-4">
+        <div className="flex justify-between items-center mb-4">
+          <h1 className={`${isMobile ? 'text-xl' : 'text-2xl'} font-bold`}>Minhas Classes</h1>
           
-          <Form {...studentForm}>
-            <form onSubmit={studentForm.handleSubmit(onSubmitStudent)} className="space-y-4">
-              <FormField
-                control={studentForm.control}
-                name="name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Nome do Aluno</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Nome completo do aluno" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <DialogFooter>
-                <Button type="submit" disabled={createStudentMutation.isPending}>
-                  {createStudentMutation.isPending ? 'Adicionando...' : 'Adicionar Aluno'}
+          {teacher?.isAdmin && (
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button size={isMobile ? "sm" : "default"}>
+                  {isMobile ? (
+                    <Plus className="h-4 w-4" />
+                  ) : (
+                    <>
+                      <School className="h-4 w-4 mr-2" />
+                      Nova Classe
+                    </>
+                  )}
                 </Button>
-              </DialogFooter>
-            </form>
-          </Form>
-        </DialogContent>
-      </Dialog>
+              </DialogTrigger>
+              <DialogContent className={isMobile ? "w-[90vw] max-w-md" : ""}>
+                <DialogHeader>
+                  <DialogTitle>Adicionar Nova Classe</DialogTitle>
+                  <DialogDescription>
+                    Digite o nome da classe para criar um novo registro.
+                  </DialogDescription>
+                </DialogHeader>
+                
+                <Form {...classForm}>
+                  <form onSubmit={classForm.handleSubmit(onSubmitClass)} className="space-y-4">
+                    <FormField
+                      control={classForm.control}
+                      name="name"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Nome da Classe</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Ex: Classe Adultos" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <DialogFooter>
+                      <Button type="submit" disabled={createClassMutation.isPending}>
+                        {createClassMutation.isPending ? 'Criando...' : 'Criar Classe'}
+                      </Button>
+                    </DialogFooter>
+                  </form>
+                </Form>
+              </DialogContent>
+            </Dialog>
+          )}
+        </div>
+        
+        <div className="max-w-lg mx-auto">
+          {renderClasses()}
+        </div>
+        
+        {/* Add Student Dialog */}
+        <Dialog open={isAddStudentOpen} onOpenChange={setIsAddStudentOpen}>
+          <DialogContent className={isMobile ? "w-[90vw] max-w-md" : ""}>
+            <DialogHeader>
+              <DialogTitle>Adicionar Novo Aluno</DialogTitle>
+              <DialogDescription>
+                {selectedClass && `Adicionar aluno à classe: ${selectedClass.name}`}
+              </DialogDescription>
+            </DialogHeader>
+            
+            <Form {...studentForm}>
+              <form onSubmit={studentForm.handleSubmit(onSubmitStudent)} className="space-y-4">
+                <FormField
+                  control={studentForm.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Nome do Aluno</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Nome completo do aluno" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <DialogFooter>
+                  <Button type="submit" disabled={createStudentMutation.isPending}>
+                    {createStudentMutation.isPending ? 'Adicionando...' : 'Adicionar Aluno'}
+                  </Button>
+                </DialogFooter>
+              </form>
+            </Form>
+          </DialogContent>
+        </Dialog>
+        
+        <div className="mt-8 text-center text-xs text-gray-400">
+          <p>Apenas classes atribuídas a você são mostradas</p>
+        </div>
+      </main>
     </div>
   );
 };
