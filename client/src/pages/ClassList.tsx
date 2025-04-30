@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useLocation } from 'wouter';
 import { useQuery, useMutation } from '@tanstack/react-query';
+import { useAuth } from '@/hooks/use-auth';
 import { 
   Card,
   CardContent,
@@ -55,6 +56,7 @@ const studentFormSchema = insertStudentSchema.extend({
 const ClassList: React.FC = () => {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const { teacher } = useAuth();
   const [selectedClass, setSelectedClass] = useState<Class | null>(null);
   const [isAddStudentOpen, setIsAddStudentOpen] = useState(false);
   
@@ -216,14 +218,17 @@ const ClassList: React.FC = () => {
             <PenSquare className="h-4 w-4 mr-2" />
             Editar
           </Button>
-          <Button 
-            size="sm" 
-            className="flex items-center"
-            onClick={() => goToWizard(classObj)}
-          >
-            Iniciar Registro
-            <ChevronRight className="h-4 w-4 ml-2" />
-          </Button>
+          
+          {!teacher?.isAdmin && (
+            <Button 
+              size="sm" 
+              className="flex items-center"
+              onClick={() => goToWizard(classObj)}
+            >
+              Iniciar Registro
+              <ChevronRight className="h-4 w-4 ml-2" />
+            </Button>
+          )}
         </CardFooter>
       </Card>
     ));
@@ -234,46 +239,48 @@ const ClassList: React.FC = () => {
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">Classes</h1>
         
-        <Dialog>
-          <DialogTrigger asChild>
-            <Button>
-              <School className="h-4 w-4 mr-2" />
-              Nova Classe
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Adicionar Nova Classe</DialogTitle>
-              <DialogDescription>
-                Digite o nome da classe para criar um novo registro.
-              </DialogDescription>
-            </DialogHeader>
-            
-            <Form {...classForm}>
-              <form onSubmit={classForm.handleSubmit(onSubmitClass)} className="space-y-4">
-                <FormField
-                  control={classForm.control}
-                  name="name"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Nome da Classe</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Ex: Classe Adultos" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                
-                <DialogFooter>
-                  <Button type="submit" disabled={createClassMutation.isPending}>
-                    {createClassMutation.isPending ? 'Criando...' : 'Criar Classe'}
-                  </Button>
-                </DialogFooter>
-              </form>
-            </Form>
-          </DialogContent>
-        </Dialog>
+        {teacher?.isAdmin && (
+          <Dialog>
+            <DialogTrigger asChild>
+              <Button>
+                <School className="h-4 w-4 mr-2" />
+                Nova Classe
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Adicionar Nova Classe</DialogTitle>
+                <DialogDescription>
+                  Digite o nome da classe para criar um novo registro.
+                </DialogDescription>
+              </DialogHeader>
+              
+              <Form {...classForm}>
+                <form onSubmit={classForm.handleSubmit(onSubmitClass)} className="space-y-4">
+                  <FormField
+                    control={classForm.control}
+                    name="name"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Nome da Classe</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Ex: Classe Adultos" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <DialogFooter>
+                    <Button type="submit" disabled={createClassMutation.isPending}>
+                      {createClassMutation.isPending ? 'Criando...' : 'Criar Classe'}
+                    </Button>
+                  </DialogFooter>
+                </form>
+              </Form>
+            </DialogContent>
+          </Dialog>
+        )}
       </div>
       
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

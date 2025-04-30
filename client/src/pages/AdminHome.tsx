@@ -32,7 +32,7 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Teacher, Class, Student } from '@shared/schema';
+import { Teacher, Class, Student, AttendanceRecord, MissionaryActivity } from '@shared/schema';
 import { useToast } from '@/hooks/use-toast';
 import { useLocation } from 'wouter';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -53,6 +53,7 @@ const AdminHome = () => {
     teacherId: 0,
     classId: 0,
   });
+  const [selectedClassForReports, setSelectedClassForReports] = useState<number | null>(null);
 
   // Fetch classes
   const { 
