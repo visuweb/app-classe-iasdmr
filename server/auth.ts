@@ -98,7 +98,8 @@ export function setupAuth(app: Express) {
         return res.json({ 
           id: teacher.id,
           name: teacher.name,
-          cpf: teacher.cpf
+          cpf: teacher.cpf,
+          isAdmin: teacher.isAdmin
         });
       });
     })(req, res, next);
