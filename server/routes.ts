@@ -30,6 +30,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
     res.status(403).json({ message: "Acesso negado. Apenas administradores podem acessar esta função." });
   };
+  
+  // Middleware to check if user is a regular teacher (not admin)
+  const ensureTeacher = (req: any, res: any, next: any) => {
+    if (req.isAuthenticated() && !req.user.isAdmin) {
+      return next();
+    }
+    res.status(403).json({ message: "Acesso negado. Apenas professores regulares podem acessar esta função." });
+  };
 
   // Teacher routes
   app.get("/api/teachers", ensureAdmin, async (req, res) => {
@@ -102,7 +110,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/classes", ensureAuthenticated, async (req, res) => {
+  app.post("/api/classes", ensureAdmin, async (req, res) => {
     try {
       const parsed = insertClassSchema.safeParse(req.body);
       if (!parsed.success) {
@@ -152,7 +160,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/attendance", ensureAuthenticated, async (req, res) => {
+  app.post("/api/attendance", ensureTeacher, async (req, res) => {
     try {
       const parsed = insertAttendanceRecordSchema.safeParse(req.body);
       if (!parsed.success) {
@@ -177,7 +185,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/missionary-activities", ensureAuthenticated, async (req, res) => {
+  app.post("/api/missionary-activities", ensureTeacher, async (req, res) => {
     try {
       const parsed = insertMissionaryActivitySchema.safeParse(req.body);
       if (!parsed.success) {

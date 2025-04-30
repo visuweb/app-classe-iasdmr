@@ -1,5 +1,5 @@
-import React from 'react';
-import { Link } from 'wouter';
+import React, { useEffect } from 'react';
+import { Link, useLocation } from 'wouter';
 import { 
   Card, 
   CardContent, 
@@ -9,13 +9,29 @@ import {
   CardTitle 
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { School, ClipboardList, BarChart3 } from 'lucide-react';
+import { School, ClipboardList, BarChart3, Users } from 'lucide-react';
+import { useAuth } from '@/hooks/use-auth';
 
 const Home: React.FC = () => {
+  const { teacher } = useAuth();
+  const [_, setLocation] = useLocation();
+  
+  // Redirecionar administradores para a página administrativa
+  useEffect(() => {
+    if (teacher?.isAdmin) {
+      setLocation('/admin');
+    }
+  }, [teacher, setLocation]);
+  
+  // Não mostrar a página home para administradores
+  if (teacher?.isAdmin) {
+    return null;
+  }
+  
   return (
     <div className="container mx-auto py-8 px-4">
       <div className="text-center mb-10">
-        <h1 className="text-3xl font-bold text-gray-800 mb-4">TURMA CLASSE</h1>
+        <h1 className="text-3xl font-bold text-gray-800 mb-4">CLASSE ALUNOS</h1>
         <p className="text-gray-600 max-w-2xl mx-auto">
           Sistema para controle de presença de alunos e atividades missionárias
         </p>
@@ -27,12 +43,12 @@ const Home: React.FC = () => {
             <div className="w-14 h-14 rounded-full bg-primary-100 flex items-center justify-center mx-auto mb-2">
               <School className="h-8 w-8 text-primary-500" />
             </div>
-            <CardTitle>Gerenciar Classes</CardTitle>
-            <CardDescription>Cadastre e organize suas turmas</CardDescription>
+            <CardTitle>Minhas Classes</CardTitle>
+            <CardDescription>Acesse suas turmas</CardDescription>
           </CardHeader>
           <CardContent className="text-center">
             <p className="text-sm text-gray-500">
-              Crie e gerencie classes, adicione ou remova alunos, e mantenha seu cadastro organizado.
+              Visualize suas classes e gerencie os alunos de suas turmas.
             </p>
           </CardContent>
           <CardFooter className="flex justify-center">
