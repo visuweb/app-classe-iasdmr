@@ -7,6 +7,7 @@ import Header from "./components/Header";
 import Footer from "./components/Footer";
 import Home from "./pages/Home";
 import ClassList from "./pages/ClassList";
+import ClassDetails from "./pages/ClassDetails";
 import RecordsList from "./pages/RecordsList";
 import Wizard from "./pages/Wizard";
 import NotFound from "@/pages/not-found";
@@ -73,6 +74,7 @@ function Router() {
         <Switch>
           <Route path="/" component={UserRoleRedirect} />
           <TeacherProtectedRoute path="/classes" component={ClassList} />
+          <TeacherProtectedRoute path="/classes/:id" component={ClassDetails} />
           <TeacherProtectedRoute path="/records" component={RecordsList} />
           <TeacherProtectedRoute path="/wizard" component={Wizard} />
           <AdminProtectedRoute path="/admin" component={AdminHome} />

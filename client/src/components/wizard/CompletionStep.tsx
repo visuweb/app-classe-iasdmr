@@ -51,7 +51,18 @@ const CompletionStep: React.FC<CompletionStepProps> = ({ isActive }) => {
   const formattedDate = format(wizardDate, "dd/MM/yyyy", { locale: ptBR });
   const studentsPresent = getStudentsPresentCount();
   const studentsAbsent = getStudentsAbsentCount();
-  const missionaryContacts = missionaryActivities.qtdContatosMissionarios || 0;
+  
+  // Mapeamento das atividades missionárias
+  const activityLabels: Record<string, string> = {
+    qtdEstudosBiblicos: 'Estudos Bíblicos',
+    qtdVisitas: 'Visitas Realizadas',
+    qtdContatosMissionarios: 'Contatos Missionários',
+    qtdLivrosDistribuidos: 'Livros Distribuídos',
+    qtdLicoesDistribuidas: 'Lições Distribuídas',
+    qtdSeminarios: 'Seminários Realizados',
+    qtdClassesBiblicas: 'Classes Bíblicas',
+    qtdPessoasAtendidas: 'Pessoas Atendidas'
+  };
   
   const handleViewRecords = () => {
     setLocation('/records');
@@ -78,17 +89,48 @@ const CompletionStep: React.FC<CompletionStepProps> = ({ isActive }) => {
         </div>
         
         <div className="bg-gray-50 rounded-lg p-4 mb-6">
-          <h4 className="font-medium text-gray-800 mb-2">Resumo do Registro</h4>
-          <div className="grid grid-cols-2 gap-2 text-sm">
-            <div className="text-left text-gray-500">Alunos presentes:</div>
-            <div className="text-right font-medium text-gray-800">{studentsPresent}</div>
-            
-            <div className="text-left text-gray-500">Alunos ausentes:</div>
-            <div className="text-right font-medium text-gray-800">{studentsAbsent}</div>
-            
-            <div className="text-left text-gray-500">Contatos missionários:</div>
-            <div className="text-right font-medium text-gray-800">{missionaryContacts}</div>
-            
+          <h4 className="font-medium text-gray-800 mb-3">Resumo do Registro</h4>
+          
+          {/* Presença de alunos */}
+          <div className="mb-3">
+            <h5 className="text-sm font-medium text-gray-700 mb-1 text-left">Presença de Alunos</h5>
+            <div className="grid grid-cols-2 gap-2 text-sm">
+              <div className="text-left text-gray-500">Alunos presentes:</div>
+              <div className="text-right font-medium text-gray-800">{studentsPresent}</div>
+              
+              <div className="text-left text-gray-500">Alunos ausentes:</div>
+              <div className="text-right font-medium text-gray-800">{studentsAbsent}</div>
+            </div>
+          </div>
+          
+          {/* Atividades missionárias */}
+          <div className="mb-3">
+            <h5 className="text-sm font-medium text-gray-700 mb-1 text-left">Atividades Missionárias</h5>
+            <div className="grid grid-cols-2 gap-2 text-sm">
+              {Object.entries(missionaryActivities).map(([key, value]) => {
+                // Mostrar apenas atividades com valores maior que zero
+                if (value && value > 0) {
+                  return (
+                    <React.Fragment key={key}>
+                      <div className="text-left text-gray-500">{activityLabels[key as keyof typeof activityLabels]}:</div>
+                      <div className="text-right font-medium text-gray-800">{value}</div>
+                    </React.Fragment>
+                  );
+                }
+                return null;
+              })}
+              
+              {/* Se não houver atividades registradas */}
+              {Object.values(missionaryActivities).every(v => !v || v === 0) && (
+                <div className="col-span-2 text-center text-gray-500 italic py-1">
+                  Nenhuma atividade registrada
+                </div>
+              )}
+            </div>
+          </div>
+          
+          {/* Data do registro */}
+          <div className="grid grid-cols-2 gap-2 text-sm pt-2 border-t border-gray-200">
             <div className="text-left text-gray-500">Data do registro:</div>
             <div className="text-right font-medium text-gray-800">{formattedDate}</div>
           </div>

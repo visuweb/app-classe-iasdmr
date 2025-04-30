@@ -1,0 +1,306 @@
+import React, { useEffect, useState } from 'react';
+import { useQuery, useMutation } from '@tanstack/react-query';
+import { useLocation, useRoute } from 'wouter';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { Class, Student } from '@shared/schema';
+import { apiRequest, queryClient } from '@/lib/queryClient';
+import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/use-auth';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { 
+  ArrowLeft, 
+  Plus, 
+  Users, 
+  UserPlus, 
+  Pencil, 
+  Trash2, 
+  School
+} from 'lucide-react';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form';
+import {
+  Table,
+  TableBody,
+  TableCaption,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import { Skeleton } from '@/components/ui/skeleton';
+
+// Schemas para validação
+const studentFormSchema = z.object({
+  name: z.string().min(1, 'Nome do aluno é obrigatório'),
+  classId: z.number(),
+});
+
+const ClassDetails: React.FC = () => {
+  const [, params] = useRoute('/classes/:id');
+  const [, navigate] = useLocation();
+  const { toast } = useToast();
+  const { teacher } = useAuth();
+  const isMobile = useIsMobile();
+  const [isAddStudentOpen, setIsAddStudentOpen] = useState(false);
+  
+  // Estado da classe
+  const classId = params?.id ? parseInt(params.id, 10) : undefined;
+  
+  // Formulário para adicionar aluno
+  const studentForm = useForm<z.infer<typeof studentFormSchema>>({
+    resolver: zodResolver(studentFormSchema),
+    defaultValues: {
+      name: '',
+      classId: classId || 0,
+    },
+  });
+  
+  // Buscar dados da classe
+  const {
+    data: classData,
+    isLoading: isClassLoading,
+    error: classError
+  } = useQuery<Class>({
+    queryKey: ['/api/classes', classId],
+    queryFn: async () => {
+      if (!classId) throw new Error('ID da classe não especificado');
+      const res = await apiRequest('GET', `/api/classes/${classId}`);
+      return res.json();
+    },
+    enabled: !!classId,
+  });
+  
+  // Buscar alunos da classe
+  const {
+    data: students = [],
+    isLoading: isStudentsLoading,
+    refetch: refetchStudents
+  } = useQuery<Student[]>({
+    queryKey: ['/api/classes', classId, 'students'],
+    queryFn: async () => {
+      if (!classId) return [];
+      const res = await apiRequest('GET', `/api/classes/${classId}/students`);
+      return res.json();
+    },
+    enabled: !!classId,
+  });
+
+  // Mutation para criar aluno
+  const createStudentMutation = useMutation({
+    mutationFn: async (data: z.infer<typeof studentFormSchema>) => {
+      const res = await apiRequest('POST', '/api/students', data);
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: 'Aluno adicionado!',
+        description: 'O aluno foi adicionado com sucesso.'
+      });
+      refetchStudents();
+      setIsAddStudentOpen(false);
+      studentForm.reset({ name: '', classId: classId || 0 });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Erro ao adicionar aluno',
+        description: error.message,
+        variant: 'destructive'
+      });
+    }
+  });
+
+  // Voltar para a lista de classes
+  const handleGoBack = () => {
+    navigate('/classes');
+  };
+
+  // Adicionar novo aluno
+  const onSubmitStudent = (data: z.infer<typeof studentFormSchema>) => {
+    createStudentMutation.mutate({
+      ...data,
+      classId: classId || 0,
+    });
+  };
+
+  // Se não houver ID ou se ocorrer um erro
+  if (classError) {
+    toast({
+      title: 'Erro ao carregar classe',
+      description: 'A classe solicitada não foi encontrada',
+      variant: 'destructive'
+    });
+    navigate('/classes');
+    return null;
+  }
+
+  return (
+    <div className="flex flex-col min-h-screen bg-gray-50">
+      <main className="flex-1 p-4">
+        {/* Cabeçalho */}
+        <div className="flex items-center mb-6">
+          <Button 
+            variant="ghost" 
+            className="mr-2 p-2" 
+            onClick={handleGoBack}
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          
+          <div>
+            <h1 className={`${isMobile ? 'text-xl' : 'text-2xl'} font-bold`}>
+              {isClassLoading ? (
+                <Skeleton className="h-7 w-48" />
+              ) : (
+                classData?.name || 'Detalhes da Classe'
+              )}
+            </h1>
+            <p className="text-sm text-gray-500">
+              {isStudentsLoading ? (
+                <Skeleton className="h-4 w-32 mt-1" />
+              ) : (
+                `${students.length} aluno${students.length !== 1 ? 's' : ''} cadastrado${students.length !== 1 ? 's' : ''}`
+              )}
+            </p>
+          </div>
+        </div>
+        
+        {/* Conteúdo principal */}
+        <div className="max-w-4xl mx-auto">
+          <Card className="mb-6">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <div className="space-y-1">
+                <CardTitle className="text-xl flex items-center">
+                  <Users className="h-5 w-5 mr-2 text-primary-500" />
+                  Alunos da Classe
+                </CardTitle>
+                <CardDescription>
+                  Gerencie os alunos inscritos nesta classe
+                </CardDescription>
+              </div>
+              <Button 
+                onClick={() => setIsAddStudentOpen(true)}
+                className="flex items-center"
+                size={isMobile ? "sm" : "default"}
+              >
+                <UserPlus className="h-4 w-4 mr-2" />
+                Adicionar Aluno
+              </Button>
+            </CardHeader>
+            
+            <CardContent className="pt-4">
+              {isStudentsLoading ? (
+                // Estado de loading
+                Array(3).fill(0).map((_, index) => (
+                  <div key={index} className="flex items-center py-3 border-b last:border-0">
+                    <Skeleton className="h-6 w-6 rounded-full mr-3" />
+                    <Skeleton className="h-5 w-48" />
+                  </div>
+                ))
+              ) : students.length === 0 ? (
+                // Nenhum aluno encontrado
+                <div className="text-center py-8 text-gray-500">
+                  <div className="mb-3 flex justify-center">
+                    <div className="h-12 w-12 rounded-full bg-gray-100 flex items-center justify-center">
+                      <Users className="h-6 w-6 text-gray-400" />
+                    </div>
+                  </div>
+                  <h3 className="font-medium mb-1">Nenhum aluno cadastrado</h3>
+                  <p className="text-sm">Adicione alunos para começar a registrar presenças</p>
+                </div>
+              ) : (
+                // Lista de alunos
+                <div className="rounded border overflow-hidden">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Nome</TableHead>
+                        <TableHead className="w-24 text-right">Ações</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {students.map((student) => (
+                        <TableRow key={student.id}>
+                          <TableCell className="font-medium">{student.name}</TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex justify-end items-center space-x-2">
+                              {/* Poderia adicionar botões para editar e excluir aqui */}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+        
+        {/* Modal para adicionar aluno */}
+        <Dialog open={isAddStudentOpen} onOpenChange={setIsAddStudentOpen}>
+          <DialogContent className={isMobile ? "w-[90vw] max-w-md" : ""}>
+            <DialogHeader>
+              <DialogTitle>Adicionar Novo Aluno</DialogTitle>
+              <DialogDescription>
+                Adicionar aluno à classe: {classData?.name}
+              </DialogDescription>
+            </DialogHeader>
+            
+            <Form {...studentForm}>
+              <form onSubmit={studentForm.handleSubmit(onSubmitStudent)} className="space-y-4">
+                <FormField
+                  control={studentForm.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Nome do Aluno</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Nome completo do aluno" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <DialogFooter>
+                  <Button type="submit" disabled={createStudentMutation.isPending}>
+                    {createStudentMutation.isPending ? 'Adicionando...' : 'Adicionar Aluno'}
+                  </Button>
+                </DialogFooter>
+              </form>
+            </Form>
+          </DialogContent>
+        </Dialog>
+      </main>
+    </div>
+  );
+};
+
+export default ClassDetails;
