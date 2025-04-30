@@ -54,6 +54,36 @@ const AdminHome = () => {
     classId: 0,
   });
   const [selectedClassForReports, setSelectedClassForReports] = useState<number | null>(null);
+  
+  // Fetch attendance records
+  const {
+    data: attendanceRecords = [],
+    isLoading: attendanceLoading,
+  } = useQuery<(AttendanceRecord & { studentName: string })[]>({
+    queryKey: ['/api/attendance-records', selectedClassForReports],
+    queryFn: async () => {
+      const url = selectedClassForReports 
+        ? `/api/attendance-records?classId=${selectedClassForReports}`
+        : '/api/attendance-records';
+      const res = await apiRequest('GET', url);
+      return res.json();
+    },
+  });
+  
+  // Fetch missionary activities
+  const {
+    data: missionaryActivities = [],
+    isLoading: activitiesLoading,
+  } = useQuery<(MissionaryActivity & { className: string })[]>({
+    queryKey: ['/api/missionary-activities', selectedClassForReports],
+    queryFn: async () => {
+      const url = selectedClassForReports 
+        ? `/api/missionary-activities?classId=${selectedClassForReports}`
+        : '/api/missionary-activities';
+      const res = await apiRequest('GET', url);
+      return res.json();
+    },
+  });
 
   // Fetch classes
   const { 
@@ -204,6 +234,11 @@ const AdminHome = () => {
   // Handle class selection
   const handleClassSelection = (classId: number) => {
     setSelectedClassId(classId);
+  };
+  
+  // Handle class selection for reports
+  const handleClassSelectionForReports = (classId: number | null) => {
+    setSelectedClassForReports(classId);
   };
 
   // Handle create class
@@ -575,15 +610,123 @@ const AdminHome = () => {
           
           {/* Reports Tab */}
           <TabsContent value="reports" className="space-y-6">
+            {/* Filter Controls */}
             <Card>
               <CardHeader>
-                <CardTitle>Registros de Frequência e Atividades</CardTitle>
-                <CardDescription>Visualize os registros de frequência e atividades missionárias</CardDescription>
+                <CardTitle>Filtros</CardTitle>
+                <CardDescription>Selecione uma classe para filtrar os registros</CardDescription>
               </CardHeader>
               <CardContent>
-                <p className="text-center py-8">
-                  Funcionalidade de visualização de registros será implementada em breve.
-                </p>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="classFilter">Filtrar por Classe</Label>
+                    <select
+                      id="classFilter"
+                      className="w-full p-2 border rounded mt-1"
+                      value={selectedClassForReports || ''}
+                      onChange={(e) => handleClassSelectionForReports(e.target.value ? Number(e.target.value) : null)}
+                    >
+                      <option value="">Todas as Classes</option>
+                      {classes.map((classObj) => (
+                        <option key={classObj.id} value={classObj.id}>
+                          {classObj.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            
+            {/* Attendance Records */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Registros de Frequência</CardTitle>
+                <CardDescription>
+                  {selectedClassForReports
+                    ? `Classe: ${classes.find(c => c.id === selectedClassForReports)?.name || ''}`
+                    : 'Todas as Classes'}
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {attendanceLoading ? (
+                  <div className="text-center py-4">Carregando registros de frequência...</div>
+                ) : attendanceRecords.length === 0 ? (
+                  <div className="text-center py-4">Nenhum registro de frequência encontrado.</div>
+                ) : (
+                  <ScrollArea className="h-[300px]">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Data</TableHead>
+                          <TableHead>Aluno</TableHead>
+                          <TableHead>Classe</TableHead>
+                          <TableHead>Presença</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {attendanceRecords.map((record) => (
+                          <TableRow key={record.id}>
+                            <TableCell>{new Date(record.date).toLocaleDateString('pt-BR')}</TableCell>
+                            <TableCell>{record.studentName}</TableCell>
+                            <TableCell>
+                              {classes.find(c => c.id === record.studentId)?.name || ''}
+                            </TableCell>
+                            <TableCell>
+                              {record.present ? (
+                                <span className="text-green-600 font-medium">Presente</span>
+                              ) : (
+                                <span className="text-red-600 font-medium">Ausente</span>
+                              )}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </ScrollArea>
+                )}
+              </CardContent>
+            </Card>
+            
+            {/* Missionary Activities */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Atividades Missionárias</CardTitle>
+                <CardDescription>
+                  {selectedClassForReports
+                    ? `Classe: ${classes.find(c => c.id === selectedClassForReports)?.name || ''}`
+                    : 'Todas as Classes'}
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {activitiesLoading ? (
+                  <div className="text-center py-4">Carregando registros de atividades...</div>
+                ) : missionaryActivities.length === 0 ? (
+                  <div className="text-center py-4">Nenhum registro de atividade missionária encontrado.</div>
+                ) : (
+                  <ScrollArea className="h-[300px]">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Data</TableHead>
+                          <TableHead>Classe</TableHead>
+                          <TableHead>Atividade</TableHead>
+                          <TableHead>Quantidade</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {missionaryActivities.map((activity) => (
+                          <TableRow key={activity.id}>
+                            <TableCell>{new Date(activity.date).toLocaleDateString('pt-BR')}</TableCell>
+                            <TableCell>{activity.className}</TableCell>
+                            <TableCell>{activity.activityType}</TableCell>
+                            <TableCell>{activity.amount}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </ScrollArea>
+                )}
               </CardContent>
             </Card>
           </TabsContent>

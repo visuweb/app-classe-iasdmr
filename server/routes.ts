@@ -137,6 +137,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/students", ensureAuthenticated, async (req, res) => {
     try {
+      // Verificar se é administrador ou se está adicionando alunos à sua própria classe
+      const teacher = req.user as Teacher;
+      
+      if (!teacher.isAdmin) {
+        const classId = parseInt(req.body.classId);
+        const teacherClasses = await storage.getClassesByTeacherId(teacher.id);
+        const isTeacherOfClass = teacherClasses.some(c => c.id === classId);
+        
+        if (!isTeacherOfClass) {
+          return res.status(403).json({ 
+            message: "Você não tem permissão para adicionar alunos a esta classe" 
+          });
+        }
+      }
+      
       const parsed = insertStudentSchema.safeParse(req.body);
       if (!parsed.success) {
         return res.status(400).json({ message: "Dados de aluno inválidos" });
