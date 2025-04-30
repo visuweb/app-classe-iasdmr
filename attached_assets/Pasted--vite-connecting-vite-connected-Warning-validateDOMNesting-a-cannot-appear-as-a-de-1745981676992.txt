@@ -1,0 +1,29 @@
+[vite] connecting...
+[vite] connected.
+Warning: validateDOMNesting(...): <a> cannot appear as a descendant of &lt;a&gt;.
+    at a
+    at a
+    at https://eaf82737-df35-4813-8906-d56884fd1a4c-00-1vr8i4t3su362.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=db0ee74e:337:18
+    at div
+    at header
+    at Header (https://eaf82737-df35-4813-8906-d56884fd1a4c-00-1vr8i4t3su362.kirk.replit.dev/src/components/Header.tsx:23:22)
+    at div
+    at Provider (https://eaf82737-df35-4813-8906-d56884fd1a4c-00-1vr8i4t3su362.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-M3NVYRND.js?v=600ee079:48:15)
+    at TooltipProvider (https://eaf82737-df35-4813-8906-d56884fd1a4c-00-1vr8i4t3su362.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-tooltip.js?v=e968addf:58:5)
+    at QueryClientProvider (https://eaf82737-df35-4813-8906-d56884fd1a4c-00-1vr8i4t3su362.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@tanstack_react-query.js?v=e74eda8f:2805:3)
+    at App
+at a
+at a
+at https://eaf82737-df35-4813-8906-d56884fd1a4c-00-1vr8i4t3su362.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=db0ee74e:337:18
+at div
+at header
+at Header (https://eaf82737-df35-4813-8906-d56884fd1a4c-00-1vr8i4t3su362.kirk.replit.dev/src/components/Header.tsx:23:22)
+at div
+at Provider (https://eaf82737-df35-4813-8906-d56884fd1a4c-00-1vr8i4t3su362.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-M3NVYRND.js?v=600ee079:48:15)
+at TooltipProvider (https://eaf82737-df35-4813-8906-d56884fd1a4c-00-1vr8i4t3su362.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-tooltip.js?v=e968addf:58:5)
+at QueryClientProvider (https://eaf82737-df35-4813-8906-d56884fd1a4c-00-1vr8i4t3su362.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@tanstack_react-query.js?v=e74eda8f:2805:3)
+at App
+at t.value (https://eaf82737-df35-4813-8906-d56884fd1a4c-00-1vr8i4t3su362.kirk.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:17465)
+at new t (https://eaf82737-df35-4813-8906-d56884fd1a4c-00-1vr8i4t3su362.kirk.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:12630)
+at t.value (https://eaf82737-df35-4813-8906-d56884fd1a4c-00-1vr8i4t3su362.kirk.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:32766)
+at https://eaf82737-df35-4813-8906-d56884fd1a4c-00-1vr8i4t3su362.kirk.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:34400

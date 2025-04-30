@@ -1,12 +1,31 @@
-import { pgTable, text, serial, integer, boolean, date, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, date, timestamp, primaryKey } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
+
+// Teachers table
+export const teachers = pgTable("teachers", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  cpf: text("cpf").notNull().unique(),
+  password: text("password").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
 
 // Classes table
 export const classes = pgTable("classes", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// Teacher-Class relationship (up to 2 teachers per class)
+export const teacherClasses = pgTable("teacher_classes", {
+  teacherId: integer("teacher_id").notNull().references(() => teachers.id),
+  classId: integer("class_id").notNull().references(() => classes.id),
+}, (table) => {
+  return {
+    pk: primaryKey({ columns: [table.teacherId, table.classId] }),
+  };
 });
 
 // Students table
@@ -42,6 +61,17 @@ export const missionaryActivities = pgTable("missionary_activities", {
 });
 
 // Insert schemas
+export const insertTeacherSchema = createInsertSchema(teachers).pick({
+  name: true,
+  cpf: true,
+  password: true,
+});
+
+export const insertTeacherClassSchema = createInsertSchema(teacherClasses).pick({
+  teacherId: true,
+  classId: true,
+});
+
 export const insertClassSchema = createInsertSchema(classes).pick({
   name: true,
 });
@@ -70,6 +100,12 @@ export const insertMissionaryActivitySchema = createInsertSchema(missionaryActiv
 });
 
 // Types
+export type Teacher = typeof teachers.$inferSelect;
+export type InsertTeacher = z.infer<typeof insertTeacherSchema>;
+
+export type TeacherClass = typeof teacherClasses.$inferSelect;
+export type InsertTeacherClass = z.infer<typeof insertTeacherClassSchema>;
+
 export type Class = typeof classes.$inferSelect;
 export type InsertClass = z.infer<typeof insertClassSchema>;
 

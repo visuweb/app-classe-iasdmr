@@ -5,106 +5,158 @@ import {
   insertClassSchema, 
   insertStudentSchema, 
   insertAttendanceRecordSchema, 
-  insertMissionaryActivitySchema
+  insertMissionaryActivitySchema,
+  insertTeacherSchema,
+  insertTeacherClassSchema
 } from "@shared/schema";
+import { setupAuth } from "./auth";
+
+// Middleware to check if user is authenticated
+const ensureAuthenticated = (req: any, res: any, next: any) => {
+  if (req.isAuthenticated()) {
+    return next();
+  }
+  res.status(401).json({ message: "Não autenticado" });
+};
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Set up authentication
+  setupAuth(app);
+
+  // Teacher routes
+  app.post("/api/teachers", async (req, res) => {
+    try {
+      const parsed = insertTeacherSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ message: "Dados de professor inválidos" });
+      }
+      
+      // Check if teacher with this CPF already exists
+      const existingTeacher = await storage.getTeacherByCpf(parsed.data.cpf);
+      if (existingTeacher) {
+        return res.status(409).json({ message: "Professor com este CPF já existe" });
+      }
+      
+      const newTeacher = await storage.createTeacher(parsed.data);
+      // Don't return the password in the response
+      const { password, ...teacherData } = newTeacher;
+      res.status(201).json(teacherData);
+    } catch (error) {
+      console.error("Error creating teacher:", error);
+      res.status(500).json({ message: "Falha ao criar professor" });
+    }
+  });
+
+  app.post("/api/teacher-classes", ensureAuthenticated, async (req, res) => {
+    try {
+      const parsed = insertTeacherClassSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ message: "Dados inválidos" });
+      }
+      
+      const teacherClass = await storage.assignTeacherToClass(parsed.data);
+      res.status(201).json(teacherClass);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message || "Falha ao atribuir professor à classe" });
+    }
+  });
+
   // Classes routes
-  app.get("/api/classes", async (req, res) => {
+  app.get("/api/classes", ensureAuthenticated, async (req, res) => {
     try {
       const classes = await storage.getAllClasses();
       res.json(classes);
     } catch (error) {
-      res.status(500).json({ message: "Failed to fetch classes" });
+      res.status(500).json({ message: "Falha ao buscar classes" });
     }
   });
 
-  app.post("/api/classes", async (req, res) => {
+  app.post("/api/classes", ensureAuthenticated, async (req, res) => {
     try {
       const parsed = insertClassSchema.safeParse(req.body);
       if (!parsed.success) {
-        return res.status(400).json({ message: "Invalid class data" });
+        return res.status(400).json({ message: "Dados de classe inválidos" });
       }
       
       const newClass = await storage.createClass(parsed.data);
       res.status(201).json(newClass);
     } catch (error) {
-      res.status(500).json({ message: "Failed to create class" });
+      res.status(500).json({ message: "Falha ao criar classe" });
     }
   });
 
   // Students routes
-  app.get("/api/classes/:classId/students", async (req, res) => {
+  app.get("/api/classes/:classId/students", ensureAuthenticated, async (req, res) => {
     try {
       const classId = parseInt(req.params.classId, 10);
       const students = await storage.getStudentsByClassId(classId);
       res.json(students);
     } catch (error) {
-      res.status(500).json({ message: "Failed to fetch students" });
+      res.status(500).json({ message: "Falha ao buscar alunos" });
     }
   });
 
-  app.post("/api/students", async (req, res) => {
+  app.post("/api/students", ensureAuthenticated, async (req, res) => {
     try {
       const parsed = insertStudentSchema.safeParse(req.body);
       if (!parsed.success) {
-        return res.status(400).json({ message: "Invalid student data" });
+        return res.status(400).json({ message: "Dados de aluno inválidos" });
       }
       
       const newStudent = await storage.createStudent(parsed.data);
       res.status(201).json(newStudent);
     } catch (error) {
-      res.status(500).json({ message: "Failed to create student" });
+      res.status(500).json({ message: "Falha ao criar aluno" });
     }
   });
 
   // Attendance routes
-  app.get("/api/attendance", async (req, res) => {
+  app.get("/api/attendance", ensureAuthenticated, async (req, res) => {
     try {
       const classId = req.query.classId ? parseInt(req.query.classId as string, 10) : undefined;
       const records = await storage.getAttendanceRecords(classId);
       res.json(records);
     } catch (error) {
-      res.status(500).json({ message: "Failed to fetch attendance records" });
+      res.status(500).json({ message: "Falha ao buscar registros de presença" });
     }
   });
 
-  app.post("/api/attendance", async (req, res) => {
+  app.post("/api/attendance", ensureAuthenticated, async (req, res) => {
     try {
       const parsed = insertAttendanceRecordSchema.safeParse(req.body);
       if (!parsed.success) {
-        return res.status(400).json({ message: "Invalid attendance data" });
+        return res.status(400).json({ message: "Dados de presença inválidos" });
       }
       
       const newRecord = await storage.createAttendanceRecord(parsed.data);
       res.status(201).json(newRecord);
     } catch (error) {
-      res.status(500).json({ message: "Failed to create attendance record" });
+      res.status(500).json({ message: "Falha ao criar registro de presença" });
     }
   });
 
   // Missionary activities routes
-  app.get("/api/missionary-activities", async (req, res) => {
+  app.get("/api/missionary-activities", ensureAuthenticated, async (req, res) => {
     try {
       const classId = req.query.classId ? parseInt(req.query.classId as string, 10) : undefined;
       const activities = await storage.getMissionaryActivities(classId);
       res.json(activities);
     } catch (error) {
-      res.status(500).json({ message: "Failed to fetch missionary activities" });
+      res.status(500).json({ message: "Falha ao buscar atividades missionárias" });
     }
   });
 
-  app.post("/api/missionary-activities", async (req, res) => {
+  app.post("/api/missionary-activities", ensureAuthenticated, async (req, res) => {
     try {
       const parsed = insertMissionaryActivitySchema.safeParse(req.body);
       if (!parsed.success) {
-        return res.status(400).json({ message: "Invalid missionary activity data" });
+        return res.status(400).json({ message: "Dados de atividade missionária inválidos" });
       }
       
       const newActivity = await storage.createMissionaryActivity(parsed.data);
       res.status(201).json(newActivity);
     } catch (error) {
-      res.status(500).json({ message: "Failed to create missionary activity" });
+      res.status(500).json({ message: "Falha ao criar atividade missionária" });
     }
   });
 
