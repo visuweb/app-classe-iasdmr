@@ -126,12 +126,12 @@ export class DatabaseStorage implements IStorage {
       const existingAdmin = await this.getTeacherByCpf("admin");
       
       if (!existingAdmin) {
-        // Criar o usuário administrador
-        const hashedPassword = await hashPassword("admincei2025");
+        // Criar o usuário administrador com senha direta para compatibilidade
+        // com o método de autenticação especial para admin
         await this.createTeacher({
           name: "Administrador",
           cpf: "admin",
-          password: hashedPassword,
+          password: "admincei2025", // senha não hash para facilitar a verificação
           isAdmin: true
         });
         console.log("Admin user created successfully");
