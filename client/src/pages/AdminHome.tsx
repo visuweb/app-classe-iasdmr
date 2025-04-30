@@ -715,14 +715,100 @@ const AdminHome = () => {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {missionaryActivities.map((activity) => (
-                          <TableRow key={activity.id}>
-                            <TableCell>{new Date(activity.date).toLocaleDateString('pt-BR')}</TableCell>
-                            <TableCell>{activity.className}</TableCell>
-                            <TableCell>{activity.activityType}</TableCell>
-                            <TableCell>{activity.amount}</TableCell>
-                          </TableRow>
-                        ))}
+                        {missionaryActivities.flatMap((activity) => {
+                          const activityEntries = [];
+                          
+                          if (activity.qtdContatosMissionarios) {
+                            activityEntries.push(
+                              <TableRow key={`${activity.id}-contatos`}>
+                                <TableCell>{new Date(activity.date).toLocaleDateString('pt-BR')}</TableCell>
+                                <TableCell>{activity.className}</TableCell>
+                                <TableCell>Contatos Missionários</TableCell>
+                                <TableCell>{activity.qtdContatosMissionarios}</TableCell>
+                              </TableRow>
+                            );
+                          }
+                          
+                          if (activity.literaturasDistribuidas) {
+                            activityEntries.push(
+                              <TableRow key={`${activity.id}-literaturas`}>
+                                <TableCell>{new Date(activity.date).toLocaleDateString('pt-BR')}</TableCell>
+                                <TableCell>{activity.className}</TableCell>
+                                <TableCell>Literaturas Distribuídas</TableCell>
+                                <TableCell>{activity.literaturasDistribuidas}</TableCell>
+                              </TableRow>
+                            );
+                          }
+                          
+                          if (activity.visitasMissionarias) {
+                            activityEntries.push(
+                              <TableRow key={`${activity.id}-visitas`}>
+                                <TableCell>{new Date(activity.date).toLocaleDateString('pt-BR')}</TableCell>
+                                <TableCell>{activity.className}</TableCell>
+                                <TableCell>Visitas Missionárias</TableCell>
+                                <TableCell>{activity.visitasMissionarias}</TableCell>
+                              </TableRow>
+                            );
+                          }
+                          
+                          if (activity.estudosBiblicos) {
+                            activityEntries.push(
+                              <TableRow key={`${activity.id}-estudos`}>
+                                <TableCell>{new Date(activity.date).toLocaleDateString('pt-BR')}</TableCell>
+                                <TableCell>{activity.className}</TableCell>
+                                <TableCell>Estudos Bíblicos</TableCell>
+                                <TableCell>{activity.estudosBiblicos}</TableCell>
+                              </TableRow>
+                            );
+                          }
+                          
+                          if (activity.ministrados) {
+                            activityEntries.push(
+                              <TableRow key={`${activity.id}-ministrados`}>
+                                <TableCell>{new Date(activity.date).toLocaleDateString('pt-BR')}</TableCell>
+                                <TableCell>{activity.className}</TableCell>
+                                <TableCell>Ministrados</TableCell>
+                                <TableCell>{activity.ministrados}</TableCell>
+                              </TableRow>
+                            );
+                          }
+                          
+                          if (activity.pessoasAuxiliadas) {
+                            activityEntries.push(
+                              <TableRow key={`${activity.id}-auxiliadas`}>
+                                <TableCell>{new Date(activity.date).toLocaleDateString('pt-BR')}</TableCell>
+                                <TableCell>{activity.className}</TableCell>
+                                <TableCell>Pessoas Auxiliadas</TableCell>
+                                <TableCell>{activity.pessoasAuxiliadas}</TableCell>
+                              </TableRow>
+                            );
+                          }
+                          
+                          if (activity.pessoasTrazidasIgreja) {
+                            activityEntries.push(
+                              <TableRow key={`${activity.id}-trazidas`}>
+                                <TableCell>{new Date(activity.date).toLocaleDateString('pt-BR')}</TableCell>
+                                <TableCell>{activity.className}</TableCell>
+                                <TableCell>Pessoas Trazidas à Igreja</TableCell>
+                                <TableCell>{activity.pessoasTrazidasIgreja}</TableCell>
+                              </TableRow>
+                            );
+                          }
+                          
+                          // Se não houver nenhuma atividade específica, mostre uma linha genérica
+                          if (activityEntries.length === 0) {
+                            activityEntries.push(
+                              <TableRow key={activity.id}>
+                                <TableCell>{new Date(activity.date).toLocaleDateString('pt-BR')}</TableCell>
+                                <TableCell>{activity.className}</TableCell>
+                                <TableCell>Sem atividades registradas</TableCell>
+                                <TableCell>0</TableCell>
+                              </TableRow>
+                            );
+                          }
+                          
+                          return activityEntries;
+                        })}
                       </TableBody>
                     </Table>
                   </ScrollArea>

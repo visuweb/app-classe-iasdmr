@@ -7,7 +7,8 @@ import {
   insertAttendanceRecordSchema, 
   insertMissionaryActivitySchema,
   insertTeacherSchema,
-  insertTeacherClassSchema
+  insertTeacherClassSchema,
+  Teacher
 } from "@shared/schema";
 import { setupAuth } from "./auth";
 
