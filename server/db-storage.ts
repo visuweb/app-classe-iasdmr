@@ -57,9 +57,19 @@ export class DatabaseStorage implements IStorage {
   
   async validateTeacher(cpf: string, password: string): Promise<Teacher | null> {
     const teacher = await this.getTeacherByCpf(cpf);
-    if (teacher && teacher.password === password) {
+    
+    if (!teacher) return null;
+    
+    // Caso especial para o admin
+    if (cpf === 'admin' && password === 'admincei2025') {
       return teacher;
     }
+    
+    // Verificando para usuários normais 
+    if (teacher.password === password) {
+      return teacher;
+    }
+    
     return null;
   }
   
@@ -91,22 +101,34 @@ export class DatabaseStorage implements IStorage {
   }
   
   async getClassesByTeacherId(teacherId: number): Promise<(Class & { role?: string })[]> {
-    // Buscar todas as classes do professor
-    const results = await db
-      .select({
-        id: classes.id,
-        name: classes.name,
-        createdAt: classes.createdAt
-      })
-      .from(teacherClasses)
-      .innerJoin(classes, eq(teacherClasses.classId, classes.id))
-      .where(eq(teacherClasses.teacherId, teacherId));
+    // Verificar se o professor é admin
+    const teacher = await this.getTeacherById(teacherId);
     
-    // Adicionar role a cada classe
-    return results.map(classObj => ({
-      ...classObj,
-      role: 'professor'
-    }));
+    if (teacher?.isAdmin) {
+      // Admin vê todas as classes
+      const allClasses = await this.getAllClasses();
+      return allClasses.map(classObj => ({
+        ...classObj,
+        role: 'admin'
+      }));
+    } else {
+      // Professor regular vê apenas suas classes
+      const results = await db
+        .select({
+          id: classes.id,
+          name: classes.name,
+          createdAt: classes.createdAt
+        })
+        .from(teacherClasses)
+        .innerJoin(classes, eq(teacherClasses.classId, classes.id))
+        .where(eq(teacherClasses.teacherId, teacherId));
+      
+      // Adicionar role a cada classe
+      return results.map(classObj => ({
+        ...classObj,
+        role: 'professor'
+      }));
+    }
   }
   
   async getTeachersByClassId(classId: number): Promise<Teacher[]> {
@@ -116,6 +138,7 @@ export class DatabaseStorage implements IStorage {
         name: teachers.name,
         cpf: teachers.cpf,
         password: teachers.password,
+        isAdmin: teachers.isAdmin,
         createdAt: teachers.createdAt
       })
       .from(teacherClasses)
@@ -262,7 +285,8 @@ export class DatabaseStorage implements IStorage {
         const teacher = await this.createTeacher({
           name: "Jones",
           cpf: "123456789",
-          password: "123456"
+          password: "123456",
+          isAdmin: false
         });
         
         // Criar classe de teste

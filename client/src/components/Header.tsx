@@ -41,7 +41,7 @@ const Header: React.FC = () => {
             "hover:opacity-90 transition-opacity"
           )}>
             <School className="h-6 w-6 text-primary-500 mr-2" />
-            <h1 className="text-xl font-semibold text-gray-800">TURMA CLASSE</h1>
+            <h1 className="text-xl font-semibold text-gray-800">CLASSE ALUNOS</h1>
           </div>
         </Link>
         
