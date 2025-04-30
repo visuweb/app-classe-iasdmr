@@ -197,26 +197,55 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
           setCalculatorResult(value || '0');
           setCalculatorExpression(value || '0');
         } else {
-          // Acrescentar o número digitado ao existente
-          setCalculatorResult(prev => prev + (value || ''));
-          setCalculatorExpression(prev => 
-            // Se a expressão já mostrar o resultado (tem '='), começe nova expressão
-            prev.includes('=') ? (value || '0') : prev + (value || '')
-          );
+          // Se a expressão contém um resultado (após '='), começar nova expressão
+          if (calculatorExpression.includes('=')) {
+            setCalculatorResult(value || '0');
+            setCalculatorExpression(value || '0');
+          } else if (calculatorExpression.includes('+')) {
+            // Se estamos adicionando o segundo número após o operador +
+            setCalculatorResult(value || '0');
+            setCalculatorExpression(prev => {
+              // Manter a parte antes do operador + e substituir o que vem depois
+              const parts = prev.split('+');
+              return parts[0] + '+ ' + (value || '0');
+            });
+          } else {
+            // Concatenar dígitos para formar um número maior
+            setCalculatorResult(prev => prev + (value || ''));
+            setCalculatorExpression(prev => prev + (value || ''));
+          }
         }
         break;
         
       case 'add':
+        // Se a expressão já tem um resultado (contém '='), usar esse resultado como primeiro número
+        if (calculatorExpression.includes('=')) {
+          const parts = calculatorExpression.split('=');
+          const result = parts[parts.length - 1].trim();
+          setCalculatorExpression(`${result} + `);
+          break;
+        }
+        
         // Iniciar a operação de adição ou continuar a somar
         if (calculatorExpression.includes('+')) {
           // Se já houver uma operação de adição, calcular o resultado primeiro
           const parts = calculatorExpression.split('+').filter(part => part.trim() !== '');
+          
+          // Adicionar o número atual à lista de partes se não estiver vazio
+          if (calculatorResult && calculatorResult !== '0') {
+            // Não adicionar se já for parte da expressão
+            const lastPartIndex = calculatorExpression.lastIndexOf('+');
+            const lastPart = calculatorExpression.substring(lastPartIndex + 1).trim();
+            
+            if (lastPart !== calculatorResult) {
+              parts.push(calculatorResult);
+            }
+          }
+          
+          // Somar todas as partes como números inteiros
           const result = parts.reduce((sum, num) => {
             const trimmed = num.trim();
-            // Ignorar parte após o '=' se existir
-            const valueToParse = trimmed.includes('=') ? 
-              trimmed.split('=')[1].trim() : trimmed;
-            const parsed = parseInt(valueToParse, 10);
+            const parsed = parseInt(trimmed, 10);
             return isNaN(parsed) ? sum : sum + parsed;
           }, 0);
           
@@ -231,15 +260,23 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
       case 'equals':
         // Calcular o resultado da operação
         if (calculatorExpression.includes('+')) {
+          // Filtrar apenas partes não vazias após split
           const parts = calculatorExpression.split('+').filter(part => part.trim() !== '');
           
+          // Converter cada parte para número e somar
           const result = parts.reduce((sum, num) => {
+            // Remover espaços e converter para número inteiro
             const parsed = parseInt(num.trim(), 10);
+            // Adicionar apenas se for um número válido
             return isNaN(parsed) ? sum : sum + parsed;
           }, 0);
           
+          // Atualizar resultado e expressão
           setCalculatorResult(result.toString());
           setCalculatorExpression(`${calculatorExpression} = ${result}`);
+        } else {
+          // Se não há operação de adição, apenas manter o valor atual
+          setCalculatorExpression(`${calculatorExpression} = ${calculatorResult}`);
         }
         break;
         

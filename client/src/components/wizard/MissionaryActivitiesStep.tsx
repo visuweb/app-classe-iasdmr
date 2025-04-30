@@ -94,11 +94,9 @@ const MissionaryActivitiesStep: React.FC<MissionaryActivitiesStepProps> = ({ isA
                       min="0"
                       value={missionaryActivities[currentActivity.id as MissionaryActivityType] ?? ""}
                       onChange={handleInputChange}
-                      className="pr-12"
+                      className="w-full"
                     />
-                    <span className="absolute inset-y-0 right-3 flex items-center text-sm text-gray-500">
-                      unid.
-                    </span>
+
                   </div>
                   <Button 
                     variant="default" 
@@ -115,13 +113,24 @@ const MissionaryActivitiesStep: React.FC<MissionaryActivitiesStepProps> = ({ isA
                 </p>
               </div>
               
-              <Button 
-                variant="default" 
-                className="w-full"
-                onClick={handleContinue}
-              >
-                CONTINUAR
-              </Button>
+              <div className="flex gap-2">
+                {currentActivityIndex > 0 && (
+                  <Button 
+                    variant="outline" 
+                    className="flex-1"
+                    onClick={() => setCurrentActivityIndex(currentActivityIndex - 1)}
+                  >
+                    VOLTAR
+                  </Button>
+                )}
+                <Button 
+                  variant="default" 
+                  className="flex-1"
+                  onClick={handleContinue}
+                >
+                  {currentActivityIndex < missionaryActivityDefinitions.length - 1 ? 'PRÓXIMO' : 'FINALIZAR'}
+                </Button>
+              </div>
             </motion.div>
           )}
         </AnimatePresence>
