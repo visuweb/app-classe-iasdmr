@@ -23,8 +23,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Set up authentication
   setupAuth(app);
 
+  // Middleware to check if user is admin
+  const ensureAdmin = (req: any, res: any, next: any) => {
+    if (req.isAuthenticated() && req.user.isAdmin) {
+      return next();
+    }
+    res.status(403).json({ message: "Acesso negado. Apenas administradores podem acessar esta função." });
+  };
+
   // Teacher routes
-  app.post("/api/teachers", async (req, res) => {
+  app.get("/api/teachers", ensureAdmin, async (req, res) => {
+    try {
+      const teachers = await storage.getAllTeachers();
+      // Remove passwords from response
+      const sanitizedTeachers = teachers.map(({ password, ...rest }) => rest);
+      res.json(sanitizedTeachers);
+    } catch (error) {
+      res.status(500).json({ message: "Falha ao buscar professores" });
+    }
+  });
+
+  app.get("/api/classes/:classId/teachers", ensureAuthenticated, async (req, res) => {
+    try {
+      const classId = parseInt(req.params.classId, 10);
+      const teachers = await storage.getTeachersByClassId(classId);
+      // Remove passwords from response
+      const sanitizedTeachers = teachers.map(({ password, ...rest }) => rest);
+      res.json(sanitizedTeachers);
+    } catch (error) {
+      res.status(500).json({ message: "Falha ao buscar professores da classe" });
+    }
+  });
+
+  app.post("/api/teachers", ensureAdmin, async (req, res) => {
     try {
       const parsed = insertTeacherSchema.safeParse(req.body);
       if (!parsed.success) {
@@ -47,7 +78,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/teacher-classes", ensureAuthenticated, async (req, res) => {
+  app.post("/api/teacher-classes", ensureAdmin, async (req, res) => {
     try {
       const parsed = insertTeacherClassSchema.safeParse(req.body);
       if (!parsed.success) {

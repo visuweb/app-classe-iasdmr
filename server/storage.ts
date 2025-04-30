@@ -20,6 +20,7 @@ export interface IStorage {
   // Teacher operations
   getTeacherById(id: number): Promise<Teacher | undefined>;
   getTeacherByCpf(cpf: string): Promise<Teacher | undefined>;
+  getAllTeachers(): Promise<Teacher[]>;
   createTeacher(data: InsertTeacher): Promise<Teacher>;
   validateTeacher(cpf: string, password: string): Promise<Teacher | null>;
   comparePasswords(supplied: string, stored: string): Promise<boolean>;

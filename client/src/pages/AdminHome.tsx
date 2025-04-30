@@ -40,7 +40,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 const AdminHome = () => {
   const { teacher, logoutMutation } = useAuth();
   const { toast } = useToast();
-  const [_, navigate] = useLocation();
+  const [_, setLocation] = useLocation();
   const [selectedClassId, setSelectedClassId] = useState<number | null>(null);
   const [newClassName, setNewClassName] = useState('');
   const [newStudentName, setNewStudentName] = useState('');
@@ -244,7 +244,7 @@ const AdminHome = () => {
   const handleLogout = () => {
     logoutMutation.mutate(undefined, {
       onSuccess: () => {
-        navigate('/auth');
+        setLocation('/auth');
       },
     });
   };
@@ -252,11 +252,11 @@ const AdminHome = () => {
   // Redirect if not admin or not logged in
   useEffect(() => {
     if (!teacher) {
-      navigate('/auth');
+      setLocation('/auth');
     } else if (!teacher.isAdmin) {
-      navigate('/');
+      setLocation('/');
     }
-  }, [teacher, navigate]);
+  }, [teacher, setLocation]);
 
   if (!teacher || !teacher.isAdmin) {
     return null;

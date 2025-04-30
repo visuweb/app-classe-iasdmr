@@ -93,6 +93,10 @@ export class DatabaseStorage implements IStorage {
     return results.length > 0 ? results[0] : undefined;
   }
   
+  async getAllTeachers(): Promise<Teacher[]> {
+    return await db.select().from(teachers);
+  }
+  
   async createTeacher(data: InsertTeacher): Promise<Teacher> {
     const results = await db.insert(teachers).values(data).returning();
     return results[0];
