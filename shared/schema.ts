@@ -8,6 +8,7 @@ export const teachers = pgTable("teachers", {
   name: text("name").notNull(),
   cpf: text("cpf").notNull().unique(),
   password: text("password").notNull(),
+  isAdmin: boolean("is_admin").default(false).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -65,6 +66,7 @@ export const insertTeacherSchema = createInsertSchema(teachers).pick({
   name: true,
   cpf: true,
   password: true,
+  isAdmin: true,
 });
 
 export const insertTeacherClassSchema = createInsertSchema(teacherClasses).pick({
