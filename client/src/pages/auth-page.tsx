@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useLocation } from 'wouter';
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
@@ -11,8 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Loader2, School, BookOpen, Users, ArrowRight } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { apiRequest } from '@/lib/queryClient';
-import { useMutation } from '@tanstack/react-query';
+import { useAuth } from '@/hooks/use-auth';
 
 // Login form schema
 const loginSchema = z.object({
@@ -37,6 +36,16 @@ const AuthPage = () => {
   const [tab, setTab] = useState<string>('login');
   const [loginError, setLoginError] = useState<string>('');
   const [registerError, setRegisterError] = useState<string>('');
+  
+  // Usar o hook useAuth para autenticação
+  const { teacher, isLoading, loginMutation, registerMutation } = useAuth();
+  
+  // Redirecionar para a página inicial se já estiver autenticado
+  useEffect(() => {
+    if (teacher) {
+      setLocation('/');
+    }
+  }, [teacher, setLocation]);
 
   // Login form
   const loginForm = useForm<LoginValues>({
@@ -57,62 +66,39 @@ const AuthPage = () => {
     },
   });
 
-  // Login mutation
-  const loginMutation = useMutation({
-    mutationFn: async (data: LoginValues) => {
-      const response = await apiRequest('POST', '/api/login', data);
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Falha ao entrar');
-      }
-      return response.json();
-    },
-    onSuccess: () => {
-      toast({
-        title: 'Login realizado com sucesso',
-        description: 'Você está sendo redirecionado...',
-      });
-      setLocation('/');
-    },
-    onError: (error: Error) => {
-      setLoginError(error.message);
-    },
-  });
-
-  // Register mutation
-  const registerMutation = useMutation({
-    mutationFn: async (data: RegisterValues) => {
-      const response = await apiRequest('POST', '/api/teachers', data);
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Falha ao cadastrar');
-      }
-      return response.json();
-    },
-    onSuccess: () => {
-      toast({
-        title: 'Registro realizado com sucesso',
-        description: 'Agora você pode fazer login',
-      });
-      setTab('login');
-      loginForm.setValue('cpf', registerForm.getValues('cpf'));
-      registerForm.reset();
-    },
-    onError: (error: Error) => {
-      setRegisterError(error.message);
-    },
-  });
-
   // Login handler
   const onLoginSubmit = (values: LoginValues) => {
     setLoginError('');
-    loginMutation.mutate(values);
+    loginMutation.mutate(values, {
+      onError: (error: Error) => {
+        setLoginError(error.message);
+      },
+      onSuccess: () => {
+        toast({
+          title: 'Login realizado com sucesso',
+          description: 'Você está sendo redirecionado...',
+        });
+      }
+    });
   };
 
   // Register handler
   const onRegisterSubmit = (values: RegisterValues) => {
     setRegisterError('');
-    registerMutation.mutate(values);
+    registerMutation.mutate(values, {
+      onSuccess: () => {
+        toast({
+          title: 'Registro realizado com sucesso',
+          description: 'Agora você pode fazer login',
+        });
+        setTab('login');
+        loginForm.setValue('cpf', registerForm.getValues('cpf'));
+        registerForm.reset();
+      },
+      onError: (error: Error) => {
+        setRegisterError(error.message);
+      }
+    });
   };
 
   return (
