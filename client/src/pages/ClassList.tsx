@@ -40,9 +40,12 @@ import {
   PenSquare, 
   UserPlus, 
   Users,
-  ChevronRight 
+  ChevronRight,
+  Plus
 } from 'lucide-react';
 import { Class, insertClassSchema, insertStudentSchema } from '@shared/schema';
+import Header from '@/components/Header';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 // Form schemas with validation
 const classFormSchema = insertClassSchema.extend({

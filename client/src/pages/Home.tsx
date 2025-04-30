@@ -9,12 +9,15 @@ import {
   CardTitle 
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { School, ClipboardList, BarChart3, Users } from 'lucide-react';
+import { School, ClipboardList, BarChart3 } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
+import { useIsMobile } from '@/hooks/use-mobile';
+import Header from '@/components/Header';
 
 const Home: React.FC = () => {
   const { teacher } = useAuth();
   const [_, setLocation] = useLocation();
+  const isMobile = useIsMobile();
   
   // Redirecionar administradores para a página administrativa
   useEffect(() => {
@@ -29,75 +32,76 @@ const Home: React.FC = () => {
   }
   
   return (
-    <div className="container mx-auto py-8 px-4">
-      <div className="text-center mb-10">
-        <h1 className="text-3xl font-bold text-gray-800 mb-4">CLASSE ALUNOS</h1>
-        <p className="text-gray-600 max-w-2xl mx-auto">
-          Sistema para controle de presença de alunos e atividades missionárias
-        </p>
-      </div>
+    <div className="flex flex-col min-h-screen bg-gray-50">
+      <Header />
       
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-6xl mx-auto">
-        <Card className="shadow-md hover:shadow-lg transition-shadow">
-          <CardHeader className="text-center">
-            <div className="w-14 h-14 rounded-full bg-primary-100 flex items-center justify-center mx-auto mb-2">
-              <School className="h-8 w-8 text-primary-500" />
-            </div>
-            <CardTitle>Minhas Classes</CardTitle>
-            <CardDescription>Acesse suas turmas</CardDescription>
-          </CardHeader>
-          <CardContent className="text-center">
-            <p className="text-sm text-gray-500">
-              Visualize suas classes e gerencie os alunos de suas turmas.
-            </p>
-          </CardContent>
-          <CardFooter className="flex justify-center">
-            <Link href="/classes">
-              <Button>Acessar Classes</Button>
-            </Link>
-          </CardFooter>
-        </Card>
+      <main className="flex-1 py-6 px-4">
+        <div className={`text-center mb-6 ${isMobile ? 'mt-2' : 'mt-6'}`}>
+          <h1 className={`${isMobile ? 'text-2xl' : 'text-3xl'} font-bold text-gray-800 mb-2`}>
+            Bem-vindo, {teacher?.name}
+          </h1>
+          <p className="text-gray-600 max-w-2xl mx-auto text-sm">
+            Sistema para controle de presença de alunos e atividades missionárias
+          </p>
+        </div>
         
-        <Card className="shadow-md hover:shadow-lg transition-shadow">
-          <CardHeader className="text-center">
-            <div className="w-14 h-14 rounded-full bg-primary-100 flex items-center justify-center mx-auto mb-2">
-              <ClipboardList className="h-8 w-8 text-primary-500" />
+        <div className="grid grid-cols-1 gap-4 max-w-xl mx-auto mt-4">
+          <Card className="shadow-sm hover:shadow-md transition-shadow">
+            <div className="flex items-center p-4">
+              <div className="w-12 h-12 rounded-full bg-primary-100 flex items-center justify-center">
+                <School className="h-6 w-6 text-primary-500" />
+              </div>
+              <div className="ml-4 flex-1">
+                <h3 className="font-medium text-base">Minhas Classes</h3>
+                <p className="text-sm text-gray-500">Gerencie suas turmas e alunos</p>
+              </div>
+              <Link href="/classes">
+                <Button size={isMobile ? "sm" : "default"} className="shrink-0">Acessar</Button>
+              </Link>
             </div>
-            <CardTitle>Iniciar Registro</CardTitle>
-            <CardDescription>Chamada e atividades missionárias</CardDescription>
-          </CardHeader>
-          <CardContent className="text-center">
-            <p className="text-sm text-gray-500">
-              Registre presença e atividades missionárias com um fluxo intuitivo de 3 etapas.
-            </p>
-          </CardContent>
-          <CardFooter className="flex justify-center">
-            <Link href="/wizard">
-              <Button variant="default">Iniciar Registro</Button>
-            </Link>
-          </CardFooter>
-        </Card>
+          </Card>
+          
+          <Card className="shadow-sm hover:shadow-md transition-shadow">
+            <div className="flex items-center p-4">
+              <div className="w-12 h-12 rounded-full bg-primary-100 flex items-center justify-center">
+                <ClipboardList className="h-6 w-6 text-primary-500" />
+              </div>
+              <div className="ml-4 flex-1">
+                <h3 className="font-medium text-base">Iniciar Registro</h3>
+                <p className="text-sm text-gray-500">Chamada e atividades missionárias</p>
+              </div>
+              <Link href="/wizard">
+                <Button size={isMobile ? "sm" : "default"} variant="default" className="shrink-0">Iniciar</Button>
+              </Link>
+            </div>
+          </Card>
+          
+          <Card className="shadow-sm hover:shadow-md transition-shadow">
+            <div className="flex items-center p-4">
+              <div className="w-12 h-12 rounded-full bg-primary-100 flex items-center justify-center">
+                <BarChart3 className="h-6 w-6 text-primary-500" />
+              </div>
+              <div className="ml-4 flex-1">
+                <h3 className="font-medium text-base">Ver Registros</h3>
+                <p className="text-sm text-gray-500">Histórico de atividades</p>
+              </div>
+              <Link href="/records">
+                <Button size={isMobile ? "sm" : "default"} variant="outline" className="shrink-0">Acessar</Button>
+              </Link>
+            </div>
+          </Card>
+        </div>
         
-        <Card className="shadow-md hover:shadow-lg transition-shadow">
-          <CardHeader className="text-center">
-            <div className="w-14 h-14 rounded-full bg-primary-100 flex items-center justify-center mx-auto mb-2">
-              <BarChart3 className="h-8 w-8 text-primary-500" />
-            </div>
-            <CardTitle>Ver Registros</CardTitle>
-            <CardDescription>Histórico e estatísticas</CardDescription>
-          </CardHeader>
-          <CardContent className="text-center">
-            <p className="text-sm text-gray-500">
-              Visualize o histórico de presença e atividades missionárias de suas classes.
-            </p>
-          </CardContent>
-          <CardFooter className="flex justify-center">
-            <Link href="/records">
-              <Button variant="outline">Ver Registros</Button>
-            </Link>
-          </CardFooter>
-        </Card>
-      </div>
+        {!isMobile && (
+          <div className="text-center mt-12 text-gray-500 text-sm">
+            <p>Deslize o dedo para a direita para acessar o menu em dispositivos móveis</p>
+          </div>
+        )}
+        
+        <div className="mt-12 text-center text-xs text-gray-400">
+          <p>CLASSE ALUNOS v1.0</p>
+        </div>
+      </main>
     </div>
   );
 };

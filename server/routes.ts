@@ -104,8 +104,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Classes routes
   app.get("/api/classes", ensureAuthenticated, async (req, res) => {
     try {
-      const classes = await storage.getAllClasses();
-      res.json(classes);
+      const teacher = req.user as Teacher;
+      
+      // Se for admin, retorna todas as classes
+      if (teacher.isAdmin) {
+        const classes = await storage.getAllClasses();
+        return res.json(classes);
+      }
+      
+      // Se for professor regular, retorna apenas suas classes
+      const teacherClasses = await storage.getClassesByTeacherId(teacher.id);
+      res.json(teacherClasses);
     } catch (error) {
       res.status(500).json({ message: "Falha ao buscar classes" });
     }
