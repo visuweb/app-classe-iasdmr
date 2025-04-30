@@ -149,16 +149,17 @@ const ClassDetails: React.FC = () => {
     });
   };
 
-  // Se não houver ID ou se ocorrer um erro
-  if (classError) {
-    toast({
-      title: 'Erro ao carregar classe',
-      description: 'A classe solicitada não foi encontrada',
-      variant: 'destructive'
-    });
-    navigate('/classes');
-    return null;
-  }
+  // Manipular erro de carregamento de classe
+  useEffect(() => {
+    if (classError) {
+      toast({
+        title: 'Erro ao carregar classe',
+        description: 'A classe solicitada não foi encontrada',
+        variant: 'destructive'
+      });
+      navigate('/classes');
+    }
+  }, [classError, navigate, toast]);
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-50">
@@ -181,13 +182,13 @@ const ClassDetails: React.FC = () => {
                 classData?.name || 'Detalhes da Classe'
               )}
             </h1>
-            <p className="text-sm text-gray-500">
+            <div className="text-sm text-gray-500">
               {isStudentsLoading ? (
                 <Skeleton className="h-4 w-32 mt-1" />
               ) : (
-                `${students.length} aluno${students.length !== 1 ? 's' : ''} cadastrado${students.length !== 1 ? 's' : ''}`
+                <span>{students.length} aluno{students.length !== 1 ? 's' : ''} cadastrado{students.length !== 1 ? 's' : ''}</span>
               )}
-            </p>
+            </div>
           </div>
         </div>
         
