@@ -1,11 +1,14 @@
 import React from 'react';
 import { Link, useLocation } from 'wouter';
-import { School } from 'lucide-react';
+import { School, LogOut } from 'lucide-react';
 import { useWizard } from '@/contexts/WizardContext';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/hooks/use-auth';
+import { Button } from '@/components/ui/button';
 
 const Header: React.FC = () => {
-  const [location] = useLocation();
+  const [location, setLocation] = useLocation();
+  const { logoutMutation } = useAuth();
   
   // Get current class name from context (if in wizard)
   const isWizard = location.includes('/wizard');
@@ -21,6 +24,14 @@ const Header: React.FC = () => {
     // Handle case when not in wizard context
   }
   
+  const handleLogout = () => {
+    logoutMutation.mutate(undefined, {
+      onSuccess: () => {
+        setLocation('/auth');
+      }
+    });
+  };
+  
   return (
     <header className="bg-white shadow">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
@@ -34,11 +45,21 @@ const Header: React.FC = () => {
           </div>
         </Link>
         
-        {isWizard && currentClassName && (
-          <div className="flex items-center">
-            <span className="text-sm text-gray-600 mr-2">{currentClassName}</span>
-          </div>
-        )}
+        <div className="flex items-center gap-4">
+          {isWizard && currentClassName && (
+            <span className="text-sm text-gray-600">{currentClassName}</span>
+          )}
+          
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={handleLogout}
+            className="flex items-center gap-1 text-gray-600 hover:text-red-600"
+          >
+            <LogOut className="h-4 w-4" />
+            <span>Sair</span>
+          </Button>
+        </div>
       </div>
     </header>
   );

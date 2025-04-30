@@ -17,6 +17,7 @@ const MissionaryActivitiesStep: React.FC<MissionaryActivitiesStepProps> = ({ isA
   const { 
     currentActivityIndex, 
     setActivityValue, 
+    advanceToNextActivity,
     missionaryActivities,
     openCalculator 
   } = useWizard();
@@ -27,9 +28,13 @@ const MissionaryActivitiesStep: React.FC<MissionaryActivitiesStepProps> = ({ isA
   
   const handleContinue = () => {
     if (currentActivity) {
+      // Atualiza o valor atual se necessário
       const activityId = currentActivity.id as MissionaryActivityType;
       const value = missionaryActivities[activityId] || 0;
       setActivityValue(activityId, value);
+      
+      // Avança para a próxima atividade manualmente
+      advanceToNextActivity();
     }
   };
   

@@ -39,6 +39,7 @@ type WizardContextType = {
   
   // Activity methods
   setActivityValue: (activity: MissionaryActivityType, value: number) => void;
+  advanceToNextActivity: () => void;
   
   // Calculator methods
   openCalculator: (target: MissionaryActivityType) => void;
@@ -144,11 +145,15 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   
   // Activity methods
   const setActivityValue = (activity: MissionaryActivityType, value: number) => {
+    // Apenas atualiza o valor sem avançar automaticamente
     setMissionaryActivities(prev => ({
       ...prev,
       [activity]: value
     }));
-    
+  };
+  
+  // Método para avançar para a próxima atividade manualmente
+  const advanceToNextActivity = () => {
     if (currentActivityIndex < missionaryActivityDefinitions.length - 1) {
       setCurrentActivityIndex(currentActivityIndex + 1);
     } else {
@@ -337,6 +342,7 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     markStudentAttendance,
     
     setActivityValue,
+    advanceToNextActivity,
     
     openCalculator,
     closeCalculator,
