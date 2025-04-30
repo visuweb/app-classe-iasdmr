@@ -35,6 +35,18 @@ async function hashPassword(password: string) {
   return `${buf.toString("hex")}.${salt}`;
 }
 
+async function comparePasswords(supplied: string, stored: string) {
+  // Se o formato não for compatível (não contém o delimitador)
+  if (!stored.includes('.')) {
+    return supplied === stored; // Comparação básica para senhas legadas
+  }
+  
+  const [hashed, salt] = stored.split(".");
+  const hashedBuf = Buffer.from(hashed, "hex");
+  const suppliedBuf = (await scryptAsync(supplied, salt, 64)) as Buffer;
+  return timingSafeEqual(hashedBuf, suppliedBuf);
+}
+
 // Criar store para sessões no PostgreSQL
 const PostgresSessionStore = connectPg(session);
 
@@ -66,22 +78,47 @@ export class DatabaseStorage implements IStorage {
     return results[0];
   }
   
+  async comparePasswords(supplied: string, stored: string): Promise<boolean> {
+    return comparePasswords(supplied, stored);
+  }
+  
   async validateTeacher(cpf: string, password: string): Promise<Teacher | null> {
     const teacher = await this.getTeacherByCpf(cpf);
     
     if (!teacher) return null;
     
-    // Caso especial para o admin
+    // Caso especial para o admin (compatibilidade com implementação anterior)
     if (cpf === 'admin' && password === 'admincei2025') {
       return teacher;
     }
     
-    // Verificando para usuários normais 
-    if (teacher.password === password) {
+    // Verificando senha com hash seguro para outros usuários
+    if (await this.comparePasswords(password, teacher.password)) {
       return teacher;
     }
     
     return null;
+  }
+  
+  async createAdminUser(): Promise<void> {
+    try {
+      // Verificar se o administrador já existe
+      const existingAdmin = await this.getTeacherByCpf("admin");
+      
+      if (!existingAdmin) {
+        // Criar o usuário administrador
+        const hashedPassword = await hashPassword("admincei2025");
+        await this.createTeacher({
+          name: "Administrador",
+          cpf: "admin",
+          password: hashedPassword,
+          isAdmin: true
+        });
+        console.log("Admin user created successfully");
+      }
+    } catch (error) {
+      console.error("Error creating admin user:", error);
+    }
   }
   
   // Teacher-Class operations

@@ -48,6 +48,11 @@ app.use((req, res, next) => {
     if ('seedTestTeacher' in storage) {
       await (storage as any).seedTestTeacher();
     }
+    
+    // Criar usuário administrador
+    if ('createAdminUser' in storage) {
+      await (storage as any).createAdminUser();
+    }
   } catch (error) {
     console.error("Database connection failed:", error);
   }

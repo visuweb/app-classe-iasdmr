@@ -22,6 +22,8 @@ export interface IStorage {
   getTeacherByCpf(cpf: string): Promise<Teacher | undefined>;
   createTeacher(data: InsertTeacher): Promise<Teacher>;
   validateTeacher(cpf: string, password: string): Promise<Teacher | null>;
+  comparePasswords(supplied: string, stored: string): Promise<boolean>;
+  createAdminUser(): Promise<void>;
   
   // Teacher-Class operations
   assignTeacherToClass(data: InsertTeacherClass): Promise<TeacherClass>;
