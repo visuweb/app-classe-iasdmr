@@ -36,6 +36,7 @@ type WizardContextType = {
   
   // Attendance methods
   markStudentAttendance: (studentId: number, present: boolean) => void;
+  goToPreviousStudent: () => void;
   
   // Activity methods
   setActivityValue: (activity: MissionaryActivityType, value: number) => void;
@@ -141,6 +142,13 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     } else {
       // When all students are processed, move to next step
       nextStep();
+    }
+  };
+  
+  // Voltar para o aluno anterior
+  const goToPreviousStudent = () => {
+    if (currentStudentIndex > 0) {
+      setCurrentStudentIndex(currentStudentIndex - 1);
     }
   };
   
@@ -409,6 +417,7 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     setCurrentClassId,
     
     markStudentAttendance,
+    goToPreviousStudent,
     
     setActivityValue,
     advanceToNextActivity,

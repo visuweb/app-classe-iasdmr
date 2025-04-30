@@ -110,9 +110,11 @@ const CompletionStep: React.FC<CompletionStepProps> = ({ isActive }) => {
               {Object.entries(missionaryActivities).map(([key, value]) => {
                 // Mostrar apenas atividades com valores maior que zero
                 if (value && value > 0) {
+                  // Verificar se temos um rótulo para esta atividade
+                  const label = activityLabels[key as keyof typeof activityLabels] || key;
                   return (
                     <React.Fragment key={key}>
-                      <div className="text-left text-gray-500">{activityLabels[key as keyof typeof activityLabels]}:</div>
+                      <div className="text-left text-gray-500">{label}:</div>
                       <div className="text-right font-medium text-gray-800">{value}</div>
                     </React.Fragment>
                   );

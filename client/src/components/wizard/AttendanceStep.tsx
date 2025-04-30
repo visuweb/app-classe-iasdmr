@@ -15,6 +15,7 @@ const AttendanceStep: React.FC<AttendanceStepProps> = ({ isActive }) => {
     students, 
     currentStudentIndex, 
     markStudentAttendance, 
+    goToPreviousStudent,
     wizardDate 
   } = useWizard();
   
@@ -65,9 +66,21 @@ const AttendanceStep: React.FC<AttendanceStepProps> = ({ isActive }) => {
                   <h4 className="font-medium text-gray-800">{currentStudent.name}</h4>
                   <p className="text-xs text-gray-500">{formattedDate}</p>
                 </div>
-                <span className="text-xs font-medium rounded-full bg-blue-100 text-blue-800 px-2.5 py-0.5">
-                  {currentStudentIndex + 1}/{students.length}
-                </span>
+                <div className="flex items-center">
+                  {currentStudentIndex > 0 && (
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="mr-2 text-xs" 
+                      onClick={goToPreviousStudent}
+                    >
+                      Voltar
+                    </Button>
+                  )}
+                  <span className="text-xs font-medium rounded-full bg-blue-100 text-blue-800 px-2.5 py-0.5">
+                    {currentStudentIndex + 1}/{students.length}
+                  </span>
+                </div>
               </div>
               
               <div className="flex space-x-3">
