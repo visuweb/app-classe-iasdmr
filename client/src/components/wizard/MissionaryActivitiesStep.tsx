@@ -15,7 +15,8 @@ interface MissionaryActivitiesStepProps {
 
 const MissionaryActivitiesStep: React.FC<MissionaryActivitiesStepProps> = ({ isActive }) => {
   const { 
-    currentActivityIndex, 
+    currentActivityIndex,
+    setCurrentActivityIndex,
     setActivityValue, 
     advanceToNextActivity,
     missionaryActivities,

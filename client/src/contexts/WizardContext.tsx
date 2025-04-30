@@ -40,6 +40,7 @@ type WizardContextType = {
   // Activity methods
   setActivityValue: (activity: MissionaryActivityType, value: number) => void;
   advanceToNextActivity: () => void;
+  setCurrentActivityIndex: (index: number) => void;
   
   // Calculator methods
   openCalculator: (target: MissionaryActivityType) => void;
@@ -380,6 +381,7 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     
     setActivityValue,
     advanceToNextActivity,
+    setCurrentActivityIndex,
     
     openCalculator,
     closeCalculator,
