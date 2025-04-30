@@ -36,15 +36,35 @@ async function hashPassword(password: string) {
 }
 
 async function comparePasswords(supplied: string, stored: string) {
-  // Se o formato não for compatível (não contém o delimitador)
-  if (!stored.includes('.')) {
-    return supplied === stored; // Comparação básica para senhas legadas
+  // Se o formato não for compatível (não contém o delimitador) ou se algum for nulo/indefinido
+  if (!stored || !supplied) {
+    return false;
   }
   
-  const [hashed, salt] = stored.split(".");
-  const hashedBuf = Buffer.from(hashed, "hex");
-  const suppliedBuf = (await scryptAsync(supplied, salt, 64)) as Buffer;
-  return timingSafeEqual(hashedBuf, suppliedBuf);
+  // Para senhas legadas
+  if (!stored.includes('.')) {
+    return supplied === stored;
+  }
+  
+  try {
+    const [hashed, salt] = stored.split(".");
+    if (!hashed || !salt) {
+      return false;
+    }
+    
+    const hashedBuf = Buffer.from(hashed, "hex");
+    const suppliedBuf = (await scryptAsync(supplied, salt, 64)) as Buffer;
+    
+    if (hashedBuf.length !== suppliedBuf.length) {
+      console.error("Buffer length mismatch", hashedBuf.length, suppliedBuf.length);
+      return false;
+    }
+    
+    return timingSafeEqual(hashedBuf, suppliedBuf);
+  } catch (error) {
+    console.error("Password comparison error:", error);
+    return false;
+  }
 }
 
 // Criar store para sessões no PostgreSQL
