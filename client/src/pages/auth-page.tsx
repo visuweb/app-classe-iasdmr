@@ -12,6 +12,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Loader2, School, BookOpen, Users, ArrowRight } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 // Login form schema
 const loginSchema = z.object({
@@ -101,14 +102,29 @@ const AuthPage = () => {
     });
   };
 
+  const isMobile = useIsMobile();
+
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-4">
       <div className="max-w-6xl w-full grid md:grid-cols-2 gap-8 items-center">
-        {/* Hero section */}
+        {/* Mobile Branding - Visible only on mobile */}
+        {isMobile && (
+          <div className="flex flex-col items-center mb-4">
+            <div className="flex items-center space-x-2 mb-2">
+              <School className="h-8 w-8 text-primary-500" />
+              <h1 className="text-2xl font-bold text-gray-900">CLASSE ALUNOS</h1>
+            </div>
+            <p className="text-center text-sm text-gray-600 mb-4">
+              Gerenciamento de classes e atividades missionárias
+            </p>
+          </div>
+        )}
+        
+        {/* Hero section - Hidden on mobile */}
         <div className="hidden md:flex flex-col space-y-8">
           <div className="flex items-center space-x-3">
             <School className="h-10 w-10 text-primary-500" />
-            <h1 className="text-3xl font-bold text-gray-900">TURMA CLASSE</h1>
+            <h1 className="text-3xl font-bold text-gray-900">CLASSE ALUNOS</h1>
           </div>
           
           <div className="space-y-4">
@@ -149,10 +165,10 @@ const AuthPage = () => {
         </div>
         
         {/* Auth forms */}
-        <div>
+        <div className={isMobile ? "w-full" : ""}>
           <Card className="w-full">
-            <CardHeader>
-              <CardTitle className="text-center text-2xl">
+            <CardHeader className={isMobile ? "py-3" : ""}>
+              <CardTitle className={`text-center ${isMobile ? "text-xl" : "text-2xl"}`}>
                 {tab === 'login' ? 'Entrar' : 'Criar Conta'}
               </CardTitle>
               <CardDescription className="text-center">
@@ -326,16 +342,6 @@ const AuthPage = () => {
               </TabsContent>
             </Tabs>
           </Card>
-          
-          <div className="md:hidden mt-8 text-center space-y-4">
-            <div className="flex items-center justify-center space-x-2">
-              <School className="h-5 w-5 text-primary-500" />
-              <h1 className="text-lg font-bold text-gray-900">TURMA CLASSE</h1>
-            </div>
-            <p className="text-sm text-gray-600">
-              Gerenciamento de classes e atividades missionárias
-            </p>
-          </div>
         </div>
       </div>
     </div>
