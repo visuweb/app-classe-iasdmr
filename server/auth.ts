@@ -67,7 +67,7 @@ export function setupAuth(app: Express) {
 
   // Login route
   app.post("/api/login", (req, res, next) => {
-    passport.authenticate("local", (err, teacher, info) => {
+    passport.authenticate("local", (err: any, teacher: Teacher | false, info: { message?: string }) => {
       if (err) {
         return next(err);
       }

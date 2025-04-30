@@ -2,6 +2,7 @@ import React from 'react';
 import { Link, useLocation } from 'wouter';
 import { School } from 'lucide-react';
 import { useWizard } from '@/contexts/WizardContext';
+import { cn } from '@/lib/utils';
 
 const Header: React.FC = () => {
   const [location] = useLocation();
@@ -24,10 +25,13 @@ const Header: React.FC = () => {
     <header className="bg-white shadow">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
         <Link href="/">
-          <a className="flex items-center">
+          <div className={cn(
+            "flex items-center cursor-pointer",
+            "hover:opacity-90 transition-opacity"
+          )}>
             <School className="h-6 w-6 text-primary-500 mr-2" />
             <h1 className="text-xl font-semibold text-gray-800">TURMA CLASSE</h1>
-          </a>
+          </div>
         </Link>
         
         {isWizard && currentClassName && (

@@ -67,7 +67,7 @@ export class MemStorage implements IStorage {
   private activityCounter: number;
   private teacherCounter: number;
   
-  public sessionStore: session.SessionStore;
+  public sessionStore: session.Store;
   
   constructor() {
     this.classes = new Map();

@@ -1,4 +1,4 @@
-import { Switch, Route } from "wouter";
+import { Switch, Route, useLocation } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -10,32 +10,43 @@ import ClassList from "./pages/ClassList";
 import RecordsList from "./pages/RecordsList";
 import Wizard from "./pages/Wizard";
 import NotFound from "@/pages/not-found";
+import AuthPage from "@/pages/auth-page";
+import { AuthProvider } from "@/hooks/use-auth";
+import { ProtectedRoute } from "@/lib/protected-route";
 
 function Router() {
+  const [location] = useLocation();
+  const showHeaderFooter = !location.includes('/auth');
+  
   return (
-    <Switch>
-      <Route path="/" component={Home} />
-      <Route path="/classes" component={ClassList} />
-      <Route path="/records" component={RecordsList} />
-      <Route path="/wizard" component={Wizard} />
-      <Route component={NotFound} />
-    </Switch>
+    <>
+      {showHeaderFooter && <Header />}
+      <main className="flex-grow">
+        <Switch>
+          <ProtectedRoute path="/" component={Home} />
+          <ProtectedRoute path="/classes" component={ClassList} />
+          <ProtectedRoute path="/records" component={RecordsList} />
+          <ProtectedRoute path="/wizard" component={Wizard} />
+          <Route path="/auth" component={AuthPage} />
+          <Route component={NotFound} />
+        </Switch>
+      </main>
+      {showHeaderFooter && <Footer />}
+    </>
   );
 }
 
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <div className="min-h-screen flex flex-col">
-          <Header />
-          <main className="flex-grow">
+      <AuthProvider>
+        <TooltipProvider>
+          <div className="min-h-screen flex flex-col">
             <Router />
-          </main>
-          <Footer />
-          <Toaster />
-        </div>
-      </TooltipProvider>
+            <Toaster />
+          </div>
+        </TooltipProvider>
+      </AuthProvider>
     </QueryClientProvider>
   );
 }
