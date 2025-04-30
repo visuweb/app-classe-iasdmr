@@ -40,6 +40,8 @@ export interface IStorage {
   getStudentsByClassId(classId: number): Promise<Student[]>;
   getStudent(id: number): Promise<Student | undefined>;
   createStudent(data: InsertStudent): Promise<Student>;
+  updateStudent(id: number, data: Partial<InsertStudent>): Promise<Student | undefined>;
+  deleteStudent(id: number): Promise<boolean>;
   
   // Attendance operations
   getAttendanceRecords(classId?: number): Promise<(AttendanceRecord & { studentName: string })[]>;
