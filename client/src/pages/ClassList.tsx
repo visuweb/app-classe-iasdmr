@@ -64,8 +64,35 @@ const ClassList: React.FC = () => {
   const [isAddStudentOpen, setIsAddStudentOpen] = useState(false);
   
   // Fetch classes
-  const { data: classes, isLoading } = useQuery<Class[]>({
+  const { data: classes = [], isLoading, refetch: refetchClasses } = useQuery<Class[]>({
     queryKey: ['/api/classes'],
+  });
+  
+  // Fetch students count for each class
+  const classStudentCounts = useQuery({
+    queryKey: ['/api/classes-students-count'],
+    queryFn: async () => {
+      if (!classes || classes.length === 0) return {};
+      
+      // Criar um mapa que armazenará o ID da classe como chave e a contagem de alunos como valor
+      const countsMap: Record<number, number> = {};
+      
+      // Buscar alunos para cada classe em paralelo
+      await Promise.all(
+        classes.map(async (classObj) => {
+          try {
+            const res = await apiRequest('GET', `/api/classes/${classObj.id}/students`);
+            const students = await res.json();
+            countsMap[classObj.id] = students.length;
+          } catch (error) {
+            countsMap[classObj.id] = 0;
+          }
+        })
+      );
+      
+      return countsMap;
+    },
+    enabled: classes.length > 0,
   });
   
   // Forms
@@ -113,7 +140,10 @@ const ClassList: React.FC = () => {
       return response.json();
     },
     onSuccess: () => {
+      // Invalidate both classes and the student counts
       queryClient.invalidateQueries({ queryKey: ['/api/classes'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/classes-students-count'] });
+      
       toast({
         title: 'Aluno adicionado com sucesso',
         description: 'O novo aluno foi adicionado à classe',
@@ -199,7 +229,13 @@ const ClassList: React.FC = () => {
               <h3 className="font-medium text-base">{classObj.name}</h3>
               <div className="flex items-center mt-1 text-sm text-gray-500">
                 <Users className="h-3.5 w-3.5 mr-1" />
-                <span>Alunos cadastrados: 0</span>
+                {classStudentCounts.isLoading ? (
+                  <Skeleton className="h-4 w-20" />
+                ) : (
+                  <span>
+                    Alunos cadastrados: {(classStudentCounts.data && classStudentCounts.data[classObj.id]) || 0}
+                  </span>
+                )}
               </div>
             </div>
             <Button 
@@ -217,7 +253,7 @@ const ClassList: React.FC = () => {
               variant="outline" 
               size="sm" 
               className="flex items-center"
-              onClick={() => handleSelectClass(classObj)}
+              onClick={() => setLocation(`/classes/${classObj.id}`)}
             >
               <PenSquare className="h-3.5 w-3.5 mr-1.5" />
               {isMobile ? "Editar" : "Gerenciar"}

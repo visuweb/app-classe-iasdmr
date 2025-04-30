@@ -120,6 +120,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get class by ID
+  app.get("/api/classes/:id", ensureAuthenticated, async (req, res) => {
+    try {
+      const classId = parseInt(req.params.id, 10);
+      if (isNaN(classId)) {
+        return res.status(400).json({ message: "ID de classe inválido" });
+      }
+      
+      const classData = await storage.getClass(classId);
+      if (!classData) {
+        return res.status(404).json({ message: "Classe não encontrada" });
+      }
+      
+      // Verificar se o professor tem acesso a esta classe
+      const teacher = req.user as Teacher;
+      if (!teacher.isAdmin) {
+        const teacherClasses = await storage.getClassesByTeacherId(teacher.id);
+        const hasAccess = teacherClasses.some(c => c.id === classId);
+        if (!hasAccess) {
+          return res.status(403).json({ message: "Acesso negado a esta classe" });
+        }
+      }
+      
+      res.json(classData);
+    } catch (error) {
+      res.status(500).json({ message: "Falha ao buscar dados da classe" });
+    }
+  });
+
   app.post("/api/classes", ensureAdmin, async (req, res) => {
     try {
       const parsed = insertClassSchema.safeParse(req.body);
