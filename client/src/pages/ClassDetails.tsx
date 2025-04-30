@@ -55,6 +55,16 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 // Schemas para validação
 const studentFormSchema = z.object({
@@ -69,6 +79,9 @@ const ClassDetails: React.FC = () => {
   const { teacher } = useAuth();
   const isMobile = useIsMobile();
   const [isAddStudentOpen, setIsAddStudentOpen] = useState(false);
+  const [isDeleteStudentOpen, setIsDeleteStudentOpen] = useState(false);
+  const [studentToDelete, setStudentToDelete] = useState<Student | null>(null);
+  const [currentStudentId, setCurrentStudentId] = useState<number | null>(null);
   
   // Estado da classe
   const classId = params?.id ? parseInt(params.id, 10) : undefined;
@@ -112,24 +125,62 @@ const ClassDetails: React.FC = () => {
     enabled: !!classId,
   });
 
-  // Mutation para criar aluno
+  // Mutation para criar/editar aluno
   const createStudentMutation = useMutation({
-    mutationFn: async (data: z.infer<typeof studentFormSchema>) => {
-      const res = await apiRequest('POST', '/api/students', data);
-      return res.json();
+    mutationFn: async (data: z.infer<typeof studentFormSchema> & { id?: number }) => {
+      if (data.id) {
+        // Editar aluno existente
+        const res = await apiRequest('PUT', `/api/students/${data.id}`, { name: data.name, classId: data.classId });
+        return res.json();
+      } else {
+        // Criar novo aluno
+        const res = await apiRequest('POST', '/api/students', data);
+        return res.json();
+      }
     },
     onSuccess: () => {
       toast({
-        title: 'Aluno adicionado!',
-        description: 'O aluno foi adicionado com sucesso.'
+        title: currentStudentId ? 'Aluno atualizado!' : 'Aluno adicionado!',
+        description: currentStudentId 
+          ? 'O aluno foi atualizado com sucesso.' 
+          : 'O aluno foi adicionado com sucesso.'
       });
       refetchStudents();
       setIsAddStudentOpen(false);
+      setCurrentStudentId(null);
       studentForm.reset({ name: '', classId: classId || 0 });
     },
     onError: (error: Error) => {
       toast({
-        title: 'Erro ao adicionar aluno',
+        title: currentStudentId ? 'Erro ao atualizar aluno' : 'Erro ao adicionar aluno',
+        description: error.message,
+        variant: 'destructive'
+      });
+    }
+  });
+  
+  // Mutation para excluir aluno
+  const deleteStudentMutation = useMutation({
+    mutationFn: async (studentId: number) => {
+      const res = await apiRequest('DELETE', `/api/students/${studentId}`);
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.message || 'Erro ao excluir aluno');
+      }
+      return true;
+    },
+    onSuccess: () => {
+      toast({
+        title: 'Aluno excluído',
+        description: 'O aluno foi excluído com sucesso.',
+      });
+      refetchStudents();
+      setIsDeleteStudentOpen(false);
+      setStudentToDelete(null);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Erro ao excluir aluno',
         description: error.message,
         variant: 'destructive'
       });
@@ -141,10 +192,11 @@ const ClassDetails: React.FC = () => {
     navigate('/classes');
   };
 
-  // Adicionar novo aluno
+  // Adicionar ou atualizar aluno
   const onSubmitStudent = (data: z.infer<typeof studentFormSchema>) => {
     createStudentMutation.mutate({
       ...data,
+      id: currentStudentId || undefined,
       classId: classId || 0,
     });
   };
@@ -251,7 +303,29 @@ const ClassDetails: React.FC = () => {
                           <TableCell className="font-medium">{student.name}</TableCell>
                           <TableCell className="text-right">
                             <div className="flex justify-end items-center space-x-2">
-                              {/* Poderia adicionar botões para editar e excluir aqui */}
+                              <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className="h-8 w-8 text-blue-600"
+                                onClick={() => {
+                                  studentForm.reset({ name: student.name, classId: classId || 0 });
+                                  setCurrentStudentId(student.id);
+                                  setIsAddStudentOpen(true);
+                                }}
+                              >
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                              <Button 
+                                variant="ghost" 
+                                size="icon"
+                                className="h-8 w-8 text-red-600"
+                                onClick={() => {
+                                  setStudentToDelete(student);
+                                  setIsDeleteStudentOpen(true);
+                                }}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
                             </div>
                           </TableCell>
                         </TableRow>
@@ -264,13 +338,15 @@ const ClassDetails: React.FC = () => {
           </Card>
         </div>
         
-        {/* Modal para adicionar aluno */}
+        {/* Modal para adicionar/editar aluno */}
         <Dialog open={isAddStudentOpen} onOpenChange={setIsAddStudentOpen}>
           <DialogContent className={isMobile ? "w-[90vw] max-w-md" : ""}>
             <DialogHeader>
-              <DialogTitle>Adicionar Novo Aluno</DialogTitle>
+              <DialogTitle>
+                {currentStudentId ? 'Editar Aluno' : 'Adicionar Novo Aluno'}
+              </DialogTitle>
               <DialogDescription>
-                Adicionar aluno à classe: {classData?.name}
+                {currentStudentId ? 'Atualizar' : 'Adicionar'} aluno à classe: {classData?.name}
               </DialogDescription>
             </DialogHeader>
             
@@ -291,14 +367,54 @@ const ClassDetails: React.FC = () => {
                 />
                 
                 <DialogFooter>
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    onClick={() => {
+                      setIsAddStudentOpen(false);
+                      setCurrentStudentId(null);
+                      studentForm.reset({ name: '', classId: classId || 0 });
+                    }}
+                  >
+                    Cancelar
+                  </Button>
                   <Button type="submit" disabled={createStudentMutation.isPending}>
-                    {createStudentMutation.isPending ? 'Adicionando...' : 'Adicionar Aluno'}
+                    {createStudentMutation.isPending 
+                      ? (currentStudentId ? 'Atualizando...' : 'Adicionando...') 
+                      : (currentStudentId ? 'Atualizar Aluno' : 'Adicionar Aluno')}
                   </Button>
                 </DialogFooter>
               </form>
             </Form>
           </DialogContent>
         </Dialog>
+        
+        {/* Modal de confirmação para excluir aluno */}
+        <AlertDialog open={isDeleteStudentOpen} onOpenChange={setIsDeleteStudentOpen}>
+          <AlertDialogContent className={isMobile ? "w-[90vw] max-w-md" : ""}>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
+              <AlertDialogDescription>
+                Tem certeza que deseja excluir o aluno "{studentToDelete?.name}"? 
+                Esta ação não pode ser desfeita.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() => {
+                  if (studentToDelete?.id) {
+                    deleteStudentMutation.mutate(studentToDelete.id);
+                  }
+                }}
+                className="bg-red-600 hover:bg-red-700"
+                disabled={deleteStudentMutation.isPending}
+              >
+                {deleteStudentMutation.isPending ? 'Excluindo...' : 'Excluir Aluno'}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </main>
     </div>
   );
