@@ -184,8 +184,39 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   
   const applyCalculatorResult = () => {
     if (calculatorTarget && calculatorResult) {
-      const value = parseInt(calculatorResult, 10) || 0;
-      setActivityValue(calculatorTarget, value);
+      // Se há uma expressão de adição que não foi calculada, calcular primeiro
+      if (calculatorExpression.includes('+') && !calculatorExpression.includes('=')) {
+        // Executar o cálculo como se tivesse pressionado "="
+        const parts = calculatorExpression.split('+').filter(part => part.trim() !== '');
+        
+        // Adicionar o número atual se não estiver na expressão
+        if (calculatorResult && calculatorResult !== '0') {
+          const lastPartIndex = calculatorExpression.lastIndexOf('+');
+          const lastPart = calculatorExpression.substring(lastPartIndex + 1).trim();
+          
+          if (lastPart !== calculatorResult) {
+            parts.push(calculatorResult);
+          }
+        }
+        
+        // Somar todas as partes
+        const result = parts.reduce((sum, num) => {
+          const parsed = parseInt(num.trim(), 10);
+          return isNaN(parsed) ? sum : sum + parsed;
+        }, 0);
+        
+        // Usar o resultado calculado
+        setActivityValue(calculatorTarget, result);
+      } else if (calculatorExpression.includes('=')) {
+        // Se já tem um resultado calculado (após '='), usar esse resultado
+        const parts = calculatorExpression.split('=');
+        const finalResult = parseInt(parts[parts.length - 1].trim(), 10) || 0;
+        setActivityValue(calculatorTarget, finalResult);
+      } else {
+        // Caso contrário, usar o valor atual
+        const value = parseInt(calculatorResult, 10) || 0;
+        setActivityValue(calculatorTarget, value);
+      }
     }
     closeCalculator();
   };

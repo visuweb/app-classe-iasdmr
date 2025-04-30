@@ -23,6 +23,17 @@ import { IStorage } from "./storage";
 import session from "express-session";
 import { eq, and } from "drizzle-orm";
 import connectPg from "connect-pg-simple";
+import { scrypt, randomBytes, timingSafeEqual } from "crypto";
+import { promisify } from "util";
+
+// Funções de hash e verificação de senha
+const scryptAsync = promisify(scrypt);
+
+async function hashPassword(password: string) {
+  const salt = randomBytes(16).toString("hex");
+  const buf = (await scryptAsync(password, salt, 64)) as Buffer;
+  return `${buf.toString("hex")}.${salt}`;
+}
 
 // Criar store para sessões no PostgreSQL
 const PostgresSessionStore = connectPg(session);

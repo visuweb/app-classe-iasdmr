@@ -38,6 +38,17 @@ export function setupAuth(app: Express) {
       },
       async (cpf, password, done) => {
         try {
+          // Verificar admin especial com login "admin"
+          if (cpf === "admin") {
+            // Login especial para o admin
+            const adminTeacher = await storage.getTeacherByCpf("admin");
+            if (adminTeacher && await storage.comparePasswords(password, adminTeacher.password)) {
+              return done(null, adminTeacher);
+            }
+            return done(null, false, { message: "Credenciais de admin inválidas" });
+          }
+          
+          // Login normal para professores
           const teacher = await storage.validateTeacher(cpf, password);
           if (!teacher) {
             return done(null, false, { message: "Credenciais inválidas" });
