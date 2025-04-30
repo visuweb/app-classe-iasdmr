@@ -33,8 +33,6 @@ const Home: React.FC = () => {
   
   return (
     <div className="flex flex-col min-h-screen bg-gray-50">
-      <Header />
-      
       <main className="flex-1 py-6 px-4">
         <div className={`text-center mb-6 ${isMobile ? 'mt-2' : 'mt-6'}`}>
           <h1 className={`${isMobile ? 'text-2xl' : 'text-3xl'} font-bold text-gray-800 mb-2`}>

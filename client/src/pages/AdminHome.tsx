@@ -309,7 +309,12 @@ const AdminHome = () => {
           <h1 className={`${isMobile ? 'text-lg' : 'text-xl'} font-bold`}>Administração</h1>
           <p className="text-xs">Bem-vindo, {teacher.name}</p>
         </div>
-        <Button variant="outline" size="sm" onClick={handleLogout} className="gap-2">
+        <Button 
+          variant="outline" 
+          size="sm" 
+          onClick={handleLogout} 
+          className="flex items-center gap-1 text-gray-600 hover:text-red-600"
+        >
           <LogOut className="h-4 w-4" />
           {!isMobile && "Sair"}
         </Button>

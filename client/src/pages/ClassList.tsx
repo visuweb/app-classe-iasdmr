@@ -217,7 +217,7 @@ const ClassList: React.FC = () => {
               variant="outline" 
               size="sm" 
               className="flex items-center"
-              onClick={() => setLocation(`/classes/${classObj.id}`)}
+              onClick={() => handleSelectClass(classObj)}
             >
               <PenSquare className="h-3.5 w-3.5 mr-1.5" />
               {isMobile ? "Editar" : "Gerenciar"}
@@ -243,8 +243,6 @@ const ClassList: React.FC = () => {
   
   return (
     <div className="flex flex-col min-h-screen bg-gray-50">
-      <Header />
-      
       <main className="flex-1 p-4">
         <div className="flex justify-between items-center mb-4">
           <h1 className={`${isMobile ? 'text-xl' : 'text-2xl'} font-bold`}>Minhas Classes</h1>
