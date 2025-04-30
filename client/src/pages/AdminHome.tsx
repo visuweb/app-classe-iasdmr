@@ -3,6 +3,8 @@ import { useAuth } from '@/hooks/use-auth';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { queryClient, apiRequest } from '@/lib/queryClient';
 import { Button } from '@/components/ui/button';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { LogOut, School, User, Book, BarChart, Plus, UserPlus, Calendar, Filter } from 'lucide-react';
 import {
   Card,
   CardContent,
