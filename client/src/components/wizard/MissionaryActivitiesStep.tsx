@@ -80,24 +80,34 @@ const MissionaryActivitiesStep: React.FC<MissionaryActivitiesStepProps> = ({ isA
                 </span>
               </div>
               
-              <div className="flex space-x-2 mb-4">
-                <div className="flex-1">
-                  <Input 
-                    type="number" 
-                    placeholder="Quantidade"
-                    min="0"
-                    value={missionaryActivities[currentActivity.id as MissionaryActivityType] || 0}
-                    onChange={handleInputChange}
-                  />
+              <div className="flex flex-col space-y-3 mb-4">
+                <div className="flex space-x-2">
+                  <div className="flex-1 relative">
+                    <Input 
+                      type="number" 
+                      placeholder="Quantidade"
+                      min="0"
+                      value={missionaryActivities[currentActivity.id as MissionaryActivityType] ?? ""}
+                      onChange={handleInputChange}
+                      className="pr-12"
+                    />
+                    <span className="absolute inset-y-0 right-3 flex items-center text-sm text-gray-500">
+                      unid.
+                    </span>
+                  </div>
+                  <Button 
+                    variant="default" 
+                    size="icon"
+                    className="bg-yellow-500 hover:bg-yellow-600"
+                    onClick={handleOpenCalculator}
+                    title="Abrir calculadora"
+                  >
+                    <Calculator className="h-5 w-5" />
+                  </Button>
                 </div>
-                <Button 
-                  variant="default" 
-                  size="icon"
-                  className="bg-yellow-500 hover:bg-yellow-600"
-                  onClick={handleOpenCalculator}
-                >
-                  <Calculator className="h-5 w-5" />
-                </Button>
+                <p className="text-xs text-gray-500 italic">
+                  Dica: Digite diretamente ou use a calculadora para somar valores parciais.
+                </p>
               </div>
               
               <Button 

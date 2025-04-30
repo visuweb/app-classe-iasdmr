@@ -187,59 +187,85 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   const handleCalculatorAction = (action: string, value?: string) => {
     switch (action) {
       case 'number':
-        if (calculatorResult === '0' || !calculatorExpression) {
+        // Iniciar com o número digitado ou substituir o "0" inicial
+        if (calculatorResult === '0' || calculatorResult === '') {
           setCalculatorResult(value || '0');
           setCalculatorExpression(value || '0');
         } else {
+          // Acrescentar o número digitado ao existente
           setCalculatorResult(prev => prev + (value || ''));
-          setCalculatorExpression(prev => prev + (value || ''));
+          setCalculatorExpression(prev => 
+            // Se a expressão já mostrar o resultado (tem '='), começe nova expressão
+            prev.includes('=') ? (value || '0') : prev + (value || '')
+          );
         }
         break;
         
       case 'add':
+        // Iniciar a operação de adição ou continuar a somar
         if (calculatorExpression.includes('+')) {
-          // If there's already a + operation, calculate the result first
-          const parts = calculatorExpression.split('+');
-          const result = parts.reduce((sum, num) => sum + parseInt(num.trim(), 10), 0);
+          // Se já houver uma operação de adição, calcular o resultado primeiro
+          const parts = calculatorExpression.split('+').filter(part => part.trim() !== '');
+          const result = parts.reduce((sum, num) => {
+            const trimmed = num.trim();
+            // Ignorar parte após o '=' se existir
+            const valueToParse = trimmed.includes('=') ? 
+              trimmed.split('=')[1].trim() : trimmed;
+            const parsed = parseInt(valueToParse, 10);
+            return isNaN(parsed) ? sum : sum + parsed;
+          }, 0);
+          
           setCalculatorResult(result.toString());
           setCalculatorExpression(`${result} + `);
         } else {
+          // Iniciar nova operação de adição
           setCalculatorExpression(`${calculatorResult} + `);
         }
         break;
         
       case 'equals':
+        // Calcular o resultado da operação
         if (calculatorExpression.includes('+')) {
-          const parts = calculatorExpression.split('+');
+          const parts = calculatorExpression.split('+').filter(part => part.trim() !== '');
+          
           const result = parts.reduce((sum, num) => {
             const parsed = parseInt(num.trim(), 10);
             return isNaN(parsed) ? sum : sum + parsed;
           }, 0);
+          
           setCalculatorResult(result.toString());
           setCalculatorExpression(`${calculatorExpression} = ${result}`);
         }
         break;
         
       case 'clear':
+        // Limpar tudo
         setCalculatorResult('0');
         setCalculatorExpression('');
         break;
         
-      case 'clearEntry':
-        setCalculatorResult('0');
-        break;
-        
       case 'backspace':
+        // Apagar último caractere
         if (calculatorResult.length > 1) {
           setCalculatorResult(prev => prev.slice(0, -1));
         } else {
           setCalculatorResult('0');
         }
         
-        if (calculatorExpression.length > 1) {
-          setCalculatorExpression(prev => prev.slice(0, -1));
-        } else {
-          setCalculatorExpression('');
+        // Apenas atualize a expressão se não estiver mostrando um resultado
+        if (!calculatorExpression.includes('=')) {
+          if (calculatorExpression.length > 1) {
+            setCalculatorExpression(prev => {
+              // Se o último caractere for um operador com espaço, remova 3 caracteres
+              const lastThree = prev.slice(-3);
+              if (lastThree === ' + ' || lastThree === ' = ') {
+                return prev.slice(0, -3);
+              }
+              return prev.slice(0, -1);
+            });
+          } else {
+            setCalculatorExpression('');
+          }
         }
         break;
     }
