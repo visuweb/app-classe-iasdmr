@@ -202,6 +202,89 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Falha ao criar aluno" });
     }
   });
+  
+  // Rota para atualizar um aluno
+  app.put("/api/students/:id", ensureAuthenticated, async (req, res) => {
+    try {
+      const studentId = parseInt(req.params.id, 10);
+      if (isNaN(studentId)) {
+        return res.status(400).json({ message: "ID de aluno inválido" });
+      }
+      
+      // Verificar se o aluno existe e obter dados da classe
+      const student = await storage.getStudent(studentId);
+      if (!student) {
+        return res.status(404).json({ message: "Aluno não encontrado" });
+      }
+      
+      // Verificar se tem permissão para editar este aluno
+      const teacher = req.user as Teacher;
+      if (!teacher.isAdmin) {
+        const teacherClasses = await storage.getClassesByTeacherId(teacher.id);
+        const hasAccess = teacherClasses.some(c => c.id === student.classId);
+        if (!hasAccess) {
+          return res.status(403).json({ 
+            message: "Você não tem permissão para editar alunos desta classe" 
+          });
+        }
+      }
+      
+      // Validar os dados de atualização
+      const parsed = insertStudentSchema.partial().safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ message: "Dados de aluno inválidos" });
+      }
+      
+      // Atualizar aluno
+      const updatedStudent = await storage.updateStudent(studentId, parsed.data);
+      if (!updatedStudent) {
+        return res.status(404).json({ message: "Aluno não encontrado" });
+      }
+      
+      res.json(updatedStudent);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message || "Falha ao atualizar aluno" });
+    }
+  });
+  
+  // Rota para excluir um aluno
+  app.delete("/api/students/:id", ensureAuthenticated, async (req, res) => {
+    try {
+      const studentId = parseInt(req.params.id, 10);
+      if (isNaN(studentId)) {
+        return res.status(400).json({ message: "ID de aluno inválido" });
+      }
+      
+      // Verificar se o aluno existe e obter dados da classe
+      const student = await storage.getStudent(studentId);
+      if (!student) {
+        return res.status(404).json({ message: "Aluno não encontrado" });
+      }
+      
+      // Verificar se tem permissão para excluir este aluno
+      const teacher = req.user as Teacher;
+      if (!teacher.isAdmin) {
+        const teacherClasses = await storage.getClassesByTeacherId(teacher.id);
+        const hasAccess = teacherClasses.some(c => c.id === student.classId);
+        if (!hasAccess) {
+          return res.status(403).json({ 
+            message: "Você não tem permissão para excluir alunos desta classe" 
+          });
+        }
+      }
+      
+      // Excluir aluno
+      await storage.deleteStudent(studentId);
+      res.status(200).json({ message: "Aluno excluído com sucesso" });
+    } catch (error: any) {
+      // Verificar se é erro de registros de presença
+      if (error.message && error.message.includes("registros de presença")) {
+        return res.status(409).json({ message: error.message });
+      }
+      
+      res.status(500).json({ message: error.message || "Falha ao excluir aluno" });
+    }
+  });
 
   // Attendance routes
   app.get("/api/attendance", ensureAuthenticated, async (req, res) => {

@@ -21,7 +21,7 @@ import {
 import { db, pool } from "./db";
 import { IStorage } from "./storage";
 import session from "express-session";
-import { eq, and } from "drizzle-orm";
+import { eq, and, count } from "drizzle-orm";
 import connectPg from "connect-pg-simple";
 import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
@@ -246,6 +246,47 @@ export class DatabaseStorage implements IStorage {
   async createStudent(data: InsertStudent): Promise<Student> {
     const results = await db.insert(students).values(data).returning();
     return results[0];
+  }
+
+  async updateStudent(id: number, data: Partial<InsertStudent>): Promise<Student | undefined> {
+    const studentExists = await this.getStudent(id);
+    if (!studentExists) {
+      return undefined;
+    }
+    
+    const results = await db
+      .update(students)
+      .set(data)
+      .where(eq(students.id, id))
+      .returning();
+    
+    return results[0];
+  }
+
+  async deleteStudent(id: number): Promise<boolean> {
+    // Verificar se o aluno existe
+    const studentExists = await this.getStudent(id);
+    if (!studentExists) {
+      return false;
+    }
+    
+    // Verificar se existem registros de presença para este aluno
+    const attendanceCount = await db
+      .select({ count: count() })
+      .from(attendanceRecords)
+      .where(eq(attendanceRecords.studentId, id));
+    
+    // Se houver registros de presença, não permitir excluir o aluno
+    if (attendanceCount[0].count > 0) {
+      throw new Error("Não é possível excluir um aluno com registros de presença");
+    }
+    
+    // Excluir o aluno
+    await db
+      .delete(students)
+      .where(eq(students.id, id));
+    
+    return true;
   }
   
   // Attendance operations
