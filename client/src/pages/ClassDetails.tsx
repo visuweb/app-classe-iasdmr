@@ -40,11 +40,13 @@ import {
 import {
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
+import { Switch } from '@/components/ui/switch';
 import {
   Table,
   TableBody,
@@ -70,6 +72,7 @@ import {
 const studentFormSchema = z.object({
   name: z.string().min(1, 'Nome do aluno é obrigatório'),
   classId: z.number(),
+  active: z.boolean().default(true),
 });
 
 const ClassDetails: React.FC = () => {
@@ -92,6 +95,7 @@ const ClassDetails: React.FC = () => {
     defaultValues: {
       name: '',
       classId: classId || 0,
+      active: true,
     },
   });
   
@@ -130,7 +134,11 @@ const ClassDetails: React.FC = () => {
     mutationFn: async (data: z.infer<typeof studentFormSchema> & { id?: number }) => {
       if (data.id) {
         // Editar aluno existente
-        const res = await apiRequest('PUT', `/api/students/${data.id}`, { name: data.name, classId: data.classId });
+        const res = await apiRequest('PUT', `/api/students/${data.id}`, { 
+          name: data.name, 
+          classId: data.classId,
+          active: data.active 
+        });
         return res.json();
       } else {
         // Criar novo aluno
@@ -159,20 +167,28 @@ const ClassDetails: React.FC = () => {
     }
   });
   
-  // Mutation para excluir aluno
+  // Mutation para desativar/reativar aluno
   const deleteStudentMutation = useMutation({
     mutationFn: async (studentId: number) => {
-      const res = await apiRequest('DELETE', `/api/students/${studentId}`);
+      // Em vez de excluir, vamos atualizar o status para o oposto
+      const newStatus = !studentToDelete?.active;
+      const res = await apiRequest('PUT', `/api/students/${studentId}`, { 
+        active: newStatus,
+        name: studentToDelete?.name || '',
+        classId: classId || 0
+      });
       if (!res.ok) {
         const errorData = await res.json();
-        throw new Error(errorData.message || 'Erro ao excluir aluno');
+        throw new Error(errorData.message || `Erro ao ${newStatus ? 'reativar' : 'desativar'} aluno`);
       }
-      return true;
+      return { success: true, active: newStatus };
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       toast({
-        title: 'Aluno excluído',
-        description: 'O aluno foi excluído com sucesso.',
+        title: data.active ? 'Aluno reativado' : 'Aluno desativado',
+        description: data.active 
+          ? 'O aluno foi reativado com sucesso.' 
+          : 'O aluno foi desativado com sucesso.',
       });
       refetchStudents();
       setIsDeleteStudentOpen(false);
@@ -180,7 +196,7 @@ const ClassDetails: React.FC = () => {
     },
     onError: (error: Error) => {
       toast({
-        title: 'Erro ao excluir aluno',
+        title: studentToDelete?.active ? 'Erro ao desativar aluno' : 'Erro ao reativar aluno',
         description: error.message,
         variant: 'destructive'
       });
@@ -379,6 +395,29 @@ const ClassDetails: React.FC = () => {
                     </FormItem>
                   )}
                 />
+                
+                {currentStudentId && (
+                  <FormField
+                    control={studentForm.control}
+                    name="active"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
+                        <div className="space-y-0.5">
+                          <FormLabel>Status do Aluno</FormLabel>
+                          <FormDescription>
+                            {field.value ? 'Aluno ativo' : 'Aluno inativo'}
+                          </FormDescription>
+                        </div>
+                        <FormControl>
+                          <Switch
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                )}
                 
                 <DialogFooter>
                   <Button 
