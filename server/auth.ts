@@ -74,11 +74,11 @@ export function setupAuth(app: Express) {
             if (!teacher.active) {
               return done(null, false, { message: "Acesso negado, favor entrar em contato com o Administrador!" });
             }
+            
+            return done(null, teacher);
           } catch (error) {
             return done(null, false, { message: "Acesso negado, favor entrar em contato com o Administrador!" });
           }
-          
-          return done(null, teacher);
         } catch (error) {
           return done(error);
         }
@@ -108,7 +108,7 @@ export function setupAuth(app: Express) {
         return next(err);
       }
       if (!teacher) {
-        return res.status(401).json({ message: info?.message || "Credenciais inválidas" });
+        return res.status(401).json({ message: info?.message || "Login ou Senha informado incorreto" });
       }
       req.login(teacher, (err) => {
         if (err) {
