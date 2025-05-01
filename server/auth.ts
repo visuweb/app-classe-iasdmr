@@ -41,33 +41,41 @@ export function setupAuth(app: Express) {
           // Verificar admin especial com login "admin"
           if (cpf === "admin") {
             // Login especial para o admin
-            const adminTeacher = await storage.getTeacherByCpf("admin");
-            if (!adminTeacher) {
-              return done(null, false, { message: "Usuário admin não encontrado" });
+            try {
+              const adminTeacher = await storage.getTeacherByCpf("admin");
+              if (!adminTeacher) {
+                return done(null, false, { message: "Login ou Senha informado incorreto" });
+              }
+              
+              // Verificar se o admin está ativo
+              if (!adminTeacher.active) {
+                return done(null, false, { message: "Acesso negado, favor entrar em contato com o Administrador!" });
+              }
+              
+              // Verificação especial para o admin (senha hard-coded para compatibilidade)
+              if (password === "admincei2025") {
+                return done(null, adminTeacher);
+              }
+              
+              return done(null, false, { message: "Login ou Senha informado incorreto" });
+            } catch (error) {
+              return done(null, false, { message: "Acesso negado, favor entrar em contato com o Administrador!" });
             }
-            
-            // Verificar se o admin está ativo
-            if (!adminTeacher.active) {
-              return done(null, false, { message: "Conta de administrador desativada" });
-            }
-            
-            // Verificação especial para o admin (senha hard-coded para compatibilidade)
-            if (password === "admincei2025") {
-              return done(null, adminTeacher);
-            }
-            
-            return done(null, false, { message: "Senha de admin inválida" });
           }
           
           // Login normal para professores
-          const teacher = await storage.validateTeacher(cpf, password);
-          if (!teacher) {
-            return done(null, false, { message: "Credenciais inválidas" });
-          }
-          
-          // Verificar se o professor está ativo
-          if (!teacher.active) {
-            return done(null, false, { message: "Sua conta foi desativada. Entre em contato com o administrador." });
+          try {
+            const teacher = await storage.validateTeacher(cpf, password);
+            if (!teacher) {
+              return done(null, false, { message: "Login ou Senha informado incorreto" });
+            }
+            
+            // Verificar se o professor está ativo
+            if (!teacher.active) {
+              return done(null, false, { message: "Acesso negado, favor entrar em contato com o Administrador!" });
+            }
+          } catch (error) {
+            return done(null, false, { message: "Acesso negado, favor entrar em contato com o Administrador!" });
           }
           
           return done(null, teacher);
