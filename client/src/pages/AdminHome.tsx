@@ -251,9 +251,7 @@ const AdminHome = () => {
       // Em vez de excluir, vamos atualizar o status para o oposto
       const newStatus = !teacherToToggle?.active;
       const res = await apiRequest('PUT', `/api/teachers/${teacherId}`, { 
-        active: newStatus,
-        name: teacherToToggle?.name || '',
-        cpf: teacherToToggle?.cpf || ''
+        active: newStatus 
       });
       if (!res.ok) {
         const errorData = await res.json();
