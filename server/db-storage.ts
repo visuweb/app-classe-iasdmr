@@ -257,6 +257,33 @@ export class DatabaseStorage implements IStorage {
       );
   }
   
+  async removeTeacherFromClass(teacherId: number, classId: number): Promise<boolean> {
+    // Verificar se a atribuição existe
+    const existingAssignment = await db.select()
+      .from(teacherClasses)
+      .where(
+        and(
+          eq(teacherClasses.teacherId, teacherId),
+          eq(teacherClasses.classId, classId)
+        )
+      ).limit(1);
+    
+    if (existingAssignment.length === 0) {
+      return false;
+    }
+    
+    // Remover a atribuição
+    await db.delete(teacherClasses)
+      .where(
+        and(
+          eq(teacherClasses.teacherId, teacherId),
+          eq(teacherClasses.classId, classId)
+        )
+      );
+    
+    return true;
+  }
+  
   // Class operations
   async getAllClasses(): Promise<Class[]> {
     return await db.select().from(classes).where(eq(classes.active, true));
