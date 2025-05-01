@@ -4,7 +4,7 @@ import { useQuery, useMutation } from '@tanstack/react-query';
 import { queryClient, apiRequest } from '@/lib/queryClient';
 import { Button } from '@/components/ui/button';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { LogOut, School, User, Book, BarChart, Plus, UserPlus, Calendar, Filter } from 'lucide-react';
+import { LogOut, School, User, Book, BarChart, Plus, UserPlus, Calendar, Filter, Trash2, Check, Pencil } from 'lucide-react';
 import {
   Card,
   CardContent,
@@ -34,6 +34,16 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Teacher, Class, Student, AttendanceRecord, MissionaryActivity } from '@shared/schema';
 import { useToast } from '@/hooks/use-toast';
 import { useLocation } from 'wouter';
@@ -56,6 +66,8 @@ const AdminHome = () => {
     classId: 0,
   });
   const [selectedClassForReports, setSelectedClassForReports] = useState<number | null>(null);
+  const [teacherToToggle, setTeacherToToggle] = useState<Teacher | null>(null);
+  const [isToggleTeacherOpen, setIsToggleTeacherOpen] = useState(false);
   
   // Fetch attendance records
   const {
@@ -231,6 +243,42 @@ const AdminHome = () => {
         variant: 'destructive',
       });
     },
+  });
+
+  // Toggle teacher status mutation
+  const toggleTeacherStatusMutation = useMutation({
+    mutationFn: async (teacherId: number) => {
+      // Em vez de excluir, vamos atualizar o status para o oposto
+      const newStatus = !teacherToToggle?.active;
+      const res = await apiRequest('PUT', `/api/teachers/${teacherId}`, { 
+        active: newStatus,
+        name: teacherToToggle?.name || '',
+        cpf: teacherToToggle?.cpf || ''
+      });
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.message || `Erro ao ${newStatus ? 'reativar' : 'desativar'} professor`);
+      }
+      return { success: true, active: newStatus };
+    },
+    onSuccess: (data) => {
+      toast({
+        title: data.active ? 'Professor reativado' : 'Professor desativado',
+        description: data.active 
+          ? 'O professor foi reativado com sucesso.' 
+          : 'O professor foi desativado com sucesso.',
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/teachers'] });
+      setIsToggleTeacherOpen(false);
+      setTeacherToToggle(null);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: teacherToToggle?.active ? 'Erro ao desativar professor' : 'Erro ao reativar professor',
+        description: error.message,
+        variant: 'destructive'
+      });
+    }
   });
 
   // Handle class selection
@@ -557,15 +605,54 @@ const AdminHome = () => {
                       <TableRow>
                         <TableHead>Nome</TableHead>
                         <TableHead>CPF</TableHead>
+                        <TableHead>Status</TableHead>
                         <TableHead>Administrador</TableHead>
+                        <TableHead className="w-24 text-right">Ações</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {teachers.map((teacher) => (
-                        <TableRow key={teacher.id}>
+                        <TableRow key={teacher.id} className={teacher.active ? "" : "opacity-50"}>
                           <TableCell>{teacher.name}</TableCell>
                           <TableCell>{teacher.cpf}</TableCell>
+                          <TableCell>
+                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                              teacher.active 
+                                ? 'bg-green-100 text-green-800' 
+                                : 'bg-gray-100 text-gray-800'
+                            }`}>
+                              {teacher.active ? 'Ativo' : 'Inativo'}
+                            </span>
+                          </TableCell>
                           <TableCell>{teacher.isAdmin ? 'Sim' : 'Não'}</TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex justify-end items-center space-x-2">
+                              <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className="h-8 w-8 text-blue-600"
+                                onClick={() => {
+                                  // Editar professor (a ser implementado)
+                                }}
+                              >
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                              <Button 
+                                variant="ghost" 
+                                size="icon"
+                                className={`h-8 w-8 ${teacher.active ? 'text-red-600' : 'text-green-600'}`}
+                                onClick={() => {
+                                  toggleTeacherStatus(teacher);
+                                }}
+                              >
+                                {teacher.active ? (
+                                  <Trash2 className="h-4 w-4" />
+                                ) : (
+                                  <Check className="h-4 w-4" />
+                                )}
+                              </Button>
+                            </div>
+                          </TableCell>
                         </TableRow>
                       ))}
                     </TableBody>

@@ -11,6 +11,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { 
   ArrowLeft, 
+  Check,
   Plus, 
   Users, 
   UserPlus, 
