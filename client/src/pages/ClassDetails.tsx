@@ -72,7 +72,6 @@ import {
 const studentFormSchema = z.object({
   name: z.string().min(1, 'Nome do aluno é obrigatório'),
   classId: z.number(),
-  active: z.boolean().default(true),
 });
 
 const ClassDetails: React.FC = () => {
@@ -95,7 +94,6 @@ const ClassDetails: React.FC = () => {
     defaultValues: {
       name: '',
       classId: classId || 0,
-      active: true,
     },
   });
   
@@ -136,8 +134,7 @@ const ClassDetails: React.FC = () => {
         // Editar aluno existente
         const res = await apiRequest('PUT', `/api/students/${data.id}`, { 
           name: data.name, 
-          classId: data.classId,
-          active: data.active 
+          classId: data.classId
         });
         return res.json();
       } else {
@@ -336,8 +333,7 @@ const ClassDetails: React.FC = () => {
                                 onClick={() => {
                                   studentForm.reset({ 
                                     name: student.name, 
-                                    classId: classId || 0,
-                                    active: student.active
+                                    classId: classId || 0
                                   });
                                   setCurrentStudentId(student.id);
                                   setIsAddStudentOpen(true);
@@ -348,13 +344,17 @@ const ClassDetails: React.FC = () => {
                               <Button 
                                 variant="ghost" 
                                 size="icon"
-                                className="h-8 w-8 text-red-600"
+                                className={`h-8 w-8 ${student.active ? 'text-red-600' : 'text-green-600'}`}
                                 onClick={() => {
                                   setStudentToDelete(student);
                                   setIsDeleteStudentOpen(true);
                                 }}
                               >
-                                <Trash2 className="h-4 w-4" />
+                                {student.active ? (
+                                  <Trash2 className="h-4 w-4" />
+                                ) : (
+                                  <Check className="h-4 w-4" />
+                                )}
                               </Button>
                             </div>
                           </TableCell>
@@ -396,28 +396,7 @@ const ClassDetails: React.FC = () => {
                   )}
                 />
                 
-                {currentStudentId && (
-                  <FormField
-                    control={studentForm.control}
-                    name="active"
-                    render={({ field }) => (
-                      <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
-                        <div className="space-y-0.5">
-                          <FormLabel>Status do Aluno</FormLabel>
-                          <FormDescription>
-                            {field.value ? 'Aluno ativo' : 'Aluno inativo'}
-                          </FormDescription>
-                        </div>
-                        <FormControl>
-                          <Switch
-                            checked={field.value}
-                            onCheckedChange={field.onChange}
-                          />
-                        </FormControl>
-                      </FormItem>
-                    )}
-                  />
-                )}
+
                 
                 <DialogFooter>
                   <Button 
