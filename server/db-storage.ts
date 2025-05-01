@@ -272,6 +272,21 @@ export class DatabaseStorage implements IStorage {
     return results[0];
   }
   
+  async updateClass(id: number, data: Partial<InsertClass>): Promise<Class | undefined> {
+    const classExists = await this.getClass(id);
+    if (!classExists) {
+      return undefined;
+    }
+    
+    const results = await db
+      .update(classes)
+      .set(data)
+      .where(eq(classes.id, id))
+      .returning();
+    
+    return results.length > 0 ? results[0] : undefined;
+  }
+  
   // Student operations
   async getStudentsByClassId(classId: number): Promise<Student[]> {
     return await db.select()

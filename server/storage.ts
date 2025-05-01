@@ -36,6 +36,10 @@ export interface IStorage {
   getAllClasses(): Promise<Class[]>;
   getClass(id: number): Promise<Class | undefined>;
   createClass(data: InsertClass): Promise<Class>;
+  updateClass(id: number, data: Partial<InsertClass>): Promise<Class | undefined>;
+  
+  // Teacher-Class operations extras
+  removeTeacherFromClass(teacherId: number, classId: number): Promise<boolean>;
   
   // Student operations
   getStudentsByClassId(classId: number): Promise<Student[]>;

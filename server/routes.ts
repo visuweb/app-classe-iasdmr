@@ -101,6 +101,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Remover atribuição de professor a uma classe
+  app.delete("/api/teacher-classes/:teacherId/:classId", ensureAdmin, async (req, res) => {
+    try {
+      const teacherId = parseInt(req.params.teacherId, 10);
+      const classId = parseInt(req.params.classId, 10);
+      
+      if (isNaN(teacherId) || isNaN(classId)) {
+        return res.status(400).json({ message: "IDs inválidos" });
+      }
+      
+      const result = await storage.removeTeacherFromClass(teacherId, classId);
+      if (!result) {
+        return res.status(404).json({ message: "Atribuição não encontrada" });
+      }
+      
+      res.status(200).json({ message: "Atribuição removida com sucesso" });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message || "Falha ao remover atribuição" });
+    }
+  });
+  
   // Rota para atualizar um professor (incluindo ativação/desativação)
   app.put("/api/teachers/:id", ensureAdmin, async (req, res) => {
     try {
@@ -213,6 +234,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(201).json(newClass);
     } catch (error) {
       res.status(500).json({ message: "Falha ao criar classe" });
+    }
+  });
+  
+  // Rota para atualizar uma classe (incluindo ativação/desativação)
+  app.put("/api/classes/:id", ensureAdmin, async (req, res) => {
+    try {
+      const classId = parseInt(req.params.id, 10);
+      if (isNaN(classId)) {
+        return res.status(400).json({ message: "ID de classe inválido" });
+      }
+      
+      // Verificar se a classe existe
+      const existingClass = await storage.getClass(classId);
+      if (!existingClass) {
+        return res.status(404).json({ message: "Classe não encontrada" });
+      }
+      
+      // Validar os dados de atualização
+      const parsed = insertClassSchema.partial().safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ message: "Dados de classe inválidos" });
+      }
+      
+      // Atualizar classe
+      const updatedClass = await storage.updateClass(classId, parsed.data);
+      if (!updatedClass) {
+        return res.status(404).json({ message: "Classe não encontrada" });
+      }
+      
+      res.json(updatedClass);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message || "Falha ao atualizar classe" });
     }
   });
 

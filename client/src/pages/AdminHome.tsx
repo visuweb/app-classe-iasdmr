@@ -1316,6 +1316,42 @@ const AdminHome = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Confirmação de ativação/desativação de aluno */}
+      <AlertDialog open={isToggleStudentOpen} onOpenChange={setIsToggleStudentOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {studentToToggle?.active 
+                ? 'Desativar Aluno' 
+                : 'Reativar Aluno'}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {studentToToggle?.active 
+                ? `Tem certeza que deseja desativar o aluno "${studentToToggle?.name}"? Este aluno não aparecerá nas listas de presença enquanto estiver desativado.` 
+                : `Tem certeza que deseja reativar o aluno "${studentToToggle?.name}"? Este aluno voltará a aparecer nas listas de presença.`}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (studentToToggle) {
+                  toggleStudentStatusMutation.mutate(studentToToggle.id);
+                }
+              }}
+              className={studentToToggle?.active ? "bg-red-600 hover:bg-red-700" : "bg-green-600 hover:bg-green-700"}
+            >
+              {toggleStudentStatusMutation.isPending 
+                ? 'Processando...' 
+                : studentToToggle?.active 
+                  ? 'Sim, desativar' 
+                  : 'Sim, reativar'
+              }
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
