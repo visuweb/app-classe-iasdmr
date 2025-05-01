@@ -294,13 +294,23 @@ const ClassDetails: React.FC = () => {
                     <TableHeader>
                       <TableRow>
                         <TableHead>Nome</TableHead>
+                        <TableHead>Status</TableHead>
                         <TableHead className="w-24 text-right">Ações</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {students.map((student) => (
-                        <TableRow key={student.id}>
+                        <TableRow key={student.id} className={student.active ? "" : "opacity-50"}>
                           <TableCell className="font-medium">{student.name}</TableCell>
+                          <TableCell>
+                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                              student.active 
+                                ? 'bg-green-100 text-green-800' 
+                                : 'bg-gray-100 text-gray-800'
+                            }`}>
+                              {student.active ? 'Ativo' : 'Inativo'}
+                            </span>
+                          </TableCell>
                           <TableCell className="text-right">
                             <div className="flex justify-end items-center space-x-2">
                               <Button 
@@ -308,7 +318,11 @@ const ClassDetails: React.FC = () => {
                                 size="icon" 
                                 className="h-8 w-8 text-blue-600"
                                 onClick={() => {
-                                  studentForm.reset({ name: student.name, classId: classId || 0 });
+                                  studentForm.reset({ 
+                                    name: student.name, 
+                                    classId: classId || 0,
+                                    active: student.active
+                                  });
                                   setCurrentStudentId(student.id);
                                   setIsAddStudentOpen(true);
                                 }}
@@ -389,14 +403,16 @@ const ClassDetails: React.FC = () => {
           </DialogContent>
         </Dialog>
         
-        {/* Modal de confirmação para excluir aluno */}
+        {/* Modal de confirmação para desativar aluno */}
         <AlertDialog open={isDeleteStudentOpen} onOpenChange={setIsDeleteStudentOpen}>
           <AlertDialogContent className={isMobile ? "w-[90vw] max-w-md" : ""}>
             <AlertDialogHeader>
-              <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
+              <AlertDialogTitle>Confirmar desativação</AlertDialogTitle>
               <AlertDialogDescription>
-                Tem certeza que deseja excluir o aluno "{studentToDelete?.name}"? 
-                Esta ação não pode ser desfeita.
+                {studentToDelete?.active 
+                  ? `Tem certeza que deseja desativar o aluno "${studentToDelete?.name}"? Alunos desativados não aparecerão nas listas de chamada.`
+                  : `Tem certeza que deseja reativar o aluno "${studentToDelete?.name}"?`
+                }
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
@@ -407,10 +423,12 @@ const ClassDetails: React.FC = () => {
                     deleteStudentMutation.mutate(studentToDelete.id);
                   }
                 }}
-                className="bg-red-600 hover:bg-red-700"
+                className={studentToDelete?.active ? "bg-red-600 hover:bg-red-700" : "bg-green-600 hover:bg-green-700"}
                 disabled={deleteStudentMutation.isPending}
               >
-                {deleteStudentMutation.isPending ? 'Excluindo...' : 'Excluir Aluno'}
+                {deleteStudentMutation.isPending 
+                  ? (studentToDelete?.active ? 'Desativando...' : 'Reativando...') 
+                  : (studentToDelete?.active ? 'Desativar' : 'Reativar')}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>

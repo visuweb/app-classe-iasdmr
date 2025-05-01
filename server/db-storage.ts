@@ -211,16 +211,22 @@ export class DatabaseStorage implements IStorage {
         cpf: teachers.cpf,
         password: teachers.password,
         isAdmin: teachers.isAdmin,
+        active: teachers.active,
         createdAt: teachers.createdAt
       })
       .from(teacherClasses)
       .innerJoin(teachers, eq(teacherClasses.teacherId, teachers.id))
-      .where(eq(teacherClasses.classId, classId));
+      .where(
+        and(
+          eq(teacherClasses.classId, classId),
+          eq(teachers.active, true)
+        )
+      );
   }
   
   // Class operations
   async getAllClasses(): Promise<Class[]> {
-    return await db.select().from(classes);
+    return await db.select().from(classes).where(eq(classes.active, true));
   }
   
   async getClass(id: number): Promise<Class | undefined> {
@@ -235,7 +241,14 @@ export class DatabaseStorage implements IStorage {
   
   // Student operations
   async getStudentsByClassId(classId: number): Promise<Student[]> {
-    return await db.select().from(students).where(eq(students.classId, classId));
+    return await db.select()
+      .from(students)
+      .where(
+        and(
+          eq(students.classId, classId),
+          eq(students.active, true)
+        )
+      );
   }
   
   async getStudent(id: number): Promise<Student | undefined> {
