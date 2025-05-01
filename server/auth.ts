@@ -46,6 +46,11 @@ export function setupAuth(app: Express) {
               return done(null, false, { message: "Usuário admin não encontrado" });
             }
             
+            // Verificar se o admin está ativo
+            if (!adminTeacher.active) {
+              return done(null, false, { message: "Conta de administrador desativada" });
+            }
+            
             // Verificação especial para o admin (senha hard-coded para compatibilidade)
             if (password === "admincei2025") {
               return done(null, adminTeacher);
@@ -59,6 +64,12 @@ export function setupAuth(app: Express) {
           if (!teacher) {
             return done(null, false, { message: "Credenciais inválidas" });
           }
+          
+          // Verificar se o professor está ativo
+          if (!teacher.active) {
+            return done(null, false, { message: "Sua conta foi desativada. Entre em contato com o administrador." });
+          }
+          
           return done(null, teacher);
         } catch (error) {
           return done(error);

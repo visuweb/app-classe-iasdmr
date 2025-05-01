@@ -247,7 +247,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  // Rota para excluir um aluno
+  // Rota para desativar um aluno
   app.delete("/api/students/:id", ensureAuthenticated, async (req, res) => {
     try {
       const studentId = parseInt(req.params.id, 10);
@@ -261,28 +261,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Aluno não encontrado" });
       }
       
-      // Verificar se tem permissão para excluir este aluno
+      // Verificar se tem permissão para desativar este aluno
       const teacher = req.user as Teacher;
       if (!teacher.isAdmin) {
         const teacherClasses = await storage.getClassesByTeacherId(teacher.id);
         const hasAccess = teacherClasses.some(c => c.id === student.classId);
         if (!hasAccess) {
           return res.status(403).json({ 
-            message: "Você não tem permissão para excluir alunos desta classe" 
+            message: "Você não tem permissão para desativar alunos desta classe" 
           });
         }
       }
       
-      // Excluir aluno
-      await storage.deleteStudent(studentId);
-      res.status(200).json({ message: "Aluno excluído com sucesso" });
-    } catch (error: any) {
-      // Verificar se é erro de registros de presença
-      if (error.message && error.message.includes("registros de presença")) {
-        return res.status(409).json({ message: error.message });
+      // Desativar aluno (alterar o campo active para false)
+      const updatedStudent = await storage.updateStudent(studentId, { active: false });
+      if (!updatedStudent) {
+        return res.status(404).json({ message: "Aluno não encontrado" });
       }
       
-      res.status(500).json({ message: error.message || "Falha ao excluir aluno" });
+      res.status(200).json({ message: "Aluno desativado com sucesso" });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message || "Falha ao desativar aluno" });
     }
   });
 
