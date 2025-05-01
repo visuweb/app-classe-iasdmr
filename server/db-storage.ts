@@ -94,12 +94,35 @@ export class DatabaseStorage implements IStorage {
   }
   
   async getAllTeachers(): Promise<Teacher[]> {
+    // Retornar todos os professores, incluindo ativos e inativos
+    // Isso permite que administradores vejam e possam reativar professores
     return await db.select().from(teachers);
   }
   
   async createTeacher(data: InsertTeacher): Promise<Teacher> {
     const results = await db.insert(teachers).values(data).returning();
     return results[0];
+  }
+  
+  async updateTeacher(id: number, data: Partial<InsertTeacher>): Promise<Teacher | undefined> {
+    // Verificar se o professor existe
+    const teacherExists = await this.getTeacherById(id);
+    if (!teacherExists) {
+      return undefined;
+    }
+    
+    // Se estiver atualizando a senha e não estiver em formato hash
+    if (data.password && !data.password.includes('.')) {
+      data.password = await hashPassword(data.password);
+    }
+    
+    const results = await db
+      .update(teachers)
+      .set(data)
+      .where(eq(teachers.id, id))
+      .returning();
+    
+    return results.length > 0 ? results[0] : undefined;
   }
   
   async comparePasswords(supplied: string, stored: string): Promise<boolean> {
@@ -109,7 +132,11 @@ export class DatabaseStorage implements IStorage {
   async validateTeacher(cpf: string, password: string): Promise<Teacher | null> {
     const teacher = await this.getTeacherByCpf(cpf);
     
+    // Verificar se o professor existe
     if (!teacher) return null;
+    
+    // Verificar se o professor está ativo
+    if (!teacher.active) return null;
     
     // Caso especial para o admin (compatibilidade com implementação anterior)
     if (cpf === 'admin' && password === 'admincei2025') {
@@ -189,11 +216,17 @@ export class DatabaseStorage implements IStorage {
         .select({
           id: classes.id,
           name: classes.name,
+          active: classes.active,
           createdAt: classes.createdAt
         })
         .from(teacherClasses)
         .innerJoin(classes, eq(teacherClasses.classId, classes.id))
-        .where(eq(teacherClasses.teacherId, teacherId));
+        .where(
+          and(
+            eq(teacherClasses.teacherId, teacherId),
+            eq(classes.active, true)
+          )
+        );
       
       // Adicionar role a cada classe
       return results.map(classObj => ({
