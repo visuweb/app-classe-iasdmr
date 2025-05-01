@@ -9,6 +9,7 @@ export const teachers = pgTable("teachers", {
   cpf: text("cpf").notNull().unique(),
   password: text("password").notNull(),
   isAdmin: boolean("is_admin").default(false).notNull(),
+  active: boolean("active").default(true).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -16,6 +17,7 @@ export const teachers = pgTable("teachers", {
 export const classes = pgTable("classes", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
+  active: boolean("active").default(true).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -34,6 +36,7 @@ export const students = pgTable("students", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
   classId: integer("class_id").notNull(),
+  active: boolean("active").default(true).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -67,6 +70,7 @@ export const insertTeacherSchema = createInsertSchema(teachers).pick({
   cpf: true,
   password: true,
   isAdmin: true,
+  active: true,
 });
 
 export const insertTeacherClassSchema = createInsertSchema(teacherClasses).pick({
@@ -76,11 +80,13 @@ export const insertTeacherClassSchema = createInsertSchema(teacherClasses).pick(
 
 export const insertClassSchema = createInsertSchema(classes).pick({
   name: true,
+  active: true,
 });
 
 export const insertStudentSchema = createInsertSchema(students).pick({
   name: true,
   classId: true,
+  active: true,
 });
 
 export const insertAttendanceRecordSchema = createInsertSchema(attendanceRecords).pick({
