@@ -74,6 +74,8 @@ const AdminHome = () => {
     cpf: '',
     password: '',
   });
+  const [classToToggle, setClassToToggle] = useState<Class | null>(null);
+  const [isToggleClassOpen, setIsToggleClassOpen] = useState(false);
   
   // Fetch attendance records
   const {
@@ -286,6 +288,79 @@ const AdminHome = () => {
     }
   });
   
+  // Toggle class status mutation
+  const toggleClassStatusMutation = useMutation({
+    mutationFn: async (classId: number) => {
+      const newStatus = !classToToggle?.active;
+      const res = await apiRequest('PUT', `/api/classes/${classId}`, {
+        active: newStatus
+      });
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.message || `Erro ao ${newStatus ? 'reativar' : 'desativar'} classe`);
+      }
+      return { success: true, active: newStatus };
+    },
+    onSuccess: (data) => {
+      toast({
+        title: data.active ? 'Classe reativada' : 'Classe desativada',
+        description: data.active
+          ? 'A classe foi reativada com sucesso.'
+          : 'A classe foi desativada com sucesso.',
+      });
+      
+      // Atualizar a lista de classes
+      queryClient.invalidateQueries({ queryKey: ['/api/classes'] });
+      
+      // Atualizar as relações
+      if (selectedClassId) {
+        queryClient.invalidateQueries({ queryKey: ['/api/classes', selectedClassId, 'teachers'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/classes', selectedClassId, 'students'] });
+      }
+      
+      // Fechar o diálogo
+      setIsToggleClassOpen(false);
+      setClassToToggle(null);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: classToToggle?.active ? 'Erro ao desativar classe' : 'Erro ao reativar classe',
+        description: error.message,
+        variant: 'destructive'
+      });
+    }
+  });
+  
+  // Remove teacher assignment mutation
+  const removeTeacherAssignmentMutation = useMutation({
+    mutationFn: async ({ teacherId, classId }: { teacherId: number, classId: number }) => {
+      const res = await apiRequest('DELETE', `/api/teacher-classes/${teacherId}/${classId}`);
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.message || 'Erro ao remover atribuição do professor');
+      }
+      return { success: true };
+    },
+    onSuccess: () => {
+      toast({
+        title: 'Atribuição removida',
+        description: 'O professor foi removido da classe com sucesso',
+      });
+      
+      // Atualizar a lista de professores da classe
+      if (selectedClassId) {
+        queryClient.invalidateQueries({ queryKey: ['/api/classes', selectedClassId, 'teachers'] });
+      }
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Erro ao remover atribuição',
+        description: error.message,
+        variant: 'destructive'
+      });
+    }
+  });
+  
   // Toggle teacher status mutation
   const toggleTeacherStatusMutation = useMutation({
     mutationFn: async (teacherId: number) => {
@@ -382,6 +457,12 @@ const AdminHome = () => {
     setIsToggleTeacherOpen(true);
   };
   
+  // Handle toggle class status
+  const toggleClassStatus = (classObj: Class) => {
+    setClassToToggle(classObj);
+    setIsToggleClassOpen(true);
+  };
+  
   // Handle edit teacher
   const handleEditTeacher = (teacher: Teacher) => {
     setTeacherToEdit(teacher);
@@ -473,12 +554,42 @@ const AdminHome = () => {
                         {classes.map((classObj) => (
                           <div
                             key={classObj.id}
-                            className={`p-3 border rounded-md cursor-pointer hover:bg-gray-100 ${
+                            className={`p-3 border rounded-md hover:bg-gray-100 ${
                               selectedClassId === classObj.id ? 'bg-primary-100 border-primary-500' : ''
-                            }`}
-                            onClick={() => handleClassSelection(classObj.id)}
+                            } ${classObj.active ? '' : 'opacity-50'}`}
                           >
-                            <h3 className="font-medium">{classObj.name}</h3>
+                            <div className="flex justify-between items-center">
+                              <h3 
+                                className="font-medium cursor-pointer" 
+                                onClick={() => handleClassSelection(classObj.id)}
+                              >
+                                {classObj.name}
+                              </h3>
+                              <div className="flex items-center space-x-2">
+                                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                  classObj.active 
+                                    ? 'bg-green-100 text-green-800' 
+                                    : 'bg-gray-100 text-gray-800'
+                                }`}>
+                                  {classObj.active ? 'Ativa' : 'Inativa'}
+                                </span>
+                                <Button 
+                                  variant="ghost" 
+                                  size="icon"
+                                  className={`h-6 w-6 ${classObj.active ? 'text-red-600' : 'text-green-600'}`}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    toggleClassStatus(classObj);
+                                  }}
+                                >
+                                  {classObj.active ? (
+                                    <Trash2 className="h-3 w-3" />
+                                  ) : (
+                                    <Check className="h-3 w-3" />
+                                  )}
+                                </Button>
+                              </div>
+                            </div>
                           </div>
                         ))}
                       </div>
@@ -542,12 +653,39 @@ const AdminHome = () => {
                             <TableHeader>
                               <TableRow>
                                 <TableHead>Nome</TableHead>
+                                <TableHead>Status</TableHead>
+                                <TableHead className="w-12 text-right">Ações</TableHead>
                               </TableRow>
                             </TableHeader>
                             <TableBody>
                               {students.map((student) => (
-                                <TableRow key={student.id}>
+                                <TableRow key={student.id} className={student.active ? "" : "opacity-50"}>
                                   <TableCell>{student.name}</TableCell>
+                                  <TableCell>
+                                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                      student.active 
+                                        ? 'bg-green-100 text-green-800' 
+                                        : 'bg-gray-100 text-gray-800'
+                                    }`}>
+                                      {student.active ? 'Ativo' : 'Inativo'}
+                                    </span>
+                                  </TableCell>
+                                  <TableCell className="text-right">
+                                    <Button 
+                                      variant="ghost" 
+                                      size="icon"
+                                      className={`h-8 w-8 ${student.active ? 'text-red-600' : 'text-green-600'}`}
+                                      onClick={() => {
+                                        // Implementar a funcionalidade de ativar/desativar aluno
+                                      }}
+                                    >
+                                      {student.active ? (
+                                        <Trash2 className="h-4 w-4" />
+                                      ) : (
+                                        <Check className="h-4 w-4" />
+                                      )}
+                                    </Button>
+                                  </TableCell>
                                 </TableRow>
                               ))}
                             </TableBody>
@@ -589,6 +727,7 @@ const AdminHome = () => {
                             <TableRow>
                               <TableHead>Nome</TableHead>
                               <TableHead>CPF</TableHead>
+                              <TableHead className="w-12 text-right">Ações</TableHead>
                             </TableRow>
                           </TableHeader>
                           <TableBody>
@@ -596,6 +735,19 @@ const AdminHome = () => {
                               <TableRow key={teacher.id}>
                                 <TableCell>{teacher.name}</TableCell>
                                 <TableCell>{teacher.cpf}</TableCell>
+                                <TableCell className="text-right">
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8 text-red-600"
+                                    onClick={() => {
+                                      // Implementar remover atribuição de professor
+                                    }}
+                                    title="Remover atribuição"
+                                  >
+                                    <MinusCircle className="h-4 w-4" />
+                                  </Button>
+                                </TableCell>
                               </TableRow>
                             ))}
                           </TableBody>
@@ -1076,6 +1228,42 @@ const AdminHome = () => {
           </form>
         </DialogContent>
       </Dialog>
+      
+      {/* Confirmação de ativação/desativação de classe */}
+      <AlertDialog open={isToggleClassOpen} onOpenChange={setIsToggleClassOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {classToToggle?.active 
+                ? 'Desativar Classe' 
+                : 'Reativar Classe'}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {classToToggle?.active 
+                ? `Tem certeza que deseja desativar a classe "${classToToggle?.name}"? Esta classe não aparecerá no perfil dos professores enquanto estiver desativada.` 
+                : `Tem certeza que deseja reativar a classe "${classToToggle?.name}"? Esta classe voltará a aparecer no perfil dos professores.`}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (classToToggle) {
+                  toggleClassStatusMutation.mutate(classToToggle.id);
+                }
+              }}
+              className={classToToggle?.active ? "bg-red-600 hover:bg-red-700" : "bg-green-600 hover:bg-green-700"}
+            >
+              {toggleClassStatusMutation.isPending 
+                ? 'Processando...' 
+                : classToToggle?.active 
+                  ? 'Sim, desativar' 
+                  : 'Sim, reativar'
+              }
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
