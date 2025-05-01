@@ -100,6 +100,59 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(400).json({ message: error.message || "Falha ao atribuir professor à classe" });
     }
   });
+  
+  // Rota para atualizar um professor (incluindo ativação/desativação)
+  app.put("/api/teachers/:id", ensureAdmin, async (req, res) => {
+    try {
+      const teacherId = parseInt(req.params.id, 10);
+      if (isNaN(teacherId)) {
+        return res.status(400).json({ message: "ID de professor inválido" });
+      }
+      
+      // Verificar se o professor existe
+      const existingTeacher = await storage.getTeacherById(teacherId);
+      if (!existingTeacher) {
+        return res.status(404).json({ message: "Professor não encontrado" });
+      }
+      
+      // Validar os dados de atualização
+      const parsed = insertTeacherSchema.partial().safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ message: "Dados de professor inválidos" });
+      }
+      
+      // Não podemos alterar o campo isAdmin desta forma para segurança
+      // Isso evita que um administrador seja rebaixado acidentalmente
+      if (parsed.data.isAdmin !== undefined) {
+        delete parsed.data.isAdmin;
+      }
+      
+      // Não permitir alteração de senha por esta rota
+      if (parsed.data.password !== undefined) {
+        delete parsed.data.password;
+      }
+      
+      // Verificar se tentar atualizar o CPF, se ele já existe
+      if (parsed.data.cpf && parsed.data.cpf !== existingTeacher.cpf) {
+        const existingByCpf = await storage.getTeacherByCpf(parsed.data.cpf);
+        if (existingByCpf) {
+          return res.status(409).json({ message: "CPF já cadastrado para outro professor" });
+        }
+      }
+      
+      // Atualizar professor
+      const updatedTeacher = await storage.updateTeacher(teacherId, parsed.data);
+      if (!updatedTeacher) {
+        return res.status(404).json({ message: "Professor não encontrado" });
+      }
+      
+      // Não retornar a senha na resposta
+      const { password, ...teacherData } = updatedTeacher;
+      res.json(teacherData);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message || "Falha ao atualizar professor" });
+    }
+  });
 
   // Classes routes
   app.get("/api/classes", ensureAuthenticated, async (req, res) => {

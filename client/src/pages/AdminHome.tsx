@@ -326,6 +326,12 @@ const AdminHome = () => {
     }
   };
 
+  // Handle toggle teacher status
+  const toggleTeacherStatus = (teacher: Teacher) => {
+    setTeacherToToggle(teacher);
+    setIsToggleTeacherOpen(true);
+  };
+
   // Handle logout
   const handleLogout = () => {
     logoutMutation.mutate(undefined, {
@@ -924,6 +930,41 @@ const AdminHome = () => {
           </TabsContent>
         </Tabs>
       </main>
+      
+      {/* Alert Dialog for toggle teacher status */}
+      <AlertDialog open={isToggleTeacherOpen} onOpenChange={setIsToggleTeacherOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {teacherToToggle?.active ? 'Desativar Professor' : 'Reativar Professor'}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {teacherToToggle?.active 
+                ? `Tem certeza que deseja desativar o professor "${teacherToToggle?.name}"? Esse professor não poderá fazer login no sistema enquanto estiver desativado.`
+                : `Tem certeza que deseja reativar o professor "${teacherToToggle?.name}"? Esse professor poderá fazer login no sistema novamente.`
+              }
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (teacherToToggle) {
+                  toggleTeacherStatusMutation.mutate(teacherToToggle.id);
+                }
+              }}
+              className={teacherToToggle?.active ? 'bg-red-600 hover:bg-red-700' : 'bg-green-600 hover:bg-green-700'}
+            >
+              {toggleTeacherStatusMutation.isPending 
+                ? 'Processando...' 
+                : teacherToToggle?.active 
+                  ? 'Sim, desativar' 
+                  : 'Sim, reativar'
+              }
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
