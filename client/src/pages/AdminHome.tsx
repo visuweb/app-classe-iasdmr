@@ -4,7 +4,7 @@ import { useQuery, useMutation } from '@tanstack/react-query';
 import { queryClient, apiRequest } from '@/lib/queryClient';
 import { Button } from '@/components/ui/button';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { LogOut, School, User, Book, BarChart, Plus, UserPlus, Calendar, Filter, Trash2, Check, Pencil } from 'lucide-react';
+import { LogOut, School, User, Book, BarChart, Plus, UserPlus, Calendar, Filter, Trash2, Check, Pencil, MinusCircle } from 'lucide-react';
 import {
   Card,
   CardContent,
@@ -76,6 +76,8 @@ const AdminHome = () => {
   });
   const [classToToggle, setClassToToggle] = useState<Class | null>(null);
   const [isToggleClassOpen, setIsToggleClassOpen] = useState(false);
+  const [studentToToggle, setStudentToToggle] = useState<Student | null>(null);
+  const [isToggleStudentOpen, setIsToggleStudentOpen] = useState(false);
   
   // Fetch attendance records
   const {
@@ -288,6 +290,45 @@ const AdminHome = () => {
     }
   });
   
+  // Toggle student status mutation
+  const toggleStudentStatusMutation = useMutation({
+    mutationFn: async (studentId: number) => {
+      const newStatus = !studentToToggle?.active;
+      const res = await apiRequest('PUT', `/api/students/${studentId}`, {
+        active: newStatus
+      });
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.message || `Erro ao ${newStatus ? 'reativar' : 'desativar'} aluno`);
+      }
+      return { success: true, active: newStatus };
+    },
+    onSuccess: (data) => {
+      toast({
+        title: data.active ? 'Aluno reativado' : 'Aluno desativado',
+        description: data.active
+          ? 'O aluno foi reativado com sucesso.'
+          : 'O aluno foi desativado com sucesso.',
+      });
+      
+      // Atualizar a lista de alunos da classe
+      if (selectedClassId) {
+        queryClient.invalidateQueries({ queryKey: ['/api/classes', selectedClassId, 'students'] });
+      }
+      
+      // Fechar o diálogo
+      setIsToggleStudentOpen(false);
+      setStudentToToggle(null);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: studentToToggle?.active ? 'Erro ao desativar aluno' : 'Erro ao reativar aluno',
+        description: error.message,
+        variant: 'destructive'
+      });
+    }
+  });
+  
   // Toggle class status mutation
   const toggleClassStatusMutation = useMutation({
     mutationFn: async (classId: number) => {
@@ -461,6 +502,12 @@ const AdminHome = () => {
   const toggleClassStatus = (classObj: Class) => {
     setClassToToggle(classObj);
     setIsToggleClassOpen(true);
+  };
+  
+  // Handle toggle student status
+  const toggleStudentStatus = (student: Student) => {
+    setStudentToToggle(student);
+    setIsToggleStudentOpen(true);
   };
   
   // Handle edit teacher
@@ -675,9 +722,8 @@ const AdminHome = () => {
                                       variant="ghost" 
                                       size="icon"
                                       className={`h-8 w-8 ${student.active ? 'text-red-600' : 'text-green-600'}`}
-                                      onClick={() => {
-                                        // Implementar a funcionalidade de ativar/desativar aluno
-                                      }}
+                                      onClick={() => toggleStudentStatus(student)}
+                                      disabled={toggleStudentStatusMutation.isPending}
                                     >
                                       {student.active ? (
                                         <Trash2 className="h-4 w-4" />
@@ -741,9 +787,15 @@ const AdminHome = () => {
                                     size="icon"
                                     className="h-8 w-8 text-red-600"
                                     onClick={() => {
-                                      // Implementar remover atribuição de professor
+                                      if (selectedClassId) {
+                                        removeTeacherAssignmentMutation.mutate({
+                                          teacherId: teacher.id,
+                                          classId: selectedClassId
+                                        });
+                                      }
                                     }}
                                     title="Remover atribuição"
+                                    disabled={removeTeacherAssignmentMutation.isPending}
                                   >
                                     <MinusCircle className="h-4 w-4" />
                                   </Button>
