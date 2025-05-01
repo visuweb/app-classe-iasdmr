@@ -68,6 +68,12 @@ const AdminHome = () => {
   const [selectedClassForReports, setSelectedClassForReports] = useState<number | null>(null);
   const [teacherToToggle, setTeacherToToggle] = useState<Teacher | null>(null);
   const [isToggleTeacherOpen, setIsToggleTeacherOpen] = useState(false);
+  const [teacherToEdit, setTeacherToEdit] = useState<Teacher | null>(null);
+  const [editTeacherData, setEditTeacherData] = useState({
+    name: '',
+    cpf: '',
+    password: '',
+  });
   
   // Fetch attendance records
   const {
@@ -245,6 +251,41 @@ const AdminHome = () => {
     },
   });
 
+  // Edit teacher mutation
+  const editTeacherMutation = useMutation({
+    mutationFn: async () => {
+      if (!teacherToEdit) throw new Error("Nenhum professor selecionado para edição");
+      
+      const data: any = {};
+      if (editTeacherData.name) data.name = editTeacherData.name;
+      if (editTeacherData.cpf) data.cpf = editTeacherData.cpf;
+      if (editTeacherData.password) data.password = editTeacherData.password;
+      
+      const res = await apiRequest('PUT', `/api/teachers/${teacherToEdit.id}`, data);
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.message || "Erro ao editar professor");
+      }
+      return await res.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: 'Professor atualizado',
+        description: 'O professor foi atualizado com sucesso',
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/teachers'] });
+      setTeacherToEdit(null);
+      setEditTeacherData({ name: '', cpf: '', password: '' });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Erro ao atualizar professor',
+        description: error.message,
+        variant: 'destructive'
+      });
+    }
+  });
+  
   // Toggle teacher status mutation
   const toggleTeacherStatusMutation = useMutation({
     mutationFn: async (teacherId: number) => {
@@ -339,6 +380,16 @@ const AdminHome = () => {
   const toggleTeacherStatus = (teacher: Teacher) => {
     setTeacherToToggle(teacher);
     setIsToggleTeacherOpen(true);
+  };
+  
+  // Handle edit teacher
+  const handleEditTeacher = (teacher: Teacher) => {
+    setTeacherToEdit(teacher);
+    setEditTeacherData({
+      name: teacher.name,
+      cpf: teacher.cpf,
+      password: ''
+    });
   };
 
   // Handle logout
@@ -646,9 +697,7 @@ const AdminHome = () => {
                                 variant="ghost" 
                                 size="icon" 
                                 className="h-8 w-8 text-blue-600"
-                                onClick={() => {
-                                  // Editar professor (a ser implementado)
-                                }}
+                                onClick={() => handleEditTeacher(teacher)}
                               >
                                 <Pencil className="h-4 w-4" />
                               </Button>
@@ -974,6 +1023,59 @@ const AdminHome = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      
+      {/* Dialog de edição de professor */}
+      <Dialog open={!!teacherToEdit} onOpenChange={(open) => {
+        if (!open) setTeacherToEdit(null);
+      }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Editar Professor</DialogTitle>
+            <DialogDescription>
+              Atualize os dados do professor
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={(e) => {
+            e.preventDefault();
+            editTeacherMutation.mutate();
+          }}>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="editTeacherName">Nome</Label>
+                <Input
+                  id="editTeacherName"
+                  value={editTeacherData.name}
+                  onChange={(e) => setEditTeacherData({ ...editTeacherData, name: e.target.value })}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="editTeacherCpf">CPF</Label>
+                <Input
+                  id="editTeacherCpf"
+                  value={editTeacherData.cpf}
+                  onChange={(e) => setEditTeacherData({ ...editTeacherData, cpf: e.target.value })}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="editTeacherPassword">Nova Senha (deixe em branco para manter a atual)</Label>
+                <Input
+                  id="editTeacherPassword"
+                  type="password"
+                  value={editTeacherData.password}
+                  onChange={(e) => setEditTeacherData({ ...editTeacherData, password: e.target.value })}
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button type="submit" disabled={editTeacherMutation.isPending}>
+                {editTeacherMutation.isPending ? 'Salvando...' : 'Salvar Alterações'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
