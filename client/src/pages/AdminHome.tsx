@@ -266,7 +266,18 @@ const AdminHome = () => {
           ? 'O professor foi reativado com sucesso.' 
           : 'O professor foi desativado com sucesso.',
       });
+      // Atualizar a lista de professores
       queryClient.invalidateQueries({ queryKey: ['/api/teachers'] });
+      
+      // Atualizar a lista de classes, pois professores inativos não devem aparecer nas classes
+      queryClient.invalidateQueries({ queryKey: ['/api/classes'] });
+      
+      // Atualizar as listas de professores por classe
+      if (selectedClassId) {
+        queryClient.invalidateQueries({ queryKey: ['/api/classes', selectedClassId, 'teachers'] });
+      }
+      
+      // Fechar o diálogo
       setIsToggleTeacherOpen(false);
       setTeacherToToggle(null);
     },
