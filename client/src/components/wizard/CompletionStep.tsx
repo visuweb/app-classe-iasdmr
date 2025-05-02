@@ -54,14 +54,12 @@ const CompletionStep: React.FC<CompletionStepProps> = ({ isActive }) => {
   
   // Mapeamento das atividades missionárias
   const activityLabels: Record<string, string> = {
-    qtdEstudosBiblicos: 'Estudos Bíblicos',
-    qtdVisitas: 'Visitas Realizadas',
     qtdContatosMissionarios: 'Contatos Missionários',
-    qtdLivrosDistribuidos: 'Livros Distribuídos',
-    qtdLicoesDistribuidas: 'Lições Distribuídas',
-    qtdSeminarios: 'Seminários Realizados',
-    qtdClassesBiblicas: 'Classes Bíblicas',
-    qtdPessoasAtendidas: 'Pessoas Atendidas'
+    literaturasDistribuidas: 'Literaturas Distribuídas',
+    visitasMissionarias: 'Visitas Missionárias',
+    estudosBiblicos: 'Estudos Bíblicos Ministrados',
+    pessoasAuxiliadas: 'Pessoas Auxiliadas',
+    pessoasTrazidasIgreja: 'Pessoas Trazidas à Igreja'
   };
   
   const handleViewRecords = () => {
