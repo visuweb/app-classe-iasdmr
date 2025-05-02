@@ -274,7 +274,6 @@ const TeacherRecords: React.FC = () => {
                         <TableHeader>
                           <TableRow>
                             <TableHead>Aluno</TableHead>
-                            <TableHead>Turma</TableHead>
                             <TableHead>Presença</TableHead>
                           </TableRow>
                         </TableHeader>
@@ -282,9 +281,6 @@ const TeacherRecords: React.FC = () => {
                           {attendanceRecords.map((record) => (
                             <TableRow key={record.id}>
                               <TableCell className="font-medium">{record.studentName}</TableCell>
-                              <TableCell>
-                                {teacherClasses.find((c: any) => c.id === record.classId)?.name || '-'}
-                              </TableCell>
                               <TableCell>
                                 {record.present ? (
                                   <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
