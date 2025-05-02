@@ -350,20 +350,56 @@ const TeacherRecords: React.FC = () => {
                       <Table>
                         <TableHeader>
                           <TableRow>
-                            <TableHead>Classe</TableHead>
-                            <TableHead>Literaturas</TableHead>
-                            <TableHead>Contatos</TableHead>
-                            <TableHead>Estudos</TableHead>
+                            <TableHead>Atividade Missionária</TableHead>
+                            <TableHead className="text-right">Quantidade</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
-                          {missionaryActivities.map((activity) => (
-                            <TableRow key={activity.id}>
-                              <TableCell className="font-medium">{activity.className}</TableCell>
-                              <TableCell>{activity.literaturasDistribuidas}</TableCell>
-                              <TableCell>{activity.qtdContatosMissionarios}</TableCell>
-                              <TableCell>{activity.estudosBiblicos}</TableCell>
-                            </TableRow>
+                          {missionaryActivities.length > 0 && missionaryActivities.map((activity) => (
+                            <>
+                              {activity.literaturasDistribuidas > 0 && (
+                                <TableRow key={`${activity.id}-literaturas`}>
+                                  <TableCell className="font-medium">Literaturas Distribuídas</TableCell>
+                                  <TableCell className="text-right">{activity.literaturasDistribuidas}</TableCell>
+                                </TableRow>
+                              )}
+                              {activity.qtdContatosMissionarios > 0 && (
+                                <TableRow key={`${activity.id}-contatos`}>
+                                  <TableCell className="font-medium">Contatos Missionários</TableCell>
+                                  <TableCell className="text-right">{activity.qtdContatosMissionarios}</TableCell>
+                                </TableRow>
+                              )}
+                              {activity.estudosBiblicos > 0 && (
+                                <TableRow key={`${activity.id}-estudos`}>
+                                  <TableCell className="font-medium">Estudos Bíblicos</TableCell>
+                                  <TableCell className="text-right">{activity.estudosBiblicos}</TableCell>
+                                </TableRow>
+                              )}
+                              {activity.visitasMissionarias > 0 && (
+                                <TableRow key={`${activity.id}-visitas`}>
+                                  <TableCell className="font-medium">Visitas Missionárias</TableCell>
+                                  <TableCell className="text-right">{activity.visitasMissionarias}</TableCell>
+                                </TableRow>
+                              )}
+                              {activity.ministrados > 0 && (
+                                <TableRow key={`${activity.id}-ministrados`}>
+                                  <TableCell className="font-medium">Ministrados</TableCell>
+                                  <TableCell className="text-right">{activity.ministrados}</TableCell>
+                                </TableRow>
+                              )}
+                              {activity.pessoasAuxiliadas > 0 && (
+                                <TableRow key={`${activity.id}-auxiliadas`}>
+                                  <TableCell className="font-medium">Pessoas Auxiliadas</TableCell>
+                                  <TableCell className="text-right">{activity.pessoasAuxiliadas}</TableCell>
+                                </TableRow>
+                              )}
+                              {activity.pessoasTrazidasIgreja > 0 && (
+                                <TableRow key={`${activity.id}-trazidas`}>
+                                  <TableCell className="font-medium">Pessoas Trazidas à Igreja</TableCell>
+                                  <TableCell className="text-right">{activity.pessoasTrazidasIgreja}</TableCell>
+                                </TableRow>
+                              )}
+                            </>
                           ))}
                         </TableBody>
                       </Table>
