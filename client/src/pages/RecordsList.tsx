@@ -23,10 +23,19 @@ import {
 } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
-import { format } from 'date-fns';
+import { format, startOfMonth, endOfMonth, parse, subMonths } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Calendar, BarChart3, ClipboardList } from 'lucide-react';
+import { Calendar, BarChart3, ClipboardList, ChevronLeft, ChevronRight, Filter } from 'lucide-react';
 import { Class, AttendanceRecord, MissionaryActivity } from '@shared/schema';
+import { Button } from '@/components/ui/button';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
+import { 
+  Calendar as CalendarComponent 
+} from '@/components/ui/calendar';
 
 type AttendanceRecordWithStudent = AttendanceRecord & { studentName: string };
 type MissionaryActivityWithClass = MissionaryActivity & { className: string };
@@ -34,18 +43,64 @@ type MissionaryActivityWithClass = MissionaryActivity & { className: string };
 const RecordsList: React.FC = () => {
   const [selectedClassId, setSelectedClassId] = useState<string>('');
   
+  // Estado para filtro de data
+  const [selectedMonth, setSelectedMonth] = useState<Date>(new Date());
+  const [datePickerOpen, setDatePickerOpen] = useState(false);
+  
+  // Calcular o início e fim do mês selecionado
+  const startOfSelectedMonth = startOfMonth(selectedMonth);
+  const endOfSelectedMonth = endOfMonth(selectedMonth);
+  
+  // Formatar datas para exibição
+  const formattedMonth = format(selectedMonth, 'MMMM yyyy', { locale: ptBR });
+  
+  // Funções para navegação entre meses
+  const goToPreviousMonth = () => {
+    setSelectedMonth(prev => subMonths(prev, 1));
+  };
+  
+  const goToNextMonth = () => {
+    setSelectedMonth(prev => {
+      const nextMonth = new Date(prev);
+      nextMonth.setMonth(nextMonth.getMonth() + 1);
+      return nextMonth;
+    });
+  };
+  
   // Queries
   const { data: classes, isLoading: isLoadingClasses } = useQuery<Class[]>({
     queryKey: ['/api/classes'],
   });
   
   const { data: attendanceRecords, isLoading: isLoadingAttendance } = useQuery<AttendanceRecordWithStudent[]>({
-    queryKey: ['/api/attendance', selectedClassId],
+    queryKey: ['/api/attendance', selectedClassId, selectedMonth],
+    queryFn: async () => {
+      const classParam = selectedClassId ? `?classId=${selectedClassId}` : '';
+      const response = await fetch(`/api/attendance${classParam}`);
+      const data = await response.json();
+      
+      // Filtrar registros pelo mês selecionado
+      return data.filter((record: AttendanceRecordWithStudent) => {
+        const recordDate = new Date(record.date);
+        return recordDate >= startOfSelectedMonth && recordDate <= endOfSelectedMonth;
+      });
+    },
     enabled: !!selectedClassId,
   });
   
   const { data: missionaryActivities, isLoading: isLoadingActivities } = useQuery<MissionaryActivityWithClass[]>({
-    queryKey: ['/api/missionary-activities', selectedClassId],
+    queryKey: ['/api/missionary-activities', selectedClassId, selectedMonth],
+    queryFn: async () => {
+      const classParam = selectedClassId ? `?classId=${selectedClassId}` : '';
+      const response = await fetch(`/api/missionary-activities${classParam}`);
+      const data = await response.json();
+      
+      // Filtrar atividades pelo mês selecionado
+      return data.filter((activity: MissionaryActivityWithClass) => {
+        const activityDate = new Date(activity.date);
+        return activityDate >= startOfSelectedMonth && activityDate <= endOfSelectedMonth;
+      });
+    },
     enabled: !!selectedClassId,
   });
   
@@ -185,7 +240,7 @@ const RecordsList: React.FC = () => {
     <div className="container mx-auto py-8 px-4">
       <h1 className="text-2xl font-bold mb-6">Histórico de Registros</h1>
       
-      <div className="mb-6">
+      <div className="flex flex-col sm:flex-row justify-between mb-6 gap-4">
         <Select 
           value={selectedClassId} 
           onValueChange={setSelectedClassId}
@@ -208,6 +263,42 @@ const RecordsList: React.FC = () => {
             )}
           </SelectContent>
         </Select>
+        
+        {/* Filtro de data por mês */}
+        <div className="flex items-center">
+          <Button variant="outline" size="sm" onClick={goToPreviousMonth}>
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+          
+          <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                className="mx-2 min-w-[150px]"
+              >
+                <Calendar className="h-4 w-4 mr-2" />
+                {formattedMonth}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <CalendarComponent
+                mode="single"
+                selected={selectedMonth}
+                onSelect={(date) => {
+                  if (date) {
+                    setSelectedMonth(date);
+                    setDatePickerOpen(false);
+                  }
+                }}
+                initialFocus
+              />
+            </PopoverContent>
+          </Popover>
+          
+          <Button variant="outline" size="sm" onClick={goToNextMonth}>
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
       
       {selectedClassId && (

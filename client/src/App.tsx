@@ -9,6 +9,7 @@ import Home from "./pages/Home";
 import ClassList from "./pages/ClassList";
 import ClassDetails from "./pages/ClassDetails";
 import RecordsList from "./pages/RecordsList";
+import TeacherRecords from "./pages/TeacherRecords";
 import Wizard from "./pages/Wizard";
 import NotFound from "@/pages/not-found";
 import AuthPage from "@/pages/auth-page";
@@ -75,7 +76,8 @@ function Router() {
           <Route path="/" component={UserRoleRedirect} />
           <TeacherProtectedRoute path="/classes" component={ClassList} />
           <TeacherProtectedRoute path="/classes/:id" component={ClassDetails} />
-          <TeacherProtectedRoute path="/records" component={RecordsList} />
+          <TeacherProtectedRoute path="/teacher-records" component={TeacherRecords} />
+          <AdminProtectedRoute path="/records" component={RecordsList} />
           <TeacherProtectedRoute path="/wizard" component={Wizard} />
           <AdminProtectedRoute path="/admin" component={AdminHome} />
           <Route path="/auth" component={AuthPage} />
