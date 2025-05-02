@@ -355,52 +355,56 @@ const TeacherRecords: React.FC = () => {
                           </TableRow>
                         </TableHeader>
                         <TableBody>
-                          {missionaryActivities.length > 0 && missionaryActivities.map((activity) => (
-                            <>
-                              {activity.literaturasDistribuidas > 0 && (
-                                <TableRow key={`${activity.id}-literaturas`}>
-                                  <TableCell className="font-medium">Literaturas Distribuídas</TableCell>
-                                  <TableCell className="text-right">{activity.literaturasDistribuidas}</TableCell>
-                                </TableRow>
-                              )}
-                              {activity.qtdContatosMissionarios > 0 && (
-                                <TableRow key={`${activity.id}-contatos`}>
-                                  <TableCell className="font-medium">Contatos Missionários</TableCell>
-                                  <TableCell className="text-right">{activity.qtdContatosMissionarios}</TableCell>
-                                </TableRow>
-                              )}
-                              {activity.estudosBiblicos > 0 && (
-                                <TableRow key={`${activity.id}-estudos`}>
-                                  <TableCell className="font-medium">Estudos Bíblicos</TableCell>
-                                  <TableCell className="text-right">{activity.estudosBiblicos}</TableCell>
-                                </TableRow>
-                              )}
-                              {activity.visitasMissionarias > 0 && (
-                                <TableRow key={`${activity.id}-visitas`}>
-                                  <TableCell className="font-medium">Visitas Missionárias</TableCell>
-                                  <TableCell className="text-right">{activity.visitasMissionarias}</TableCell>
-                                </TableRow>
-                              )}
-                              {activity.ministrados > 0 && (
-                                <TableRow key={`${activity.id}-ministrados`}>
-                                  <TableCell className="font-medium">Ministrados</TableCell>
-                                  <TableCell className="text-right">{activity.ministrados}</TableCell>
-                                </TableRow>
-                              )}
-                              {activity.pessoasAuxiliadas > 0 && (
-                                <TableRow key={`${activity.id}-auxiliadas`}>
-                                  <TableCell className="font-medium">Pessoas Auxiliadas</TableCell>
-                                  <TableCell className="text-right">{activity.pessoasAuxiliadas}</TableCell>
-                                </TableRow>
-                              )}
-                              {activity.pessoasTrazidasIgreja > 0 && (
-                                <TableRow key={`${activity.id}-trazidas`}>
-                                  <TableCell className="font-medium">Pessoas Trazidas à Igreja</TableCell>
-                                  <TableCell className="text-right">{activity.pessoasTrazidasIgreja}</TableCell>
-                                </TableRow>
-                              )}
-                            </>
-                          ))}
+                          {missionaryActivities.length > 0 && missionaryActivities.map((activity) => {
+                            // Criar um ID único para cada atividade
+                            const activityKey = `activity-${activity.id}`;
+                            return (
+                              <React.Fragment key={activityKey}>
+                                {activity.literaturasDistribuidas && activity.literaturasDistribuidas > 0 && (
+                                  <TableRow key={`${activity.id}-literaturas`}>
+                                    <TableCell className="font-medium">Literaturas Distribuídas</TableCell>
+                                    <TableCell className="text-right">{activity.literaturasDistribuidas}</TableCell>
+                                  </TableRow>
+                                )}
+                                {activity.qtdContatosMissionarios && activity.qtdContatosMissionarios > 0 && (
+                                  <TableRow key={`${activity.id}-contatos`}>
+                                    <TableCell className="font-medium">Contatos Missionários</TableCell>
+                                    <TableCell className="text-right">{activity.qtdContatosMissionarios}</TableCell>
+                                  </TableRow>
+                                )}
+                                {activity.estudosBiblicos && activity.estudosBiblicos > 0 && (
+                                  <TableRow key={`${activity.id}-estudos`}>
+                                    <TableCell className="font-medium">Estudos Bíblicos</TableCell>
+                                    <TableCell className="text-right">{activity.estudosBiblicos}</TableCell>
+                                  </TableRow>
+                                )}
+                                {activity.visitasMissionarias && activity.visitasMissionarias > 0 && (
+                                  <TableRow key={`${activity.id}-visitas`}>
+                                    <TableCell className="font-medium">Visitas Missionárias</TableCell>
+                                    <TableCell className="text-right">{activity.visitasMissionarias}</TableCell>
+                                  </TableRow>
+                                )}
+                                {activity.ministrados && activity.ministrados > 0 && (
+                                  <TableRow key={`${activity.id}-ministrados`}>
+                                    <TableCell className="font-medium">Ministrados</TableCell>
+                                    <TableCell className="text-right">{activity.ministrados}</TableCell>
+                                  </TableRow>
+                                )}
+                                {activity.pessoasAuxiliadas && activity.pessoasAuxiliadas > 0 && (
+                                  <TableRow key={`${activity.id}-auxiliadas`}>
+                                    <TableCell className="font-medium">Pessoas Auxiliadas</TableCell>
+                                    <TableCell className="text-right">{activity.pessoasAuxiliadas}</TableCell>
+                                  </TableRow>
+                                )}
+                                {activity.pessoasTrazidasIgreja && activity.pessoasTrazidasIgreja > 0 && (
+                                  <TableRow key={`${activity.id}-trazidas`}>
+                                    <TableCell className="font-medium">Pessoas Trazidas à Igreja</TableCell>
+                                    <TableCell className="text-right">{activity.pessoasTrazidasIgreja}</TableCell>
+                                  </TableRow>
+                                )}
+                              </React.Fragment>
+                            );
+                          })}
                         </TableBody>
                       </Table>
                     </div>

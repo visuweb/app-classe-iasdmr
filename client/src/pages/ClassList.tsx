@@ -43,7 +43,8 @@ import {
   ChevronRight,
   Plus,
   ClipboardList,
-  FileText
+  FileText,
+  CheckSquare
 } from 'lucide-react';
 import { Class, insertClassSchema, insertStudentSchema } from '@shared/schema';
 import Header from '@/components/Header';
@@ -269,6 +270,15 @@ const ClassList: React.FC = () => {
               >
                 <FileText className="h-4 w-4 mr-2" />
                 {isMobile ? "Registros" : "Ver Registros"}
+              </Button>
+              <Button 
+                variant="default" 
+                size="sm" 
+                className="flex items-center"
+                onClick={() => goToWizard(classObj)}
+              >
+                <CheckSquare className="h-4 w-4 mr-2" />
+                {isMobile ? "Chamada" : "Iniciar Chamada"}
               </Button>
             </div>
 
