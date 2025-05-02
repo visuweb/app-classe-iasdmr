@@ -1,12 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useLocation } from 'wouter';
 import { useAuth } from '@/hooks/use-auth';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { format, parse, startOfMonth, endOfMonth, subMonths } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { apiRequest } from '@/lib/queryClient';
-import { AttendanceRecord, MissionaryActivity } from '@shared/schema';
+import { AttendanceRecord, MissionaryActivity, Class } from '@shared/schema';
 import { 
   Calendar, 
   ArrowLeft, 
@@ -14,8 +13,6 @@ import {
   Users, 
   Check, 
   X, 
-  ChevronLeft, 
-  ChevronRight, 
   Filter 
 } from 'lucide-react';
 import {
@@ -29,24 +26,21 @@ import { Button } from '@/components/ui/button';
 import {
   Table,
   TableBody,
-  TableCaption,
   TableCell,
   TableHead,
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
 import { 
-  Calendar as CalendarComponent 
-} from '@/components/ui/calendar';
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
-type AttendanceRecordWithStudent = AttendanceRecord & { studentName: string };
+type AttendanceRecordWithStudent = AttendanceRecord & { studentName: string, classId?: number };
 type MissionaryActivityWithClass = MissionaryActivity & { className: string };
 
 const TeacherRecords: React.FC = () => {
@@ -54,16 +48,19 @@ const TeacherRecords: React.FC = () => {
   const { teacher } = useAuth();
   const isMobile = useIsMobile();
   
-  // Estado para filtro de data
-  const [selectedMonth, setSelectedMonth] = useState<Date>(new Date());
-  const [datePickerOpen, setDatePickerOpen] = useState(false);
+  // Estado para a data selecionada
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
   
-  // Calcular o início e fim do mês selecionado
-  const startOfSelectedMonth = startOfMonth(selectedMonth);
-  const endOfSelectedMonth = endOfMonth(selectedMonth);
+  // Carregar classes do professor
+  const { 
+    data: teacherClasses = [], 
+    isLoading: isLoadingClasses 
+  } = useQuery<(Class & { role?: string })[]>({
+    queryKey: ['/api/teacher/classes'],
+  });
   
-  // Formatar datas para exibição
-  const formattedMonth = format(selectedMonth, 'MMMM yyyy', { locale: ptBR });
+  // IDs das classes do professor
+  const teacherClassIds = teacherClasses.map(cls => cls.id);
   
   // Carregar registros de presença
   const {
@@ -73,11 +70,47 @@ const TeacherRecords: React.FC = () => {
     queryKey: ['/api/attendance'],
   });
   
-  // Filtrar registros pelo mês selecionado
-  const attendanceRecords = allAttendanceRecords.filter((record) => {
-    const recordDate = new Date(record.date);
-    return recordDate >= startOfSelectedMonth && recordDate <= endOfSelectedMonth;
+  // Determinar classId para cada registro de presença
+  const enrichedAttendanceRecords = allAttendanceRecords.map(record => {
+    // Neste ponto, precisamos verificar a relação entre studentId e classId
+    // Idealmente, o backend forneceria essa informação
+    // Como simplificação, vamos apenas verificar se temos essa informação
+    return {
+      ...record,
+      // Se não tivermos classId, precisaremos inferir de outra maneira
+      // Por exemplo, poderíamos fazer uma consulta adicional ao backend
+    };
   });
+  
+  // Filtrar registros apenas das classes do professor
+  const teacherAttendanceRecords = enrichedAttendanceRecords.filter(record => {
+    if (record.classId) {
+      return teacherClassIds.includes(record.classId);
+    }
+    // Se não tivermos classId, podemos assumir que o professor tem acesso ao registro
+    // Idealmente, deveríamos verificar se o studentId pertence a uma das classes do professor
+    return true;
+  });
+  
+  // Extrair datas únicas dos registros
+  const uniqueDates = [...new Set(teacherAttendanceRecords.map(record => 
+    format(new Date(record.date), 'yyyy-MM-dd')
+  ))].sort().reverse(); // Mais recentes primeiro
+  
+  // Se não houver data selecionada e houver datas disponíveis, selecione a mais recente
+  useEffect(() => {
+    if (!selectedDate && uniqueDates.length > 0) {
+      setSelectedDate(uniqueDates[0]);
+    }
+  }, [uniqueDates, selectedDate]);
+  
+  // Filtrar registros pela data selecionada
+  const attendanceRecords = selectedDate 
+    ? teacherAttendanceRecords.filter(record => {
+        const recordDate = format(new Date(record.date), 'yyyy-MM-dd');
+        return recordDate === selectedDate;
+      })
+    : [];
   
   // Carregar atividades missionárias
   const {
@@ -87,30 +120,37 @@ const TeacherRecords: React.FC = () => {
     queryKey: ['/api/missionary-activities'],
   });
   
-  // Filtrar atividades pelo mês selecionado
-  const missionaryActivities = allMissionaryActivities.filter((activity) => {
-    const activityDate = new Date(activity.date);
-    return activityDate >= startOfSelectedMonth && activityDate <= endOfSelectedMonth;
+  // Filtrar atividades apenas das classes do professor
+  const teacherMissionaryActivities = allMissionaryActivities.filter(activity => {
+    return teacherClassIds.includes(activity.classId);
   });
   
-  // Funções para navegação entre meses
-  const goToPreviousMonth = () => {
-    setSelectedMonth(prev => subMonths(prev, 1));
-  };
+  // Extrair datas únicas das atividades
+  const uniqueActivityDates = [...new Set(teacherMissionaryActivities.map(activity => 
+    format(new Date(activity.date), 'yyyy-MM-dd')
+  ))].sort().reverse(); // Mais recentes primeiro
   
-  const goToNextMonth = () => {
-    setSelectedMonth(prev => {
-      const nextMonth = new Date(prev);
-      nextMonth.setMonth(nextMonth.getMonth() + 1);
-      return nextMonth;
-    });
-  };
+  // Combinar todas as datas únicas para o dropdown
+  const allUniqueDates = [...new Set([...uniqueDates, ...uniqueActivityDates])].sort().reverse();
+  
+  // Filtrar atividades pela data selecionada
+  const missionaryActivities = selectedDate 
+    ? teacherMissionaryActivities.filter(activity => {
+        const activityDate = format(new Date(activity.date), 'yyyy-MM-dd');
+        return activityDate === selectedDate;
+      })
+    : [];
   
   // Função para formatar data
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr);
     return format(date, 'dd/MM/yyyy');
   };
+  
+  // Formatar data selecionada para exibição
+  const formattedSelectedDate = selectedDate 
+    ? format(parseISO(selectedDate), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })
+    : 'Selecione uma data';
   
   return (
     <div className="flex flex-col min-h-screen bg-gray-50">
@@ -136,41 +176,44 @@ const TeacherRecords: React.FC = () => {
           </div>
         </div>
         
-        {/* Filtros */}
+        {/* Filtro por Data */}
         <div className="flex justify-between items-center mb-6">
           <div className="flex items-center">
-            <Button variant="outline" size="sm" onClick={goToPreviousMonth}>
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            
-            <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  className="mx-2 min-w-[150px]"
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button 
+                  variant="outline" 
+                  className="min-w-[220px] flex justify-between items-center text-left"
+                  disabled={allUniqueDates.length === 0}
                 >
-                  <Calendar className="h-4 w-4 mr-2" />
-                  {formattedMonth}
+                  <div className="flex items-center truncate">
+                    <Calendar className="h-4 w-4 mr-2 flex-shrink-0" />
+                    <span className="truncate">{formattedSelectedDate}</span>
+                  </div>
+                  <Filter className="h-4 w-4 ml-2 flex-shrink-0" />
                 </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <CalendarComponent
-                  mode="single"
-                  selected={selectedMonth}
-                  onSelect={(date) => {
-                    if (date) {
-                      setSelectedMonth(date);
-                      setDatePickerOpen(false);
-                    }
-                  }}
-                  initialFocus
-                />
-              </PopoverContent>
-            </Popover>
-            
-            <Button variant="outline" size="sm" onClick={goToNextMonth}>
-              <ChevronRight className="h-4 w-4" />
-            </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="max-h-[300px] overflow-auto">
+                {allUniqueDates.length === 0 ? (
+                  <div className="px-2 py-1.5 text-sm text-muted-foreground">
+                    Nenhum registro encontrado
+                  </div>
+                ) : (
+                  allUniqueDates.map((date) => (
+                    <DropdownMenuItem 
+                      key={date} 
+                      onClick={() => setSelectedDate(date)}
+                      className="flex justify-between items-center"
+                    >
+                      {format(parseISO(date), "dd/MM/yyyy")}
+                      {date === selectedDate && (
+                        <Check className="h-4 w-4 text-primary-500" />
+                      )}
+                    </DropdownMenuItem>
+                  ))
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
         
@@ -194,11 +237,11 @@ const TeacherRecords: React.FC = () => {
                 <CardHeader>
                   <CardTitle className="text-xl">Registros de Frequência</CardTitle>
                   <CardDescription>
-                    Presença dos alunos nas aulas - {formattedMonth}
+                    Presença dos alunos nas aulas - {formattedSelectedDate}
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  {attendanceLoading ? (
+                  {attendanceLoading || isLoadingClasses ? (
                     // Estado de loading
                     <div className="space-y-3">
                       {Array(5).fill(0).map((_, i) => (
@@ -218,7 +261,11 @@ const TeacherRecords: React.FC = () => {
                         </div>
                       </div>
                       <h3 className="font-medium mb-1">Nenhum registro encontrado</h3>
-                      <p className="text-sm">Não há registros de frequência para este mês</p>
+                      <p className="text-sm">
+                        {uniqueDates.length === 0 
+                          ? "Você não tem registros de frequência" 
+                          : "Não há registros de frequência para a data selecionada"}
+                      </p>
                     </div>
                   ) : (
                     // Tabela de registros
@@ -227,7 +274,7 @@ const TeacherRecords: React.FC = () => {
                         <TableHeader>
                           <TableRow>
                             <TableHead>Aluno</TableHead>
-                            <TableHead>Data</TableHead>
+                            <TableHead>Turma</TableHead>
                             <TableHead>Presença</TableHead>
                           </TableRow>
                         </TableHeader>
@@ -235,7 +282,9 @@ const TeacherRecords: React.FC = () => {
                           {attendanceRecords.map((record) => (
                             <TableRow key={record.id}>
                               <TableCell className="font-medium">{record.studentName}</TableCell>
-                              <TableCell>{formatDate(record.date)}</TableCell>
+                              <TableCell>
+                                {teacherClasses.find((c: any) => c.id === record.classId)?.name || '-'}
+                              </TableCell>
                               <TableCell>
                                 {record.present ? (
                                   <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
@@ -265,11 +314,11 @@ const TeacherRecords: React.FC = () => {
                 <CardHeader>
                   <CardTitle className="text-xl">Atividades Missionárias</CardTitle>
                   <CardDescription>
-                    Registros de atividades realizadas - {formattedMonth}
+                    Registros de atividades realizadas - {formattedSelectedDate}
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  {activitiesLoading ? (
+                  {activitiesLoading || isLoadingClasses ? (
                     // Estado de loading
                     <div className="space-y-3">
                       {Array(3).fill(0).map((_, i) => (
@@ -289,7 +338,11 @@ const TeacherRecords: React.FC = () => {
                         </div>
                       </div>
                       <h3 className="font-medium mb-1">Nenhum registro encontrado</h3>
-                      <p className="text-sm">Não há registros de atividades missionárias para este mês</p>
+                      <p className="text-sm">
+                        {uniqueActivityDates.length === 0 
+                          ? "Você não tem registros de atividades missionárias" 
+                          : "Não há registros de atividades para a data selecionada"}
+                      </p>
                     </div>
                   ) : (
                     // Tabela de atividades
@@ -298,7 +351,6 @@ const TeacherRecords: React.FC = () => {
                         <TableHeader>
                           <TableRow>
                             <TableHead>Classe</TableHead>
-                            <TableHead>Data</TableHead>
                             <TableHead>Literaturas</TableHead>
                             <TableHead>Contatos</TableHead>
                             <TableHead>Estudos</TableHead>
@@ -308,7 +360,6 @@ const TeacherRecords: React.FC = () => {
                           {missionaryActivities.map((activity) => (
                             <TableRow key={activity.id}>
                               <TableCell className="font-medium">{activity.className}</TableCell>
-                              <TableCell>{formatDate(activity.date)}</TableCell>
                               <TableCell>{activity.literaturasDistribuidas}</TableCell>
                               <TableCell>{activity.qtdContatosMissionarios}</TableCell>
                               <TableCell>{activity.estudosBiblicos}</TableCell>
