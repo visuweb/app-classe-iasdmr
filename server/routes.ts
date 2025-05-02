@@ -353,7 +353,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  // Rota para desativar um aluno
+  // Rota para desativar/reativar um aluno
   app.delete("/api/students/:id", ensureAuthenticated, async (req, res) => {
     try {
       const studentId = parseInt(req.params.id, 10);
@@ -367,27 +367,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Aluno não encontrado" });
       }
       
-      // Verificar se tem permissão para desativar este aluno
+      // Verificar se tem permissão para desativar/reativar este aluno
       const teacher = req.user as Teacher;
       if (!teacher.isAdmin) {
         const teacherClasses = await storage.getClassesByTeacherId(teacher.id);
         const hasAccess = teacherClasses.some(c => c.id === student.classId);
         if (!hasAccess) {
           return res.status(403).json({ 
-            message: "Você não tem permissão para desativar alunos desta classe" 
+            message: `Você não tem permissão para ${student.active ? 'desativar' : 'reativar'} alunos desta classe` 
           });
         }
       }
       
-      // Desativar aluno (alterar o campo active para false)
-      const updatedStudent = await storage.updateStudent(studentId, { active: false });
-      if (!updatedStudent) {
+      // Alternar status do aluno (ativar/desativar)
+      const result = await storage.deleteStudent(studentId);
+      if (!result) {
         return res.status(404).json({ message: "Aluno não encontrado" });
       }
       
-      res.status(200).json({ message: "Aluno desativado com sucesso" });
+      // Buscar o aluno atualizado para obter seu novo estado
+      const updatedStudent = await storage.getStudent(studentId);
+      
+      res.status(200).json({ 
+        message: updatedStudent?.active 
+          ? "Aluno reativado com sucesso"
+          : "Aluno desativado com sucesso",
+        student: updatedStudent 
+      });
     } catch (error: any) {
-      res.status(500).json({ message: error.message || "Falha ao desativar aluno" });
+      res.status(500).json({ 
+        message: error.message || "Falha ao alterar o status do aluno" 
+      });
     }
   });
 

@@ -168,25 +168,25 @@ const ClassDetails: React.FC = () => {
   // Mutation para desativar/reativar aluno
   const deleteStudentMutation = useMutation({
     mutationFn: async (studentId: number) => {
-      // Em vez de excluir, vamos atualizar o status para o oposto
-      const newStatus = !studentToDelete?.active;
-      const res = await apiRequest('PUT', `/api/students/${studentId}`, { 
-        active: newStatus,
-        name: studentToDelete?.name || '',
-        classId: classId || 0
-      });
+      // Usamos DELETE que agora alterna o status (active/inactive)
+      const res = await apiRequest('DELETE', `/api/students/${studentId}`);
       if (!res.ok) {
         const errorData = await res.json();
-        throw new Error(errorData.message || `Erro ao ${newStatus ? 'reativar' : 'desativar'} aluno`);
+        throw new Error(errorData.message || 'Erro ao alterar status do aluno');
       }
-      return { success: true, active: newStatus };
+      const data = await res.json();
+      return { 
+        success: true, 
+        active: data.student?.active ?? false,
+        message: data.message
+      };
     },
     onSuccess: (data) => {
       toast({
         title: data.active ? 'Aluno reativado' : 'Aluno desativado',
-        description: data.active 
+        description: data.message || (data.active 
           ? 'O aluno foi reativado com sucesso.' 
-          : 'O aluno foi desativado com sucesso.',
+          : 'O aluno foi desativado com sucesso.'),
       });
       refetchStudents();
       setIsDeleteStudentOpen(false);
