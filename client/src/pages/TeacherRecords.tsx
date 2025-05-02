@@ -67,42 +67,30 @@ const TeacherRecords: React.FC = () => {
   
   // Carregar registros de presença
   const {
-    data: attendanceRecords = [],
+    data: allAttendanceRecords = [],
     isLoading: attendanceLoading
   } = useQuery<AttendanceRecordWithStudent[]>({
-    queryKey: ['/api/attendance', selectedMonth],
-    queryFn: async () => {
-      const res = await apiRequest('GET', '/api/attendance', {
-        // Se tivermos acesso a classes do professor, poderíamos filtrar por classId
-      });
-      const data = await res.json();
-      
-      // Filtrar registros pelo mês selecionado
-      return data.filter((record: AttendanceRecordWithStudent) => {
-        const recordDate = new Date(record.date);
-        return recordDate >= startOfSelectedMonth && recordDate <= endOfSelectedMonth;
-      });
-    },
+    queryKey: ['/api/attendance'],
+  });
+  
+  // Filtrar registros pelo mês selecionado
+  const attendanceRecords = allAttendanceRecords.filter((record) => {
+    const recordDate = new Date(record.date);
+    return recordDate >= startOfSelectedMonth && recordDate <= endOfSelectedMonth;
   });
   
   // Carregar atividades missionárias
   const {
-    data: missionaryActivities = [],
+    data: allMissionaryActivities = [],
     isLoading: activitiesLoading
   } = useQuery<MissionaryActivityWithClass[]>({
-    queryKey: ['/api/missionary-activities', selectedMonth],
-    queryFn: async () => {
-      const res = await apiRequest('GET', '/api/missionary-activities', {
-        // Se tivermos acesso a classes do professor, poderíamos filtrar por classId
-      });
-      const data = await res.json();
-      
-      // Filtrar atividades pelo mês selecionado
-      return data.filter((activity: MissionaryActivityWithClass) => {
-        const activityDate = new Date(activity.date);
-        return activityDate >= startOfSelectedMonth && activityDate <= endOfSelectedMonth;
-      });
-    },
+    queryKey: ['/api/missionary-activities'],
+  });
+  
+  // Filtrar atividades pelo mês selecionado
+  const missionaryActivities = allMissionaryActivities.filter((activity) => {
+    const activityDate = new Date(activity.date);
+    return activityDate >= startOfSelectedMonth && activityDate <= endOfSelectedMonth;
   });
   
   // Funções para navegação entre meses

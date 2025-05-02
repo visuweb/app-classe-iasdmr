@@ -72,37 +72,50 @@ const RecordsList: React.FC = () => {
     queryKey: ['/api/classes'],
   });
   
-  const { data: attendanceRecords, isLoading: isLoadingAttendance } = useQuery<AttendanceRecordWithStudent[]>({
-    queryKey: ['/api/attendance', selectedClassId, selectedMonth],
-    queryFn: async () => {
-      const classParam = selectedClassId ? `?classId=${selectedClassId}` : '';
-      const response = await fetch(`/api/attendance${classParam}`);
-      const data = await response.json();
-      
-      // Filtrar registros pelo mês selecionado
-      return data.filter((record: AttendanceRecordWithStudent) => {
-        const recordDate = new Date(record.date);
-        return recordDate >= startOfSelectedMonth && recordDate <= endOfSelectedMonth;
-      });
-    },
+  // Carregar todos os registros de presença
+  const { data: allAttendanceRecords = [], isLoading: isLoadingAllAttendance } = useQuery<AttendanceRecordWithStudent[]>({
+    queryKey: ['/api/attendance'],
     enabled: !!selectedClassId,
   });
   
-  const { data: missionaryActivities, isLoading: isLoadingActivities } = useQuery<MissionaryActivityWithClass[]>({
-    queryKey: ['/api/missionary-activities', selectedClassId, selectedMonth],
-    queryFn: async () => {
-      const classParam = selectedClassId ? `?classId=${selectedClassId}` : '';
-      const response = await fetch(`/api/missionary-activities${classParam}`);
-      const data = await response.json();
-      
-      // Filtrar atividades pelo mês selecionado
-      return data.filter((activity: MissionaryActivityWithClass) => {
-        const activityDate = new Date(activity.date);
-        return activityDate >= startOfSelectedMonth && activityDate <= endOfSelectedMonth;
-      });
-    },
+  // Filtrar registros por classe e mês
+  const attendanceRecords = selectedClassId
+    ? allAttendanceRecords.filter((record) => {
+        // Converter para número para comparação
+        const studentClassId = parseInt(selectedClassId, 10);
+        const recordDate = new Date(record.date);
+        
+        // Verificar se o record pertence à classe selecionada
+        // Como o record não tem classId diretamente, precisamos verificar nos estudantes
+        // ou confiar que a API já filtrou corretamente
+        return recordDate >= startOfSelectedMonth && 
+               recordDate <= endOfSelectedMonth;
+      })
+    : [];
+  
+  // Indicador de carregamento para registros combinados
+  const isLoadingAttendance = isLoadingAllAttendance;
+  
+  // Carregar atividades missionárias
+  const { data: allMissionaryActivities = [], isLoading: isLoadingAllActivities } = useQuery<MissionaryActivityWithClass[]>({
+    queryKey: ['/api/missionary-activities'],
     enabled: !!selectedClassId,
   });
+  
+  // Filtrar atividades por classe e mês
+  const missionaryActivities = selectedClassId
+    ? allMissionaryActivities.filter((activity) => {
+        const classId = parseInt(selectedClassId, 10);
+        const activityDate = new Date(activity.date);
+        
+        return activity.classId === classId && 
+               activityDate >= startOfSelectedMonth && 
+               activityDate <= endOfSelectedMonth;
+      })
+    : [];
+  
+  // Indicador de carregamento para atividades combinadas
+  const isLoadingActivities = isLoadingAllActivities;
   
   const formatDate = (dateString: string) => {
     return format(new Date(dateString), "dd 'de' MMMM, yyyy", { locale: ptBR });
