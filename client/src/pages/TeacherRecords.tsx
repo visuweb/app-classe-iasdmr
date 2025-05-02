@@ -388,7 +388,7 @@ const TeacherRecords: React.FC = () => {
                                     <TableCell className="text-right">{activity.pessoasAuxiliadas}</TableCell>
                                   </TableRow>
                                 )}
-                                {activity.pessoasTrazidasIgreja && activity.pessoasTrazidasIgreja > 0 && (
+                                {activity.pessoasTrazidasIgreja > 0 && (
                                   <TableRow key={`${activity.id}-trazidas`}>
                                     <TableCell className="font-medium">Pessoas Trazidas à Igreja</TableCell>
                                     <TableCell className="text-right">{activity.pessoasTrazidasIgreja}</TableCell>
