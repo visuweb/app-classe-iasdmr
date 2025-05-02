@@ -66,24 +66,12 @@ const AttendanceStep: React.FC<AttendanceStepProps> = ({ isActive }) => {
                   <h4 className="font-medium text-gray-800">{currentStudent.name}</h4>
                   <p className="text-xs text-gray-500">{formattedDate}</p>
                 </div>
-                <div className="flex items-center">
-                  {currentStudentIndex > 0 && (
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      className="mr-2 text-xs" 
-                      onClick={goToPreviousStudent}
-                    >
-                      Voltar
-                    </Button>
-                  )}
-                  <span className="text-xs font-medium rounded-full bg-blue-100 text-blue-800 px-2.5 py-0.5">
-                    {currentStudentIndex + 1}/{students.length}
-                  </span>
-                </div>
+                <span className="text-xs font-medium rounded-full bg-blue-100 text-blue-800 px-2.5 py-0.5">
+                  {currentStudentIndex + 1}/{students.length}
+                </span>
               </div>
               
-              <div className="flex space-x-3">
+              <div className="flex space-x-3 mb-3">
                 <Button 
                   variant="default" 
                   className="flex-1 bg-green-600 hover:bg-green-700"
@@ -101,6 +89,18 @@ const AttendanceStep: React.FC<AttendanceStepProps> = ({ isActive }) => {
                   AUSENTE
                 </Button>
               </div>
+              
+              {currentStudentIndex > 0 && (
+                <div className="flex gap-2">
+                  <Button 
+                    variant="outline" 
+                    className="flex-1"
+                    onClick={goToPreviousStudent}
+                  >
+                    VOLTAR
+                  </Button>
+                </div>
+              )}
             </motion.div>
           ) : (
             <div className="text-center p-8">
