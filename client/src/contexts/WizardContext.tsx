@@ -85,7 +85,9 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
           const response = await fetch(`/api/classes/${currentClassId}/students`);
           if (response.ok) {
             const data = await response.json();
-            setStudents(data);
+            // Filtrar apenas alunos ativos para a chamada
+            const activeStudents = data.filter((student: Student) => student.active === true);
+            setStudents(activeStudents);
           }
         } catch (error) {
           console.error('Error fetching students:', error);

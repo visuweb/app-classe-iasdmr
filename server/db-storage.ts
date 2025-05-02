@@ -286,7 +286,7 @@ export class DatabaseStorage implements IStorage {
   
   // Class operations
   async getAllClasses(): Promise<Class[]> {
-    return await db.select().from(classes).where(eq(classes.active, true));
+    return await db.select().from(classes);
   }
   
   async getClass(id: number): Promise<Class | undefined> {
@@ -318,12 +318,7 @@ export class DatabaseStorage implements IStorage {
   async getStudentsByClassId(classId: number): Promise<Student[]> {
     return await db.select()
       .from(students)
-      .where(
-        and(
-          eq(students.classId, classId),
-          eq(students.active, true)
-        )
-      );
+      .where(eq(students.classId, classId));
   }
   
   async getStudent(id: number): Promise<Student | undefined> {
@@ -358,20 +353,10 @@ export class DatabaseStorage implements IStorage {
       return false;
     }
     
-    // Verificar se existem registros de presença para este aluno
-    const attendanceCount = await db
-      .select({ count: count() })
-      .from(attendanceRecords)
-      .where(eq(attendanceRecords.studentId, id));
-    
-    // Se houver registros de presença, não permitir excluir o aluno
-    if (attendanceCount[0].count > 0) {
-      throw new Error("Não é possível excluir um aluno com registros de presença");
-    }
-    
-    // Excluir o aluno
+    // Em vez de excluir, alteramos o status active do aluno
     await db
-      .delete(students)
+      .update(students)
+      .set({ active: !studentExists.active })
       .where(eq(students.id, id));
     
     return true;
