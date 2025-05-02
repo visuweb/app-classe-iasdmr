@@ -64,21 +64,21 @@ const ClassList: React.FC = () => {
   const { teacher } = useAuth();
   const [selectedClass, setSelectedClass] = useState<Class | null>(null);
   const [isAddStudentOpen, setIsAddStudentOpen] = useState(false);
-  
+
   // Fetch classes
   const { data: classes = [], isLoading, refetch: refetchClasses } = useQuery<Class[]>({
     queryKey: ['/api/classes'],
   });
-  
+
   // Fetch students count for each class
   const classStudentCounts = useQuery({
     queryKey: ['/api/classes-students-count'],
     queryFn: async () => {
       if (!classes || classes.length === 0) return {};
-      
+
       // Criar um mapa que armazenará o ID da classe como chave e a contagem de alunos como valor
       const countsMap: Record<number, number> = {};
-      
+
       // Buscar alunos para cada classe em paralelo
       await Promise.all(
         classes.map(async (classObj) => {
@@ -91,12 +91,12 @@ const ClassList: React.FC = () => {
           }
         })
       );
-      
+
       return countsMap;
     },
     enabled: classes.length > 0,
   });
-  
+
   // Forms
   const classForm = useForm<z.infer<typeof classFormSchema>>({
     resolver: zodResolver(classFormSchema),
@@ -104,7 +104,7 @@ const ClassList: React.FC = () => {
       name: '',
     },
   });
-  
+
   const studentForm = useForm<z.infer<typeof studentFormSchema>>({
     resolver: zodResolver(studentFormSchema),
     defaultValues: {
@@ -112,7 +112,7 @@ const ClassList: React.FC = () => {
       classId: 0,
     },
   });
-  
+
   // Mutations
   const createClassMutation = useMutation({
     mutationFn: async (data: z.infer<typeof classFormSchema>) => {
@@ -135,7 +135,7 @@ const ClassList: React.FC = () => {
       });
     },
   });
-  
+
   const createStudentMutation = useMutation({
     mutationFn: async (data: z.infer<typeof studentFormSchema>) => {
       const response = await apiRequest('POST', '/api/students', data);
@@ -145,7 +145,7 @@ const ClassList: React.FC = () => {
       // Invalidate both classes and the student counts
       queryClient.invalidateQueries({ queryKey: ['/api/classes'] });
       queryClient.invalidateQueries({ queryKey: ['/api/classes-students-count'] });
-      
+
       toast({
         title: 'Aluno adicionado com sucesso',
         description: 'O novo aluno foi adicionado à classe',
@@ -161,12 +161,12 @@ const ClassList: React.FC = () => {
       });
     },
   });
-  
+
   // Submit handlers
   const onSubmitClass = (data: z.infer<typeof classFormSchema>) => {
     createClassMutation.mutate(data);
   };
-  
+
   const onSubmitStudent = (data: z.infer<typeof studentFormSchema>) => {
     if (selectedClass) {
       createStudentMutation.mutate({
@@ -175,7 +175,7 @@ const ClassList: React.FC = () => {
       });
     }
   };
-  
+
   const handleSelectClass = (classObj: Class) => {
     setSelectedClass(classObj);
     setIsAddStudentOpen(true);
@@ -184,15 +184,15 @@ const ClassList: React.FC = () => {
       classId: classObj.id,
     });
   };
-  
+
   const goToWizard = (classObj: Class) => {
     setLocation(`/wizard?classId=${classObj.id}&className=${encodeURIComponent(classObj.name)}`);
   };
-  
+
   // Render class list
   const renderClasses = () => {
     const isMobile = useIsMobile();
-    
+
     if (isLoading) {
       return Array(3).fill(0).map((_, i) => (
         <Card key={i} className="mb-3 shadow-sm">
@@ -207,7 +207,7 @@ const ClassList: React.FC = () => {
         </Card>
       ));
     }
-    
+
     if (!classes || classes.length === 0) {
       return (
         <Card className="text-center p-6 shadow-sm">
@@ -222,7 +222,7 @@ const ClassList: React.FC = () => {
         </Card>
       );
     }
-    
+
     return classes.map(classObj => (
       <Card key={classObj.id} className="mb-3 shadow-sm hover:shadow-md transition-shadow">
         <div className="p-4">
@@ -249,42 +249,44 @@ const ClassList: React.FC = () => {
               <UserPlus className="h-4 w-4" />
             </Button>
           </div>
-          
+
           <div className="flex items-center justify-between mt-4 pt-3 border-t border-gray-100">
-            <Button 
-              variant="outline" 
-              size="sm" 
-              className="flex items-center"
-              onClick={() => setLocation(`/classes/${classObj.id}`)}
-            >
-              <PenSquare className="h-3.5 w-3.5 mr-1.5" />
-              {isMobile ? "Editar" : "Gerenciar"}
-            </Button>
-            
-            {!teacher?.isAdmin && (
+            <div className="flex space-x-2">
               <Button 
+                variant="outline" 
                 size="sm" 
                 className="flex items-center"
-                onClick={() => goToWizard(classObj)}
+                onClick={() => setLocation(`/classes/${classObj.id}`)}
               >
-                {isMobile ? "Iniciar" : "Iniciar Registro"}
-                <ChevronRight className="h-3.5 w-3.5 ml-1.5" />
+                <PenSquare className="h-3.5 w-3.5 mr-1.5" />
+                {isMobile ? "Editar" : "Gerenciar"}
               </Button>
-            )}
+
+              <Button 
+                variant="outline" 
+                size="sm"
+                className="flex items-center"
+                onClick={() => setLocation('/teacher-records')}
+              >
+                <FileText className="h-3.5 w-3.5 mr-1.5" />
+                {isMobile ? "Registros" : "Ver Registros"}
+              </Button>
+            </div>
+
           </div>
         </div>
       </Card>
     ));
   };
-  
+
   const isMobile = useIsMobile();
-  
+
   return (
     <div className="flex flex-col min-h-screen bg-gray-50">
       <main className="flex-1 p-4">
         <div className="flex flex-wrap justify-between items-center mb-4 gap-2">
           <h1 className={`${isMobile ? 'text-xl' : 'text-2xl'} font-bold`}>Minhas Classes</h1>
-          
+
           <div className="flex space-x-2">
             {/* Botão para visualizar registros */}
             <Button 
@@ -295,7 +297,7 @@ const ClassList: React.FC = () => {
               <FileText className="h-4 w-4 mr-2" />
               {isMobile ? "Registros" : "Ver Registros"}
             </Button>
-            
+
             {teacher?.isAdmin && (
               <Dialog>
                 <DialogTrigger asChild>
@@ -317,7 +319,7 @@ const ClassList: React.FC = () => {
                       Digite o nome da classe para criar um novo registro.
                     </DialogDescription>
                   </DialogHeader>
-                  
+
                   <Form {...classForm}>
                     <form onSubmit={classForm.handleSubmit(onSubmitClass)} className="space-y-4">
                       <FormField
@@ -333,7 +335,7 @@ const ClassList: React.FC = () => {
                           </FormItem>
                         )}
                       />
-                      
+
                       <DialogFooter>
                         <Button type="submit" disabled={createClassMutation.isPending}>
                           {createClassMutation.isPending ? 'Criando...' : 'Criar Classe'}
@@ -346,11 +348,11 @@ const ClassList: React.FC = () => {
             )}
           </div>
         </div>
-        
+
         <div className="max-w-lg mx-auto">
           {renderClasses()}
         </div>
-        
+
         {/* Add Student Dialog */}
         <Dialog open={isAddStudentOpen} onOpenChange={setIsAddStudentOpen}>
           <DialogContent className={isMobile ? "w-[90vw] max-w-md" : ""}>
@@ -360,7 +362,7 @@ const ClassList: React.FC = () => {
                 {selectedClass && `Adicionar aluno à classe: ${selectedClass.name}`}
               </DialogDescription>
             </DialogHeader>
-            
+
             <Form {...studentForm}>
               <form onSubmit={studentForm.handleSubmit(onSubmitStudent)} className="space-y-4">
                 <FormField
@@ -376,7 +378,7 @@ const ClassList: React.FC = () => {
                     </FormItem>
                   )}
                 />
-                
+
                 <DialogFooter>
                   <Button type="submit" disabled={createStudentMutation.isPending}>
                     {createStudentMutation.isPending ? 'Adicionando...' : 'Adicionar Aluno'}
@@ -386,7 +388,7 @@ const ClassList: React.FC = () => {
             </Form>
           </DialogContent>
         </Dialog>
-        
+
         <div className="mt-8 text-center text-xs text-gray-400">
           <p>Apenas classes atribuídas a você são mostradas</p>
         </div>
