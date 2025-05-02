@@ -232,11 +232,10 @@ const RecordsList: React.FC = () => {
             <div className="text-sm text-gray-500">Visitas Missionárias:</div>
             <div className="text-sm font-medium text-right">{activity.visitasMissionarias}</div>
             
-            <div className="text-sm text-gray-500">Estudos Bíblicos:</div>
-            <div className="text-sm font-medium text-right">{activity.estudosBiblicos}</div>
-            
-            <div className="text-sm text-gray-500">Ministrados:</div>
-            <div className="text-sm font-medium text-right">{activity.ministrados}</div>
+            <div className="text-sm text-gray-500">Estudos Bíblicos Ministrados:</div>
+            <div className="text-sm font-medium text-right">
+              {(activity.estudosBiblicos || 0) + (activity.ministrados || 0)}
+            </div>
             
             <div className="text-sm text-gray-500">Pessoas Auxiliadas:</div>
             <div className="text-sm font-medium text-right">{activity.pessoasAuxiliadas}</div>

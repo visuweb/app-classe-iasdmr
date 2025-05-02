@@ -372,22 +372,18 @@ const TeacherRecords: React.FC = () => {
                                     <TableCell className="text-right">{activity.qtdContatosMissionarios}</TableCell>
                                   </TableRow>
                                 )}
-                                {activity.estudosBiblicos && activity.estudosBiblicos > 0 && (
+                                {(activity.estudosBiblicos && activity.estudosBiblicos > 0) || (activity.ministrados && activity.ministrados > 0) ? (
                                   <TableRow key={`${activity.id}-estudos`}>
-                                    <TableCell className="font-medium">Estudos Bíblicos</TableCell>
-                                    <TableCell className="text-right">{activity.estudosBiblicos}</TableCell>
+                                    <TableCell className="font-medium">Estudos Bíblicos Ministrados</TableCell>
+                                    <TableCell className="text-right">
+                                      {(activity.estudosBiblicos || 0) + (activity.ministrados || 0)}
+                                    </TableCell>
                                   </TableRow>
-                                )}
+                                ) : null}
                                 {activity.visitasMissionarias && activity.visitasMissionarias > 0 && (
                                   <TableRow key={`${activity.id}-visitas`}>
                                     <TableCell className="font-medium">Visitas Missionárias</TableCell>
                                     <TableCell className="text-right">{activity.visitasMissionarias}</TableCell>
-                                  </TableRow>
-                                )}
-                                {activity.ministrados && activity.ministrados > 0 && (
-                                  <TableRow key={`${activity.id}-ministrados`}>
-                                    <TableCell className="font-medium">Ministrados</TableCell>
-                                    <TableCell className="text-right">{activity.ministrados}</TableCell>
                                   </TableRow>
                                 )}
                                 {activity.pessoasAuxiliadas && activity.pessoasAuxiliadas > 0 && (

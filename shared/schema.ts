@@ -131,8 +131,7 @@ export const missionaryActivityDefinitions = [
   { id: "qtdContatosMissionarios", label: "Contatos Missionários" },
   { id: "literaturasDistribuidas", label: "Literaturas Distribuídas" },
   { id: "visitasMissionarias", label: "Visitas Missionárias" },
-  { id: "estudosBiblicos", label: "Estudos Bíblicos" },
-  { id: "ministrados", label: "Ministrados" },
+  { id: "estudosBiblicos", label: "Estudos Bíblicos Ministrados" },
   { id: "pessoasAuxiliadas", label: "Pessoas Auxiliadas" },
   { id: "pessoasTrazidasIgreja", label: "Pessoas Trazidas à Igreja" }
 ] as const;
