@@ -262,15 +262,7 @@ const ClassList: React.FC = () => {
                 {isMobile ? "Editar" : "Gerenciar"}
               </Button>
 
-              <Button 
-                variant="outline" 
-                size="sm"
-                className="flex items-center"
-                onClick={() => setLocation('/teacher-records')}
-              >
-                <FileText className="h-3.5 w-3.5 mr-1.5" />
-                {isMobile ? "Registros" : "Ver Registros"}
-              </Button>
+              
             </div>
 
           </div>
