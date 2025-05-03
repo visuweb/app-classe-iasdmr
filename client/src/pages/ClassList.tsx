@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useLocation } from 'wouter';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/use-auth';
@@ -65,6 +65,7 @@ const ClassList: React.FC = () => {
   const { teacher } = useAuth();
   const [selectedClass, setSelectedClass] = useState<Class | null>(null);
   const [isAddStudentOpen, setIsAddStudentOpen] = useState(false);
+  const [classesTodayRecords, setClassesTodayRecords] = useState<Record<number, boolean>>({});
 
   // Fetch classes
   const { data: classes = [], isLoading, refetch: refetchClasses } = useQuery<Class[]>({
@@ -186,6 +187,39 @@ const ClassList: React.FC = () => {
     });
   };
 
+  // Função para verificar se a classe já tem registro para o dia atual
+  const checkTodayRecords = async (classId: number) => {
+    try {
+      const response = await apiRequest('GET', `/api/check-today-records/${classId}`);
+      const data = await response.json();
+      return data.hasRecords || false;
+    } catch (error) {
+      console.error('Erro ao verificar registros do dia:', error);
+      return false;
+    }
+  };
+
+  // Verificar se cada classe tem registro para hoje quando as classes forem carregadas
+  useEffect(() => {
+    if (classes && classes.length > 0) {
+      const fetchRecordsStatus = async () => {
+        const recordsMap: Record<number, boolean> = {};
+        
+        // Verificar todas as classes em paralelo
+        await Promise.all(
+          classes.map(async (classObj) => {
+            const hasRecords = await checkTodayRecords(classObj.id);
+            recordsMap[classObj.id] = hasRecords;
+          })
+        );
+        
+        setClassesTodayRecords(recordsMap);
+      };
+      
+      fetchRecordsStatus();
+    }
+  }, [classes]);
+
   const goToWizard = (classObj: Class) => {
     setLocation(`/wizard?classId=${classObj.id}&className=${encodeURIComponent(classObj.name)}`);
   };
@@ -272,13 +306,18 @@ const ClassList: React.FC = () => {
                 {isMobile ? "Registros" : "Ver Registros"}
               </Button>
               <Button 
-                variant="default" 
+                variant={classesTodayRecords[classObj.id] ? "destructive" : "default"}
                 size="sm" 
-                className="flex items-center"
+                className={`flex items-center ${classesTodayRecords[classObj.id] ? "bg-orange-500 hover:bg-orange-600" : ""}`}
                 onClick={() => goToWizard(classObj)}
               >
                 <CheckSquare className="h-4 w-4 mr-2" />
-                {isMobile ? "Chamada" : "Iniciar Chamada"}
+                {isMobile 
+                  ? "Chamada" 
+                  : classesTodayRecords[classObj.id] 
+                    ? "Editar Chamada" 
+                    : "Iniciar Chamada"
+                }
               </Button>
             </div>
 
