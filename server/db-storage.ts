@@ -21,7 +21,7 @@ import {
 import { db, pool } from "./db";
 import { IStorage } from "./storage";
 import session from "express-session";
-import { eq, and, count, inArray } from "drizzle-orm";
+import { eq, and, count, inArray, sql } from "drizzle-orm";
 import connectPg from "connect-pg-simple";
 import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
@@ -364,8 +364,25 @@ export class DatabaseStorage implements IStorage {
   
   // Attendance operations
   async getAttendanceRecords(classId?: number): Promise<(AttendanceRecord & { studentName: string })[]> {
+    // Buscar todos os registros agrupando por studentId e date para evitar duplicações
+    // Isso vai pegar sempre o registro mais recente para cada combinação de aluno e data
+    
     if (classId) {
-      // Buscar registros com nome do aluno filtrando por classe
+      // Subconsulta para obter o ID mais recente para cada combinação de aluno e data
+      const latestRecords = db
+        .select({
+          maxId: sql<number>`max(${attendanceRecords.id})`.as('maxId'),
+          studentId: attendanceRecords.studentId,
+          date: attendanceRecords.date
+        })
+        .from(attendanceRecords)
+        .innerJoin(students, eq(attendanceRecords.studentId, students.id))
+        .innerJoin(classes, eq(students.classId, classes.id))
+        .where(eq(classes.id, classId))
+        .groupBy(attendanceRecords.studentId, attendanceRecords.date)
+        .as('latestRecords');
+      
+      // Usar a subconsulta para obter apenas os registros mais recentes
       return await db
         .select({
           id: attendanceRecords.id,
@@ -377,10 +394,20 @@ export class DatabaseStorage implements IStorage {
         })
         .from(attendanceRecords)
         .innerJoin(students, eq(attendanceRecords.studentId, students.id))
-        .innerJoin(classes, eq(students.classId, classes.id))
-        .where(eq(classes.id, classId));
+        .innerJoin(latestRecords, eq(attendanceRecords.id, latestRecords.maxId));
     } else {
-      // Buscar todos os registros com nome do aluno
+      // Subconsulta para obter o ID mais recente para cada combinação de aluno e data
+      const latestRecords = db
+        .select({
+          maxId: sql<number>`max(${attendanceRecords.id})`.as('maxId'),
+          studentId: attendanceRecords.studentId,
+          date: attendanceRecords.date
+        })
+        .from(attendanceRecords)
+        .groupBy(attendanceRecords.studentId, attendanceRecords.date)
+        .as('latestRecords');
+      
+      // Usar a subconsulta para obter apenas os registros mais recentes
       return await db
         .select({
           id: attendanceRecords.id,
@@ -391,11 +418,31 @@ export class DatabaseStorage implements IStorage {
           studentName: students.name
         })
         .from(attendanceRecords)
-        .innerJoin(students, eq(attendanceRecords.studentId, students.id));
+        .innerJoin(students, eq(attendanceRecords.studentId, students.id))
+        .innerJoin(latestRecords, eq(attendanceRecords.id, latestRecords.maxId));
     }
   }
   
   async getAttendanceRecordsForClassAndDate(classId: number, date: string): Promise<(AttendanceRecord & { studentName: string })[]> {
+    // Subconsulta para obter o ID mais recente para cada aluno nesta data
+    const latestRecords = db
+      .select({
+        maxId: sql<number>`max(${attendanceRecords.id})`.as('maxId'),
+        studentId: attendanceRecords.studentId
+      })
+      .from(attendanceRecords)
+      .innerJoin(students, eq(attendanceRecords.studentId, students.id))
+      .innerJoin(classes, eq(students.classId, classes.id))
+      .where(
+        and(
+          eq(classes.id, classId),
+          eq(attendanceRecords.date, date)
+        )
+      )
+      .groupBy(attendanceRecords.studentId)
+      .as('latestRecords');
+    
+    // Usar a subconsulta para obter apenas os registros mais recentes
     return await db
       .select({
         id: attendanceRecords.id,
@@ -407,13 +454,7 @@ export class DatabaseStorage implements IStorage {
       })
       .from(attendanceRecords)
       .innerJoin(students, eq(attendanceRecords.studentId, students.id))
-      .innerJoin(classes, eq(students.classId, classes.id))
-      .where(
-        and(
-          eq(classes.id, classId),
-          eq(attendanceRecords.date, date)
-        )
-      );
+      .innerJoin(latestRecords, eq(attendanceRecords.id, latestRecords.maxId));
   }
   
   async createAttendanceRecord(data: InsertAttendanceRecord): Promise<AttendanceRecord> {
@@ -454,7 +495,19 @@ export class DatabaseStorage implements IStorage {
   // Missionary activity operations
   async getMissionaryActivities(classId?: number): Promise<(MissionaryActivity & { className: string })[]> {
     if (classId) {
-      // Buscar atividades filtrando por classe
+      // Para missões, usamos uma subconsulta para pegar apenas o registro mais recente para cada combinação de classe e data
+      const latestRecords = db
+        .select({
+          maxId: sql<number>`max(${missionaryActivities.id})`.as('maxId'),
+          classId: missionaryActivities.classId,
+          date: missionaryActivities.date
+        })
+        .from(missionaryActivities)
+        .where(eq(missionaryActivities.classId, classId))
+        .groupBy(missionaryActivities.classId, missionaryActivities.date)
+        .as('latestRecords');
+      
+      // Buscar atividades filtrando por classe, usando apenas os IDs mais recentes
       return await db
         .select({
           id: missionaryActivities.id,
@@ -472,9 +525,20 @@ export class DatabaseStorage implements IStorage {
         })
         .from(missionaryActivities)
         .innerJoin(classes, eq(missionaryActivities.classId, classes.id))
-        .where(eq(missionaryActivities.classId, classId));
+        .innerJoin(latestRecords, eq(missionaryActivities.id, latestRecords.maxId));
     } else {
-      // Buscar todas as atividades
+      // Para todas as classes, fazer o mesmo mas sem filtrar por classId
+      const latestRecords = db
+        .select({
+          maxId: sql<number>`max(${missionaryActivities.id})`.as('maxId'),
+          classId: missionaryActivities.classId,
+          date: missionaryActivities.date
+        })
+        .from(missionaryActivities)
+        .groupBy(missionaryActivities.classId, missionaryActivities.date)
+        .as('latestRecords');
+        
+      // Buscar todas as atividades, usando apenas os IDs mais recentes
       return await db
         .select({
           id: missionaryActivities.id,
@@ -491,20 +555,47 @@ export class DatabaseStorage implements IStorage {
           className: classes.name
         })
         .from(missionaryActivities)
-        .innerJoin(classes, eq(missionaryActivities.classId, classes.id));
+        .innerJoin(classes, eq(missionaryActivities.classId, classes.id))
+        .innerJoin(latestRecords, eq(missionaryActivities.id, latestRecords.maxId));
     }
   }
   
   async getMissionaryActivitiesForClassAndDate(classId: number, date: string): Promise<MissionaryActivity[]> {
-    return await db
-      .select()
+    // Subconsulta para obter o ID mais recente para esta classe e data
+    const latestRecords = db
+      .select({
+        maxId: sql<number>`max(${missionaryActivities.id})`.as('maxId')
+      })
       .from(missionaryActivities)
       .where(
         and(
           eq(missionaryActivities.classId, classId),
           eq(missionaryActivities.date, date)
         )
-      );
+      )
+      .as('latestRecords');
+    
+    // Usar a subconsulta para obter apenas o registro mais recente
+    const results = await db
+      .select()
+      .from(missionaryActivities)
+      .innerJoin(latestRecords, eq(missionaryActivities.id, latestRecords.maxId));
+    
+    if (results.length === 0) {
+      // Se não encontrou com a subconsulta (pode acontecer em alguns casos),
+      // voltar ao método original por segurança
+      return await db
+        .select()
+        .from(missionaryActivities)
+        .where(
+          and(
+            eq(missionaryActivities.classId, classId),
+            eq(missionaryActivities.date, date)
+          )
+        );
+    }
+    
+    return results;
   }
   
   async createMissionaryActivity(data: InsertMissionaryActivity): Promise<MissionaryActivity> {
