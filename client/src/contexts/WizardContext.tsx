@@ -523,6 +523,9 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
       // Format data for submission
       const formattedDate = format(wizardDate, 'yyyy-MM-dd');
       
+      // Log dos valores das atividades missionárias antes da submissão
+      console.log('Valores das atividades missionárias antes da submissão:', missionaryActivities);
+      
       // Verificar se já existem registros para o dia atual da classe
       const checkResponse = await apiRequest('GET', `/api/check-today-records/${currentClassId}`);
       const checkData = await checkResponse.json();
@@ -537,16 +540,12 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         // Neste momento, a API não suporta atualizações diretamente (PUT/PATCH)
         // Então vamos excluir os registros antigos e inserir os novos
         // Idealmente, no futuro, isso seria substituído por um endpoint de atualização real
-        
-        // Como workaround, a API atualmente permite simplesmente adicionar novos registros
-        // para o mesmo dia, com os dados mais recentes - eles substituirão os antigos na exibição
       }
       
       // Se há registros existentes, excluímos antes de criar novos
       if (hasExistingRecords) {
         console.log('Excluindo registros existentes para a data', formattedDate);
         try {
-          // Excluir registros existentes para a data
           // O endpoint da API já está configurado para excluir registros antigos no backend
           // quando um novo registro é criado para a mesma classe e data
         } catch (error) {
@@ -564,13 +563,50 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         });
       }
       
-      // Submit missionary activities
-      // A API já está configurada para excluir atividades existentes e criar novas
-      await apiRequest('POST', '/api/missionary-activities', {
+      // Montar um objeto para as atividades missionárias com todos os campos, mesmo que zerados
+      const completeActivities: Record<string, any> = {
         classId: currentClassId,
         date: formattedDate,
-        ...missionaryActivities
+      };
+      
+      // Garantir que todos os campos estejam presentes, preenchendo com 0 se não existirem
+      missionaryActivityDefinitions.forEach(def => {
+        const fieldName = def.id;
+        completeActivities[fieldName] = missionaryActivities[fieldName as MissionaryActivityType] || 0;
       });
+      
+      console.log('Submetendo atividades missionárias completas:', completeActivities);
+      
+      // Submit missionary activities
+      // A API já está configurada para excluir atividades existentes e criar novas
+      const missionaryResponse = await apiRequest('POST', '/api/missionary-activities', completeActivities);
+      const missionaryData = await missionaryResponse.json();
+      
+      console.log('Resposta da submissão de atividades missionárias:', missionaryData);
+      
+      // Atualizar o estado local com os dados mais recentes do servidor
+      if (missionaryData) {
+        // Extrair valores das atividades missionárias do servidor para atualizar o estado local
+        const serverActivities: Partial<Record<MissionaryActivityType, number>> = {};
+        
+        missionaryActivityDefinitions.forEach(def => {
+          const fieldName = def.id as MissionaryActivityType;
+          if (missionaryData[fieldName] !== undefined) {
+            const value = parseInt(missionaryData[fieldName], 10);
+            if (!isNaN(value)) {
+              serverActivities[fieldName] = value;
+            }
+          }
+        });
+        
+        console.log('Atualizando estado local com valores do servidor:', serverActivities);
+        if (Object.keys(serverActivities).length > 0) {
+          setMissionaryActivities(prev => ({
+            ...prev,
+            ...serverActivities
+          }));
+        }
+      }
       
       return true;
     } catch (error) {

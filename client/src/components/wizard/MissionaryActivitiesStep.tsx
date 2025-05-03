@@ -34,8 +34,13 @@ const MissionaryActivitiesStep: React.FC<MissionaryActivitiesStepProps> = ({ isA
       const value = missionaryActivities[activityId] || 0;
       setActivityValue(activityId, value);
       
+      console.log(`Salvando atividade ${activityId} com valor ${value}`);
+      
       // Avança para a próxima atividade manualmente
       advanceToNextActivity();
+      
+      // Para debug: mostrar valores atuais
+      console.log('Valores atuais das atividades:', missionaryActivities);
     }
   };
   
