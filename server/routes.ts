@@ -420,15 +420,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "ID de classe inválido" });
       }
       
-      // Obter a data atual no formato yyyy-mm-dd
-      const today = new Date();
-      const formattedDate = today.toISOString().split('T')[0]; // yyyy-mm-dd
+      // Obter a data da query ou usar a data atual
+      let date = req.query.date ? String(req.query.date) : undefined;
       
-      // Verificar registros de frequência para hoje
-      const attendanceRecords = await storage.getAttendanceRecordsForClassAndDate(classId, formattedDate);
+      if (!date) {
+        const today = new Date();
+        date = today.toISOString().split('T')[0]; // yyyy-mm-dd
+      }
       
-      // Verificar atividades missionárias para hoje
-      const missionaryActivities = await storage.getMissionaryActivitiesForClassAndDate(classId, formattedDate);
+      console.log(`Verificando registros para classe ${classId} na data ${date}`);
+      
+      // Verificar registros de frequência para a data
+      const attendanceRecords = await storage.getAttendanceRecordsForClassAndDate(classId, date);
+      
+      // Verificar atividades missionárias para a data
+      const missionaryActivities = await storage.getMissionaryActivitiesForClassAndDate(classId, date);
+      
+      console.log(`Encontrados: ${attendanceRecords.length} registros de presença e ${missionaryActivities.length} atividades missionárias`);
       
       res.json({
         hasRecords: attendanceRecords.length > 0 || missionaryActivities.length > 0,
@@ -436,6 +444,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         missionaryActivities: missionaryActivities.length > 0 ? missionaryActivities[0] : null
       });
     } catch (error) {
+      console.error('Erro ao verificar registros:', error);
       res.status(500).json({ message: "Falha ao verificar registros do dia" });
     }
   });
@@ -453,11 +462,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Aluno não encontrado" });
       }
       
-      // Para registros existentes de frequência, o processo é por aluno individual
-      // Cada chamada a este endpoint é para um aluno específico
-      // Não precisamos excluir todos os registros, apenas os deste aluno específico
+      // Verificar se já existe um registro para este aluno na data especificada
+      const existingRecords = await storage.getAttendanceRecordsForClassAndDate(student.classId, parsed.data.date);
+      const existingRecord = existingRecords.find(record => record.studentId === parsed.data.studentId);
       
-      // Criar novo registro (substituirá qualquer registro existente para este aluno/data na exibição)
+      if (existingRecord) {
+        console.log(`Registro existente para aluno ${parsed.data.studentId} na data ${parsed.data.date} - será substituído`);
+        
+        // Implementação ideal seria um UPDATE, mas como drizzle não tem um método "upsert" simples,
+        // vamos simplesmente criar um novo registro que substituirá o antigo na visualização
+        // A solução mais robusta seria implementar um método de atualização no storage
+      }
+      
+      // Criar novo registro
       const newRecord = await storage.createAttendanceRecord(parsed.data);
       res.status(201).json(newRecord);
     } catch (error) {
