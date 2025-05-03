@@ -147,10 +147,12 @@ const CompletionStep: React.FC<CompletionStepProps> = ({ isActive }) => {
           </Button>
           <Button 
             variant="outline" 
-            className="flex-1"
+            className={`flex-1 ${Object.keys(attendanceRecords).length > 0 
+              ? 'border-orange-500 text-orange-500 hover:bg-orange-50 hover:text-orange-600' 
+              : ''}`}
             onClick={handleStartNew}
           >
-            NOVO REGISTRO
+            {Object.keys(attendanceRecords).length > 0 ? 'EDITAR REGISTRO' : 'NOVO REGISTRO'}
           </Button>
         </div>
       </div>
