@@ -98,6 +98,60 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     }
   }, [currentClassId]);
   
+  // Verificar se já existe registro para o dia atual desta classe e carregar os dados
+  useEffect(() => {
+    if (currentClassId) {
+      const checkAndLoadTodayRecords = async () => {
+        try {
+          // Obter a data atual formatada como yyyy-mm-dd
+          const formattedDate = format(wizardDate, 'yyyy-MM-dd');
+          
+          // Verificar registros para o dia atual
+          const response = await apiRequest('GET', `/api/check-today-records/${currentClassId}`);
+          const data = await response.json();
+          
+          if (data.hasRecords) {
+            console.log('Carregando dados existentes para o dia:', formattedDate);
+            
+            // Carregar registros de presença
+            if (data.attendanceRecords && data.attendanceRecords.length > 0) {
+              const recordsMap: Record<number, boolean> = {};
+              
+              // Mapear registros de presença por ID do aluno
+              data.attendanceRecords.forEach((record: AttendanceRecord) => {
+                recordsMap[record.studentId] = record.present;
+              });
+              
+              // Definir registros de presença
+              setAttendanceRecords(recordsMap);
+            }
+            
+            // Carregar atividades missionárias
+            if (data.missionaryActivities) {
+              const activities = data.missionaryActivities;
+              const activitiesMap: Partial<Record<MissionaryActivityType, number>> = {};
+              
+              // Mapear cada tipo de atividade
+              missionaryActivityDefinitions.forEach(def => {
+                const fieldName = def.id as keyof typeof activities;
+                if (activities[fieldName] !== undefined) {
+                  activitiesMap[def.id] = activities[fieldName];
+                }
+              });
+              
+              // Definir atividades missionárias
+              setMissionaryActivities(activitiesMap);
+            }
+          }
+        } catch (error) {
+          console.error('Erro ao verificar/carregar registros do dia:', error);
+        }
+      };
+      
+      checkAndLoadTodayRecords();
+    }
+  }, [currentClassId, wizardDate]);
+  
   // Navigation methods
   const goToStep = (step: number) => {
     if (step >= 1 && step <= totalSteps) {
@@ -371,6 +425,25 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     try {
       // Format data for submission
       const formattedDate = format(wizardDate, 'yyyy-MM-dd');
+      
+      // Verificar se já existem registros para o dia atual da classe
+      const checkResponse = await apiRequest('GET', `/api/check-today-records/${currentClassId}`);
+      const checkData = await checkResponse.json();
+      const hasExistingRecords = checkData.hasRecords;
+      
+      // Log para depuração
+      console.log('Verificando registros existentes:', hasExistingRecords);
+      
+      if (hasExistingRecords) {
+        console.log('Atualizando registros existentes para o dia:', formattedDate);
+        
+        // Neste momento, a API não suporta atualizações diretamente (PUT/PATCH)
+        // Então vamos excluir os registros antigos e inserir os novos
+        // Idealmente, no futuro, isso seria substituído por um endpoint de atualização real
+        
+        // Como workaround, a API atualmente permite simplesmente adicionar novos registros
+        // para o mesmo dia, com os dados mais recentes - eles substituirão os antigos na exibição
+      }
       
       // Submit attendance records
       for (const [studentId, present] of Object.entries(attendanceRecords)) {
