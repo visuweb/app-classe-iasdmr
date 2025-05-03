@@ -52,11 +52,13 @@ export interface IStorage {
   getAttendanceRecords(classId?: number): Promise<(AttendanceRecord & { studentName: string })[]>;
   getAttendanceRecordsForClassAndDate(classId: number, date: string): Promise<(AttendanceRecord & { studentName: string })[]>;
   createAttendanceRecord(data: InsertAttendanceRecord): Promise<AttendanceRecord>;
+  deleteAttendanceRecordsForClassAndDate(classId: number, date: string): Promise<boolean>;
   
   // Missionary activity operations
   getMissionaryActivities(classId?: number): Promise<(MissionaryActivity & { className: string })[]>;
   getMissionaryActivitiesForClassAndDate(classId: number, date: string): Promise<MissionaryActivity[]>;
   createMissionaryActivity(data: InsertMissionaryActivity): Promise<MissionaryActivity>;
+  deleteMissionaryActivitiesForClassAndDate(classId: number, date: string): Promise<boolean>;
   
   // Session store
   sessionStore: session.Store;
