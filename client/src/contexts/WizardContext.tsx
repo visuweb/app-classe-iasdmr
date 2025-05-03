@@ -128,19 +128,71 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
             
             // Carregar atividades missionárias
             if (data.missionaryActivities) {
-              const activities = data.missionaryActivities;
+              console.log("Dados de atividades missionárias recebidos:", data.missionaryActivities);
+              
+              // Determinar o formato da resposta e extrair corretamente
+              let activities: any;
+              
+              if (typeof data.missionaryActivities === 'object' && !Array.isArray(data.missionaryActivities)) {
+                // É um objeto direto com propriedades
+                activities = data.missionaryActivities;
+              } else if (Array.isArray(data.missionaryActivities) && data.missionaryActivities.length > 0) {
+                // É um array, usar o primeiro elemento
+                activities = data.missionaryActivities[0];
+              } else {
+                console.error("Formato de dados de atividades missionárias não reconhecido");
+                return;
+              }
+              
+              console.log("Atividades missionárias preparadas para processamento:", activities);
+              
               const activitiesMap: Partial<Record<MissionaryActivityType, number>> = {};
+              
+              // Extrair todas as chaves disponíveis para debug
+              console.log("Chaves disponíveis no objeto de atividades:", Object.keys(activities));
               
               // Mapear cada tipo de atividade
               missionaryActivityDefinitions.forEach(def => {
-                const fieldName = def.id as keyof typeof activities;
-                if (activities[fieldName] !== undefined) {
-                  activitiesMap[def.id] = activities[fieldName];
+                const fieldName = def.id;
+                console.log(`Processando campo: ${fieldName}`);
+                
+                // Checar várias formatações possíveis da chave
+                const possibleKeys = [
+                  fieldName,                     // qtdContatosMissionarios
+                  fieldName.toLowerCase(),       // qtdcontatosmissionarios
+                  fieldName.toUpperCase(),       // QTDCONTATOSMISSIONARIOS
+                  fieldName.replace(/([A-Z])/g, '_$1').toLowerCase() // qtd_contatos_missionarios
+                ];
+                
+                let found = false;
+                
+                // Verificar cada possível formato da chave
+                for (const key of possibleKeys) {
+                  if (activities[key] !== undefined && !found) {
+                    const value = parseInt(activities[key], 10);
+                    if (!isNaN(value)) {
+                      activitiesMap[def.id] = value;
+                      console.log(`Valor encontrado para ${fieldName}: ${value} (usando chave ${key})`);
+                      found = true;
+                    }
+                  }
+                }
+                
+                if (!found) {
+                  console.log(`Nenhum valor encontrado para ${fieldName}`);
                 }
               });
               
-              // Definir atividades missionárias
-              setMissionaryActivities(activitiesMap);
+              console.log("Mapa de atividades final:", activitiesMap);
+              
+              // Definir atividades missionárias se houver valores encontrados
+              if (Object.keys(activitiesMap).length > 0) {
+                setMissionaryActivities(activitiesMap);
+              } else {
+                console.error("Nenhum valor de atividade missionária foi extraído corretamente");
+              }
+            } else {
+              console.log("Nenhum dado de atividade missionária disponível");
             }
           }
         } catch (error) {
