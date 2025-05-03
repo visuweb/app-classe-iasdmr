@@ -411,6 +411,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Falha ao buscar registros de presença" });
     }
   });
+  
+  // Rota para verificar se já existe registro de chamada e atividades para o dia atual da classe
+  app.get("/api/check-today-records/:classId", ensureAuthenticated, async (req, res) => {
+    try {
+      const classId = parseInt(req.params.classId, 10);
+      if (isNaN(classId)) {
+        return res.status(400).json({ message: "ID de classe inválido" });
+      }
+      
+      // Obter a data atual no formato yyyy-mm-dd
+      const today = new Date();
+      const formattedDate = today.toISOString().split('T')[0]; // yyyy-mm-dd
+      
+      // Verificar registros de frequência para hoje
+      const attendanceRecords = await storage.getAttendanceRecordsForClassAndDate(classId, formattedDate);
+      
+      // Verificar atividades missionárias para hoje
+      const missionaryActivities = await storage.getMissionaryActivitiesForClassAndDate(classId, formattedDate);
+      
+      res.json({
+        hasRecords: attendanceRecords.length > 0 || missionaryActivities.length > 0,
+        attendanceRecords: attendanceRecords,
+        missionaryActivities: missionaryActivities.length > 0 ? missionaryActivities[0] : null
+      });
+    } catch (error) {
+      res.status(500).json({ message: "Falha ao verificar registros do dia" });
+    }
+  });
 
   app.post("/api/attendance", ensureTeacher, async (req, res) => {
     try {

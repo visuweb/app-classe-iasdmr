@@ -395,6 +395,27 @@ export class DatabaseStorage implements IStorage {
     }
   }
   
+  async getAttendanceRecordsForClassAndDate(classId: number, date: string): Promise<(AttendanceRecord & { studentName: string })[]> {
+    return await db
+      .select({
+        id: attendanceRecords.id,
+        studentId: attendanceRecords.studentId,
+        present: attendanceRecords.present,
+        date: attendanceRecords.date,
+        recordDate: attendanceRecords.recordDate,
+        studentName: students.name
+      })
+      .from(attendanceRecords)
+      .innerJoin(students, eq(attendanceRecords.studentId, students.id))
+      .innerJoin(classes, eq(students.classId, classes.id))
+      .where(
+        and(
+          eq(classes.id, classId),
+          eq(attendanceRecords.date, date)
+        )
+      );
+  }
+  
   async createAttendanceRecord(data: InsertAttendanceRecord): Promise<AttendanceRecord> {
     const results = await db.insert(attendanceRecords).values(data).returning();
     return results[0];
@@ -442,6 +463,18 @@ export class DatabaseStorage implements IStorage {
         .from(missionaryActivities)
         .innerJoin(classes, eq(missionaryActivities.classId, classes.id));
     }
+  }
+  
+  async getMissionaryActivitiesForClassAndDate(classId: number, date: string): Promise<MissionaryActivity[]> {
+    return await db
+      .select()
+      .from(missionaryActivities)
+      .where(
+        and(
+          eq(missionaryActivities.classId, classId),
+          eq(missionaryActivities.date, date)
+        )
+      );
   }
   
   async createMissionaryActivity(data: InsertMissionaryActivity): Promise<MissionaryActivity> {

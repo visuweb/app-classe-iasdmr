@@ -50,10 +50,12 @@ export interface IStorage {
   
   // Attendance operations
   getAttendanceRecords(classId?: number): Promise<(AttendanceRecord & { studentName: string })[]>;
+  getAttendanceRecordsForClassAndDate(classId: number, date: string): Promise<(AttendanceRecord & { studentName: string })[]>;
   createAttendanceRecord(data: InsertAttendanceRecord): Promise<AttendanceRecord>;
   
   // Missionary activity operations
   getMissionaryActivities(classId?: number): Promise<(MissionaryActivity & { className: string })[]>;
+  getMissionaryActivitiesForClassAndDate(classId: number, date: string): Promise<MissionaryActivity[]>;
   createMissionaryActivity(data: InsertMissionaryActivity): Promise<MissionaryActivity>;
   
   // Session store
