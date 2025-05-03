@@ -16,7 +16,8 @@ const AttendanceStep: React.FC<AttendanceStepProps> = ({ isActive }) => {
     currentStudentIndex, 
     markStudentAttendance, 
     goToPreviousStudent,
-    wizardDate 
+    wizardDate,
+    attendanceRecords
   } = useWizard();
   
   if (!isActive) return null;
@@ -46,7 +47,12 @@ const AttendanceStep: React.FC<AttendanceStepProps> = ({ isActive }) => {
       <div className="bg-white shadow rounded-lg p-6 max-w-md mx-auto">
         <div className="text-center mb-6">
           <span className="material-icons text-4xl text-primary-500 mb-2">fact_check</span>
-          <h3 className="text-xl font-medium text-gray-900">Lista de Chamada</h3>
+          <h3 className="text-xl font-medium text-gray-900">
+            Lista de Chamada
+            {Object.keys(attendanceRecords).length > 0 && 
+              <span className="text-orange-500 ml-1 text-sm">(editando...)</span>
+            }
+          </h3>
           <p className="text-sm text-gray-500 mt-1">Registre a presença dos alunos</p>
         </div>
 
@@ -74,7 +80,11 @@ const AttendanceStep: React.FC<AttendanceStepProps> = ({ isActive }) => {
               <div className="flex space-x-3 mb-3">
                 <Button 
                   variant="default" 
-                  className="flex-1 bg-green-600 hover:bg-green-700"
+                  className={`flex-1 bg-green-600 hover:bg-green-700 ${
+                    currentStudent && attendanceRecords[currentStudent.id] === true 
+                      ? 'ring-4 ring-green-300' 
+                      : ''
+                  }`}
                   onClick={handleMarkPresent}
                 >
                   <Check className="h-4 w-4 mr-2" />
@@ -82,7 +92,11 @@ const AttendanceStep: React.FC<AttendanceStepProps> = ({ isActive }) => {
                 </Button>
                 <Button 
                   variant="default" 
-                  className="flex-1 bg-red-600 hover:bg-red-700"
+                  className={`flex-1 bg-red-600 hover:bg-red-700 ${
+                    currentStudent && attendanceRecords[currentStudent.id] === false 
+                      ? 'ring-4 ring-red-300' 
+                      : ''
+                  }`}
                   onClick={handleMarkAbsent}
                 >
                   <X className="h-4 w-4 mr-2" />

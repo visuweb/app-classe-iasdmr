@@ -22,7 +22,8 @@ const CompletionStep: React.FC<CompletionStepProps> = ({ isActive }) => {
     getStudentsAbsentCount,
     missionaryActivities,
     submitWizardData,
-    resetWizard
+    resetWizard,
+    attendanceRecords
   } = useWizard();
   
   useEffect(() => {
