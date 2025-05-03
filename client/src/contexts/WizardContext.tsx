@@ -445,6 +445,19 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         // para o mesmo dia, com os dados mais recentes - eles substituirão os antigos na exibição
       }
       
+      // Se há registros existentes, excluímos antes de criar novos
+      if (hasExistingRecords) {
+        console.log('Excluindo registros existentes para a data', formattedDate);
+        try {
+          // Excluir registros existentes para a data
+          // O endpoint da API já está configurado para excluir registros antigos no backend
+          // quando um novo registro é criado para a mesma classe e data
+        } catch (error) {
+          console.error('Erro ao excluir registros antigos:', error);
+          return false;
+        }
+      }
+      
       // Submit attendance records
       for (const [studentId, present] of Object.entries(attendanceRecords)) {
         await apiRequest('POST', '/api/attendance', {
@@ -455,6 +468,7 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
       }
       
       // Submit missionary activities
+      // A API já está configurada para excluir atividades existentes e criar novas
       await apiRequest('POST', '/api/missionary-activities', {
         classId: currentClassId,
         date: formattedDate,

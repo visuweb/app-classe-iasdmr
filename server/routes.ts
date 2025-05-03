@@ -447,16 +447,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Dados de presença inválidos" });
       }
       
-      // Obter registros existentes para o aluno e data
-      const existingRecords = await storage.getAttendanceRecordsForClassAndDate(
-        parsed.data.studentId, 
-        parsed.data.date
-      );
+      // Obter o aluno para identificar a classe
+      const student = await storage.getStudent(parsed.data.studentId);
+      if (!student) {
+        return res.status(404).json({ message: "Aluno não encontrado" });
+      }
       
-      // Criar novo registro
+      // Para registros existentes de frequência, o processo é por aluno individual
+      // Cada chamada a este endpoint é para um aluno específico
+      // Não precisamos excluir todos os registros, apenas os deste aluno específico
+      
+      // Criar novo registro (substituirá qualquer registro existente para este aluno/data na exibição)
       const newRecord = await storage.createAttendanceRecord(parsed.data);
       res.status(201).json(newRecord);
     } catch (error) {
+      console.error("Erro ao criar registro de presença:", error);
       res.status(500).json({ message: "Falha ao criar registro de presença" });
     }
   });
