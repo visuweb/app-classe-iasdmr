@@ -21,7 +21,7 @@ import {
 import { db, pool } from "./db";
 import { IStorage } from "./storage";
 import session from "express-session";
-import { eq, and, count } from "drizzle-orm";
+import { eq, and, count, inArray } from "drizzle-orm";
 import connectPg from "connect-pg-simple";
 import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
@@ -421,6 +421,36 @@ export class DatabaseStorage implements IStorage {
     return results[0];
   }
   
+  async deleteAttendanceRecordsForClassAndDate(classId: number, date: string): Promise<boolean> {
+    try {
+      // Primeiro, obtemos os IDs dos alunos desta classe
+      const studentsResult = await db.select({ id: students.id })
+        .from(students)
+        .where(eq(students.classId, classId));
+      
+      if (studentsResult.length === 0) {
+        return false;
+      }
+      
+      // Extrair os IDs dos alunos
+      const studentIds = studentsResult.map(student => student.id);
+      
+      // Excluir todos os registros de presença destes alunos para a data especificada
+      await db.delete(attendanceRecords)
+        .where(
+          and(
+            eq(attendanceRecords.date, date),
+            inArray(attendanceRecords.studentId, studentIds)
+          )
+        );
+      
+      return true;
+    } catch (error) {
+      console.error('Erro ao excluir registros de frequência:', error);
+      return false;
+    }
+  }
+  
   // Missionary activity operations
   async getMissionaryActivities(classId?: number): Promise<(MissionaryActivity & { className: string })[]> {
     if (classId) {
@@ -492,6 +522,24 @@ export class DatabaseStorage implements IStorage {
     
     const results = await db.insert(missionaryActivities).values(completeData).returning();
     return results[0];
+  }
+  
+  async deleteMissionaryActivitiesForClassAndDate(classId: number, date: string): Promise<boolean> {
+    try {
+      // Excluir atividades missionárias para a classe e data específicas
+      await db.delete(missionaryActivities)
+        .where(
+          and(
+            eq(missionaryActivities.classId, classId),
+            eq(missionaryActivities.date, date)
+          )
+        );
+      
+      return true;
+    } catch (error) {
+      console.error('Erro ao excluir atividades missionárias:', error);
+      return false;
+    }
   }
   
   // Método para inicializar o banco com um professor de teste

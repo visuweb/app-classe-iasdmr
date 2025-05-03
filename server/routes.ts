@@ -447,6 +447,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Dados de presença inválidos" });
       }
       
+      // Obter registros existentes para o aluno e data
+      const existingRecords = await storage.getAttendanceRecordsForClassAndDate(
+        parsed.data.studentId, 
+        parsed.data.date
+      );
+      
+      // Criar novo registro
       const newRecord = await storage.createAttendanceRecord(parsed.data);
       res.status(201).json(newRecord);
     } catch (error) {
@@ -470,6 +477,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const parsed = insertMissionaryActivitySchema.safeParse(req.body);
       if (!parsed.success) {
         return res.status(400).json({ message: "Dados de atividade missionária inválidos" });
+      }
+      
+      // Se já existe um registro para esta classe e data, atualizamos o registro em vez de criar um novo
+      const { classId, date } = parsed.data;
+      const existingActivities = await storage.getMissionaryActivitiesForClassAndDate(classId, date);
+      
+      if (existingActivities.length > 0) {
+        // Excluir atividades existentes antes de criar a nova
+        await storage.deleteMissionaryActivitiesForClassAndDate(classId, date);
       }
       
       const newActivity = await storage.createMissionaryActivity(parsed.data);
