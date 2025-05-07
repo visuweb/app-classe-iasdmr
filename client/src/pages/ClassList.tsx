@@ -334,9 +334,11 @@ const ClassList: React.FC = () => {
                 {isMobile ? "Registros" : "Ver Registros"}
               </Button>
               <Button 
-                variant={classesTodayRecords[classObj.id] ? "outline" : "default"}
+                variant={classesTodayRecords[classObj.id] ? "default" : "default"}
                 size="sm" 
-                className={`flex items-center ${classesTodayRecords[classObj.id] ? "bg-orange-500 hover:bg-orange-600 text-white" : "bg-blue-600 hover:bg-blue-700"}`}
+                className={`flex items-center ${classesTodayRecords[classObj.id] 
+                  ? "bg-orange-500 hover:bg-orange-600 text-white border-orange-500" 
+                  : "bg-blue-600 hover:bg-blue-700 text-white"}`}
                 onClick={() => goToWizard(classObj)}
               >
                 {classesTodayRecords[classObj.id] 

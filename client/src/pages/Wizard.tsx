@@ -31,8 +31,15 @@ const WizardContent: React.FC = () => {
     const url = new URL(window.location.href);
     const classId = url.searchParams.get('classId');
     const className = url.searchParams.get('className');
+    const isEditing = url.searchParams.get('isEditing') === 'true';
     
     if (classId && className) {
+      // Configure o modo de edição com base no parâmetro URL
+      if (isEditing) {
+        // Se estamos editando, indicar isso no contexto
+        console.log("Iniciando wizard em modo de edição para registros existentes");
+      }
+      
       setCurrentClassId(parseInt(classId, 10), decodeURIComponent(className));
     } else {
       // Redirect to class selection if no class is specified

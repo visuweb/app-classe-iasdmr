@@ -410,9 +410,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/attendance", ensureAuthenticated, async (req, res) => {
     try {
       const classId = req.query.classId ? parseInt(req.query.classId as string, 10) : undefined;
+      const date = req.query.date ? String(req.query.date) : undefined;
+      
+      if (classId && date) {
+        // Se temos classId e date, buscamos registros específicos para esta data e classe
+        console.log(`Buscando registros de presença para classe ${classId} na data ${date}`);
+        const records = await storage.getAttendanceRecordsForClassAndDate(classId, date);
+        return res.json(records);
+      }
+      
+      // Caso contrário, busca normal de todos os registros
       const records = await storage.getAttendanceRecords(classId);
       res.json(records);
     } catch (error) {
+      console.error('Erro ao buscar registros de presença:', error);
       res.status(500).json({ message: "Falha ao buscar registros de presença" });
     }
   });
@@ -602,9 +613,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/missionary-activities", ensureAuthenticated, async (req, res) => {
     try {
       const classId = req.query.classId ? parseInt(req.query.classId as string, 10) : undefined;
+      const date = req.query.date ? String(req.query.date) : undefined;
+      
+      if (classId && date) {
+        // Se temos classId e date, buscamos registros específicos para esta data e classe
+        console.log(`Buscando atividades missionárias para classe ${classId} na data ${date}`);
+        const activities = await storage.getMissionaryActivitiesForClassAndDate(classId, date);
+        return res.json(activities);
+      }
+      
+      // Caso contrário, busca normal de todas as atividades
       const activities = await storage.getMissionaryActivities(classId);
       res.json(activities);
     } catch (error) {
+      console.error('Erro ao buscar atividades missionárias:', error);
       res.status(500).json({ message: "Falha ao buscar atividades missionárias" });
     }
   });
