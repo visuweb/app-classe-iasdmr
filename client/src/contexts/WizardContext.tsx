@@ -20,6 +20,7 @@ type WizardContextType = {
   missionaryActivities: Partial<Record<MissionaryActivityType, number>>;
   currentActivityIndex: number;
   wizardDate: Date;
+  isEditingExistingRecords: boolean;
   calculatorOpen: boolean;
   calculatorExpression: string;
   calculatorResult: string;
@@ -70,6 +71,7 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   const [missionaryActivities, setMissionaryActivities] = useState<Partial<Record<MissionaryActivityType, number>>>({});
   const [currentActivityIndex, setCurrentActivityIndex] = useState(0);
   const [wizardDate] = useState<Date>(new Date());
+  const [isEditingExistingRecords, setIsEditingExistingRecords] = useState(false);
   
   // Calculator state
   const [calculatorOpen, setCalculatorOpen] = useState(false);
