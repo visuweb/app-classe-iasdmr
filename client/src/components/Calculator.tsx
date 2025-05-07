@@ -131,8 +131,12 @@ const Calculator: React.FC = () => {
               9
             </button>
             <button 
-              className="bg-white hover:bg-gray-100 invisible"
+              className="bg-blue-500 hover:bg-blue-600 text-white font-medium rounded row-span-4"
+              onClick={() => handleCalculatorAction('add')}
             >
+              <div className="flex items-center justify-center h-full">
+                <Plus className="h-5 w-5" />
+              </div>
             </button>
             
             {/* Row 3 */}
@@ -154,10 +158,6 @@ const Calculator: React.FC = () => {
             >
               6
             </button>
-            <button 
-              className="bg-white hover:bg-gray-100 invisible"
-            >
-            </button>
             
             {/* Row 4 */}
             <button 
@@ -178,14 +178,10 @@ const Calculator: React.FC = () => {
             >
               3
             </button>
-            <button 
-              className="bg-white hover:bg-gray-100 invisible"
-            >
-            </button>
             
             {/* Row 5 */}
             <button 
-              className="bg-white hover:bg-gray-100 text-gray-800 font-medium py-3 rounded border"
+              className="bg-white hover:bg-gray-100 text-gray-800 font-medium py-3 rounded border col-span-3"
               onClick={() => handleCalculatorAction('number', '0')}
             >
               0
