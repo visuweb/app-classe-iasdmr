@@ -81,6 +81,14 @@ const AdminHome = () => {
   const [classToEdit, setClassToEdit] = useState<Class | null>(null);
   const [isEditClassOpen, setIsEditClassOpen] = useState(false);
   const [editClassName, setEditClassName] = useState('');
+  
+  // Estado para edição de nome de aluno
+  const [studentToEdit, setStudentToEdit] = useState<Student | null>(null);
+  const [isEditStudentOpen, setIsEditStudentOpen] = useState(false);
+  const [editStudentName, setEditStudentName] = useState('');
+  
+  // Estado para adicionar aluno
+  const [isAddStudentOpen, setIsAddStudentOpen] = useState(false);
   const [studentToToggle, setStudentToToggle] = useState<Student | null>(null);
   const [isToggleStudentOpen, setIsToggleStudentOpen] = useState(false);
   
@@ -289,6 +297,44 @@ const AdminHome = () => {
     onError: (error: Error) => {
       toast({
         title: 'Erro ao atualizar professor',
+        description: error.message,
+        variant: 'destructive'
+      });
+    }
+  });
+  
+  // Edit student name mutation
+  const editStudentMutation = useMutation({
+    mutationFn: async () => {
+      if (!studentToEdit) throw new Error("Nenhum aluno selecionado para edição");
+      
+      const res = await apiRequest('PUT', `/api/students/${studentToEdit.id}`, {
+        name: editStudentName
+      });
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.message || "Erro ao editar nome do aluno");
+      }
+      return await res.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: 'Aluno atualizado',
+        description: 'O nome do aluno foi atualizado com sucesso',
+      });
+      
+      // Atualizar a lista de alunos da classe
+      if (selectedClassId) {
+        queryClient.invalidateQueries({ queryKey: ['/api/classes', selectedClassId, 'students'] });
+      }
+      
+      setStudentToEdit(null);
+      setEditStudentName('');
+      setIsEditStudentOpen(false);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Erro ao atualizar aluno',
         description: error.message,
         variant: 'destructive'
       });
@@ -555,6 +601,13 @@ const AdminHome = () => {
     setIsToggleStudentOpen(true);
   };
   
+  // Handle edit student
+  const handleEditStudent = (student: Student) => {
+    setStudentToEdit(student);
+    setEditStudentName(student.name);
+    setIsEditStudentOpen(true);
+  };
+  
   // Handle edit teacher
   const handleEditTeacher = (teacher: Teacher) => {
     setTeacherToEdit(teacher);
@@ -774,19 +827,29 @@ const AdminHome = () => {
                                     </span>
                                   </TableCell>
                                   <TableCell className="text-right">
-                                    <Button 
-                                      variant="ghost" 
-                                      size="icon"
-                                      className={`h-8 w-8 ${student.active ? 'text-red-600' : 'text-green-600'}`}
-                                      onClick={() => toggleStudentStatus(student)}
-                                      disabled={toggleStudentStatusMutation.isPending}
-                                    >
-                                      {student.active ? (
-                                        <Trash2 className="h-4 w-4" />
-                                      ) : (
-                                        <Check className="h-4 w-4" />
-                                      )}
-                                    </Button>
+                                    <div className="flex justify-end space-x-1">
+                                      <Button 
+                                        variant="ghost" 
+                                        size="icon"
+                                        className="h-8 w-8 text-blue-600"
+                                        onClick={() => handleEditStudent(student)}
+                                      >
+                                        <Pencil className="h-4 w-4" />
+                                      </Button>
+                                      <Button 
+                                        variant="ghost" 
+                                        size="icon"
+                                        className={`h-8 w-8 ${student.active ? 'text-red-600' : 'text-green-600'}`}
+                                        onClick={() => toggleStudentStatus(student)}
+                                        disabled={toggleStudentStatusMutation.isPending}
+                                      >
+                                        {student.active ? (
+                                          <Trash2 className="h-4 w-4" />
+                                        ) : (
+                                          <Check className="h-4 w-4" />
+                                        )}
+                                      </Button>
+                                    </div>
                                   </TableCell>
                                 </TableRow>
                               ))}
@@ -796,19 +859,37 @@ const AdminHome = () => {
                       )}
                     </CardContent>
                     <CardFooter>
-                      <form onSubmit={handleCreateStudent} className="space-y-4 w-full">
-                        <div className="flex space-x-2">
-                          <Input
-                            placeholder="Nome do novo aluno"
-                            value={newStudentName}
-                            onChange={(e) => setNewStudentName(e.target.value)}
-                            required
-                          />
-                          <Button type="submit" disabled={createStudentMutation.isPending}>
-                            {createStudentMutation.isPending ? 'Adicionando...' : 'Adicionar'}
-                          </Button>
-                        </div>
-                      </form>
+                      <Dialog open={isAddStudentOpen} onOpenChange={setIsAddStudentOpen}>
+                        <DialogTrigger asChild>
+                          <Button>Adicionar Novo Aluno</Button>
+                        </DialogTrigger>
+                        <DialogContent>
+                          <DialogHeader>
+                            <DialogTitle>Adicionar Novo Aluno</DialogTitle>
+                            <DialogDescription>
+                              Insira o nome para adicionar um novo aluno à classe
+                            </DialogDescription>
+                          </DialogHeader>
+                          <form onSubmit={handleCreateStudent}>
+                            <div className="space-y-4 py-4">
+                              <div className="space-y-2">
+                                <Label htmlFor="studentName">Nome do Aluno</Label>
+                                <Input
+                                  id="studentName"
+                                  value={newStudentName}
+                                  onChange={(e) => setNewStudentName(e.target.value)}
+                                  required
+                                />
+                              </div>
+                            </div>
+                            <DialogFooter>
+                              <Button type="submit" disabled={createStudentMutation.isPending}>
+                                {createStudentMutation.isPending ? 'Adicionando...' : 'Adicionar Aluno'}
+                              </Button>
+                            </DialogFooter>
+                          </form>
+                        </DialogContent>
+                      </Dialog>
                     </CardFooter>
                   </Card>
 
