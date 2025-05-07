@@ -306,12 +306,15 @@ const ClassList: React.FC = () => {
                 {isMobile ? "Registros" : "Ver Registros"}
               </Button>
               <Button 
-                variant={classesTodayRecords[classObj.id] ? "destructive" : "default"}
+                variant={classesTodayRecords[classObj.id] ? "outline" : "default"}
                 size="sm" 
-                className={`flex items-center ${classesTodayRecords[classObj.id] ? "bg-orange-500 hover:bg-orange-600" : ""}`}
+                className={`flex items-center ${classesTodayRecords[classObj.id] ? "bg-orange-500 hover:bg-orange-600 text-white" : "bg-blue-600 hover:bg-blue-700"}`}
                 onClick={() => goToWizard(classObj)}
               >
-                <CheckSquare className="h-4 w-4 mr-2" />
+                {classesTodayRecords[classObj.id] 
+                  ? <Pencil className="h-4 w-4 mr-2" /> 
+                  : <CheckSquare className="h-4 w-4 mr-2" />
+                }
                 {isMobile 
                   ? "Chamada" 
                   : classesTodayRecords[classObj.id] 
