@@ -428,6 +428,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Rota para excluir registros de presença por classe e data (para edição)
+  app.delete("/api/attendance/:classId/:date", ensureAuthenticated, async (req, res) => {
+    try {
+      const classId = parseInt(req.params.classId, 10);
+      const date = req.params.date;
+      
+      if (isNaN(classId) || !date) {
+        return res.status(400).json({ message: "ID de classe ou data inválidos" });
+      }
+      
+      // Verificar permissões do professor
+      const teacher = req.user as Teacher;
+      if (!teacher.isAdmin) {
+        const teacherClasses = await storage.getClassesByTeacherId(teacher.id);
+        const hasAccess = teacherClasses.some(c => c.id === classId);
+        if (!hasAccess) {
+          return res.status(403).json({ 
+            message: "Você não tem permissão para excluir registros nesta classe" 
+          });
+        }
+      }
+      
+      // Obter registros existentes para confirmar que serão excluídos
+      const existingRecords = await storage.getAttendanceRecordsForClassAndDate(classId, date);
+      
+      if (existingRecords.length === 0) {
+        return res.status(404).json({ message: "Nenhum registro encontrado para exclusão" });
+      }
+      
+      // Excluir registros
+      const success = await storage.deleteAttendanceRecordsForClassAndDate(classId, date);
+      
+      if (success) {
+        res.status(200).json({ 
+          message: `${existingRecords.length} registros de presença excluídos com sucesso` 
+        });
+      } else {
+        res.status(500).json({ message: "Erro ao excluir registros de presença" });
+      }
+    } catch (error: any) {
+      res.status(500).json({ message: error.message || "Falha ao excluir registros de presença" });
+    }
+  });
+  
   // Rota para atualizar um registro de presença
   app.patch("/api/attendance/:id", ensureAuthenticated, async (req, res) => {
     try {
@@ -647,6 +691,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Erro ao buscar atividades missionárias:', error);
       res.status(500).json({ message: "Falha ao buscar atividades missionárias" });
+    }
+  });
+  
+  // Rota para excluir atividades missionárias por classe e data (para edição)
+  app.delete("/api/missionary-activities/:classId/:date", ensureAuthenticated, async (req, res) => {
+    try {
+      const classId = parseInt(req.params.classId, 10);
+      const date = req.params.date;
+      
+      if (isNaN(classId) || !date) {
+        return res.status(400).json({ message: "ID de classe ou data inválidos" });
+      }
+      
+      // Verificar permissões do professor
+      const teacher = req.user as Teacher;
+      if (!teacher.isAdmin) {
+        const teacherClasses = await storage.getClassesByTeacherId(teacher.id);
+        const hasAccess = teacherClasses.some(c => c.id === classId);
+        if (!hasAccess) {
+          return res.status(403).json({ 
+            message: "Você não tem permissão para excluir registros nesta classe" 
+          });
+        }
+      }
+      
+      // Obter atividades existentes para confirmar que serão excluídas
+      const existingActivities = await storage.getMissionaryActivitiesForClassAndDate(classId, date);
+      
+      if (existingActivities.length === 0) {
+        return res.status(404).json({ message: "Nenhuma atividade missionária encontrada para exclusão" });
+      }
+      
+      // Excluir atividades
+      const success = await storage.deleteMissionaryActivitiesForClassAndDate(classId, date);
+      
+      if (success) {
+        res.status(200).json({ 
+          message: `${existingActivities.length} atividades missionárias excluídas com sucesso` 
+        });
+      } else {
+        res.status(500).json({ message: "Erro ao excluir atividades missionárias" });
+      }
+    } catch (error: any) {
+      res.status(500).json({ message: error.message || "Falha ao excluir atividades missionárias" });
     }
   });
 
