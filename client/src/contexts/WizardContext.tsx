@@ -669,17 +669,19 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     if (!currentClassId) return false;
     
     try {
-      // Obter a data formatada para submissão (que pode ser a data atual ou a data que estamos editando)
-      // Usar o utilitário para garantir a consistência do fuso horário
-      const formattedDate = getCurrentDateBRT();
+      // Obter a data atual em formato yyyy-MM-dd para o fuso horário de Brasília
+      // Essa é a data que deve ser usada para novos registros
+      const today = new Date();
+      const currentDate = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+      
+      console.log('Data atual (sem ajustes de fuso horário):', currentDate);
       
       // Log dos valores das atividades missionárias antes da submissão
       console.log('Valores das atividades missionárias antes da submissão:', missionaryActivities);
-      console.log('Data do registro:', formattedDate);
       
       // Se estamos editando registros existentes, precisamos excluí-los primeiro
       if (isEditingExistingRecords) {
-        console.log('Modo de edição: excluindo registros existentes para a data', formattedDate);
+        console.log('Modo de edição: excluindo registros existentes');
         
         try {
           // Buscar quais datas têm registros existentes para esta classe
@@ -688,7 +690,7 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
           console.log("Datas com registros existentes:", recordsData);
           
           // Obter a data do registro existente (pode ser diferente da data atual)
-          let targetDate = formattedDate;
+          let targetDate = currentDate;
           if (recordsData.hasRecords && recordsData.datesFound && recordsData.datesFound.length > 0) {
             targetDate = recordsData.datesFound[0];
             console.log(`Usando data existente para exclusão: ${targetDate}`);
@@ -717,7 +719,7 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
       
       // Obter a data alvo para uso em ambos os registros (presença e atividades)
       // Se estamos em modo de edição, usa a data existente; caso contrário, usa a data atual
-      let targetDate = formattedDate;
+      let targetDate = currentDate;
       if (isEditingExistingRecords) {
         // Verifica se já obtivemos a data do registro existente
         const recordsResponse = await fetch(`/api/class-has-recent-records/${currentClassId}`);

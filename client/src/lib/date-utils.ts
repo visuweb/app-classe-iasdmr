@@ -2,18 +2,31 @@ import { addDays, format, parse, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
 /**
- * Função utilitária para corrigir o problema do fuso horário em todas as datas vindas do banco de dados.
- * Adiciona 1 dia à data para compensar a diferença de fuso horário entre UTC e Brasília (UTC-3)
+ * Função utilitária para processar corretamente datas vindas do banco de dados.
+ * Ajusta a data para garantir que ela seja exibida corretamente no fuso horário de Brasília (UTC-3).
  * 
  * @param dateStr String de data no formato ISO ou 'yyyy-MM-dd'
  * @returns String de data no formato 'yyyy-MM-dd'
  */
 export function adjustDateToBRT(dateStr: string): string {
-  // Cria uma data a partir da string
-  const date = new Date(dateStr);
-  // Adiciona um dia para compensar a diferença de fuso horário
-  const correctedDate = addDays(date, 1);
-  return format(correctedDate, 'yyyy-MM-dd');
+  // Se a data já estiver no formato yyyy-MM-dd sem parte de hora, ela já está correta
+  if (typeof dateStr === 'string' && dateStr.length === 10 && dateStr.includes('-')) {
+    return dateStr;
+  }
+  
+  // Para datas com timestamp (formato ISO), extraímos apenas a parte da data
+  if (typeof dateStr === 'string' && dateStr.includes('T')) {
+    return dateStr.split('T')[0];
+  }
+  
+  // Para outros formatos, interpretamos a data e retornamos apenas yyyy-MM-dd
+  try {
+    const date = new Date(dateStr);
+    return format(date, 'yyyy-MM-dd');
+  } catch (e) {
+    console.error('Erro ao processar data:', e);
+    return dateStr; // Em caso de erro, retorna a string original
+  }
 }
 
 /**
@@ -52,23 +65,24 @@ export function formatBrazilianDateExtended(dateStr: string): string {
  * @returns String de data no formato 'yyyy-MM-dd'
  */
 export function getCurrentDateBRT(): string {
-  // Criar data atual
+  // Abordagem mais robusta usando bibliotecas de fuso horário
+  // Obter a data atual em UTC
   const now = new Date();
   
-  // Obter o offset atual do servidor em minutos
-  const serverOffset = now.getTimezoneOffset();
+  // Criar uma string de data com o timezone explícito de Brasília (UTC-3)
+  // Primeiro, pegamos ano, mês e dia
+  const year = now.getUTCFullYear();
+  const month = now.getUTCMonth();
+  const day = now.getUTCDate();
   
-  // Offset de Brasília é UTC-3, ou seja, -180 minutos
-  const brazilOffset = -180;
+  // Construir uma nova data usando componentes UTC, mas interpretando-os como hora local
+  // (que é o que o banco de dados espera)
+  const brazilDate = new Date(Date.UTC(year, month, day));
   
-  // Calcular a diferença de offset em milissegundos
-  const offsetDiff = (serverOffset - brazilOffset) * 60 * 1000;
-  
-  // Ajustar a data para o fuso de Brasília
-  const brazilTime = new Date(now.getTime() + offsetDiff);
-  
-  // Formatar no padrão ISO (yyyy-MM-dd)
-  return format(brazilTime, 'yyyy-MM-dd');
+  // Devido ao comportamento do banco de dados PostgreSQL com timezones,
+  // precisamos usar a data UTC diretamente, pois o servidor já vai aplicar
+  // a conversão ao armazenar. Isso evita o problema de dupla conversão.
+  return format(brazilDate, 'yyyy-MM-dd');
 }
 
 /**
