@@ -188,41 +188,27 @@ const ClassList: React.FC = () => {
     });
   };
 
-  // Função para verificar se a classe já tem registro para o dia atual - versão melhorada
+  // Função para verificar se a classe já tem registro para o dia atual - versão robusta com datas recentes
   const checkTodayRecords = async (classId: number) => {
     try {
-      // Forçar data para hoje
-      const today = new Date();
-      const formattedDate = today.toISOString().split('T')[0]; // yyyy-mm-dd
+      console.log(`Verificando registros recentes para classe ${classId}`);
       
-      // Buscar registros de presença para hoje
-      const attendanceResponse = await apiRequest(
+      // Usar a nova rota que considera tanto hoje quanto ontem (por causa de diferenças de fuso horário)
+      const response = await apiRequest(
         'GET', 
-        `/api/attendance?classId=${classId}&date=${formattedDate}`
+        `/api/class-has-recent-records/${classId}`
       );
-      const attendanceData = await attendanceResponse.json();
+      const data = await response.json();
       
-      // Buscar atividades missionárias para hoje
-      const activitiesResponse = await apiRequest(
-        'GET', 
-        `/api/missionary-activities?classId=${classId}&date=${formattedDate}`
-      );
-      const activitiesData = await activitiesResponse.json();
+      if (data.hasRecords) {
+        console.log(`Encontrados registros recentes para classe ${classId}. Datas:`, data.datesFound);
+      } else {
+        console.log(`Nenhum registro recente encontrado para classe ${classId}`);
+      }
       
-      // Verificar se existem registros de qualquer tipo
-      const hasAttendanceRecords = Array.isArray(attendanceData) && attendanceData.length > 0;
-      const hasActivities = Array.isArray(activitiesData) && activitiesData.length > 0;
-      
-      const hasRecords = hasAttendanceRecords || hasActivities;
-      console.log(`Verificação direta para classe ${classId} (${formattedDate}):`, {
-        hasAttendanceRecords,
-        hasActivities,
-        hasRecords
-      });
-      
-      return hasRecords;
+      return data.hasRecords || false;
     } catch (error) {
-      console.error('Erro ao verificar registros do dia:', error);
+      console.error('Erro ao verificar registros recentes:', error);
       return false;
     }
   };
