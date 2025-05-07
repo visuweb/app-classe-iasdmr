@@ -4,7 +4,7 @@ import { useQuery, useMutation } from '@tanstack/react-query';
 import { queryClient, apiRequest } from '@/lib/queryClient';
 import { Button } from '@/components/ui/button';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { LogOut, School, User, Book, BarChart, Plus, UserPlus, Calendar, Filter, Trash2, Check, Pencil, MinusCircle } from 'lucide-react';
+import { LogOut, School, User, Book, BarChart, Plus, UserPlus, Calendar, Filter, Trash2, Check, Pencil, MinusCircle, Search } from 'lucide-react';
 import {
   Card,
   CardContent,
@@ -1010,10 +1010,34 @@ const AdminHome = () => {
           <TabsContent value="teachers" className="space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle>Professores ({teachers.length})</CardTitle>
+                <CardTitle>
+                  Professores ({teacherNameFilter 
+                    ? teachers.filter(teacher => teacher.name.toLowerCase().includes(teacherNameFilter.toLowerCase())).length 
+                    : teachers.length})
+                </CardTitle>
                 <CardDescription>Lista de todos os professores cadastrados</CardDescription>
               </CardHeader>
               <CardContent>
+                <div className="mb-4 relative">
+                  <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <div className="flex space-x-2">
+                    <Input
+                      placeholder="Filtrar por nome..."
+                      className="pl-8"
+                      value={teacherNameFilter}
+                      onChange={(e) => setTeacherNameFilter(e.target.value)}
+                    />
+                    {teacherNameFilter && (
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => setTeacherNameFilter('')}
+                      >
+                        Limpar
+                      </Button>
+                    )}
+                  </div>
+                </div>
                 {teachersLoading ? (
                   <div className="text-center py-4">Carregando professores...</div>
                 ) : (
@@ -1028,7 +1052,12 @@ const AdminHome = () => {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {teachers.map((teacher) => (
+                      {teachers
+                        .filter(teacher => 
+                          teacherNameFilter === '' || 
+                          teacher.name.toLowerCase().includes(teacherNameFilter.toLowerCase())
+                        )
+                        .map((teacher) => (
                         <TableRow key={teacher.id} className={teacher.active ? "" : "opacity-50"}>
                           <TableCell>{teacher.name}</TableCell>
                           <TableCell>{teacher.cpf}</TableCell>
