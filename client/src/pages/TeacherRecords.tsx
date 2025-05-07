@@ -229,6 +229,12 @@ const TeacherRecords: React.FC = () => {
   const { data: allMissionaryActivities = [], isLoading: activitiesLoading } =
     useQuery<MissionaryActivityWithClass[]>({
       queryKey: ["/api/missionary-activities"],
+      onSuccess: (data) => {
+        console.log("Atividades missionárias carregadas com sucesso:", data);
+      },
+      onError: (error) => {
+        console.error("Erro ao carregar atividades missionárias:", error);
+      }
     });
 
   // Filtrar atividades apenas das classes do professor
@@ -242,7 +248,8 @@ const TeacherRecords: React.FC = () => {
   const uniqueActivityDatesArray = teacherMissionaryActivities.map((activity) =>
     format(new Date(activity.date), "yyyy-MM-dd"),
   );
-  const uniqueActivityDates = [...new Set(uniqueActivityDatesArray)]
+  const uniqueActivityDatesSet = new Set(uniqueActivityDatesArray);
+  const uniqueActivityDates = Array.from(uniqueActivityDatesSet)
     .sort()
     .reverse(); // Mais recentes primeiro
 
@@ -251,7 +258,8 @@ const TeacherRecords: React.FC = () => {
     ...uniqueDatesArray,
     ...uniqueActivityDatesArray,
   ];
-  const allUniqueDates = [...new Set(allUniqueDatesArray)].sort().reverse();
+  const allUniqueDatesSet = new Set(allUniqueDatesArray);
+  const allUniqueDates = Array.from(allUniqueDatesSet).sort().reverse();
 
   // Filtrar atividades pela data selecionada
   const missionaryActivities = selectedDate
