@@ -66,8 +66,8 @@ const TeacherRecords: React.FC = () => {
   const isMobile = useIsMobile();
   const { toast } = useToast();
 
-  // Estado para a data selecionada
-  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  // Estado para a data selecionada - inicializado com a data atual como padrão
+  const [selectedDate, setSelectedDate] = useState<string | null>(getCurrentDateBRT());
 
   // Estados para os modais de edição
   const [isEditAttendanceOpen, setIsEditAttendanceOpen] = useState(false);
@@ -214,21 +214,6 @@ const TeacherRecords: React.FC = () => {
   const uniqueDatesSet = new Set(uniqueDatesArray);
   const uniqueDates = Array.from(uniqueDatesSet).sort().reverse(); // Mais recentes primeiro
 
-  // Se não houver data selecionada e houver datas disponíveis, selecione a mais recente
-  useEffect(() => {
-    if (!selectedDate && uniqueDates.length > 0) {
-      setSelectedDate(uniqueDates[0]);
-    }
-  }, [uniqueDates, selectedDate]);
-
-  // Filtrar registros pela data selecionada usando recordDate
-  const attendanceRecords = selectedDate
-    ? teacherAttendanceRecords.filter((record) => {
-        const recordDateStr = extractDateFromRecord(record.recordDate, record.date);
-        return recordDateStr === selectedDate;
-      })
-    : [];
-
   // Carregar atividades missionárias
   const { data: allMissionaryActivities = [], isLoading: activitiesLoading } =
     useQuery<MissionaryActivityWithClass[]>({
@@ -253,12 +238,23 @@ const TeacherRecords: React.FC = () => {
     .reverse(); // Mais recentes primeiro
 
   // Combinar todas as datas únicas para o dropdown
+  // Incluir a data atual por padrão
+  const todayDate = getCurrentDateBRT();
   const allUniqueDatesArray = [
     ...uniqueDatesArray,
     ...uniqueActivityDatesArray,
+    todayDate // Adicionar a data atual
   ];
   const allUniqueDatesSet = new Set(allUniqueDatesArray);
   const allUniqueDates = Array.from(allUniqueDatesSet).sort().reverse();
+
+  // Filtrar registros pela data selecionada usando recordDate
+  const attendanceRecords = selectedDate
+    ? teacherAttendanceRecords.filter((record) => {
+        const recordDateStr = extractDateFromRecord(record.recordDate, record.date);
+        return recordDateStr === selectedDate;
+      })
+    : [];
 
   // Filtrar atividades pela data selecionada usando recordDate ao invés de date
   const missionaryActivities = selectedDate
