@@ -556,6 +556,10 @@ const AdminHome = () => {
       createStudentMutation.mutate({
         name: newStudentName,
         classId: selectedClassId,
+      }, {
+        onSuccess: () => {
+          setIsAddStudentOpen(false);
+        }
       });
     }
   };
@@ -1522,6 +1526,49 @@ const AdminHome = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Modal de edição de aluno */}
+      <Dialog open={isEditStudentOpen} onOpenChange={setIsEditStudentOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Editar Aluno</DialogTitle>
+            <DialogDescription>
+              Altere o nome do aluno
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={(e) => {
+            e.preventDefault();
+            editStudentMutation.mutate();
+          }}>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="editStudentName">Nome do Aluno</Label>
+                <Input
+                  id="editStudentName"
+                  value={editStudentName}
+                  onChange={(e) => setEditStudentName(e.target.value)}
+                  required
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button 
+                variant="outline" 
+                type="button"
+                onClick={() => setIsEditStudentOpen(false)}
+              >
+                Cancelar
+              </Button>
+              <Button 
+                type="submit"
+                disabled={editStudentMutation.isPending}
+              >
+                {editStudentMutation.isPending ? 'Salvando...' : 'Salvar Alterações'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
