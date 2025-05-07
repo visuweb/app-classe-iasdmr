@@ -15,6 +15,7 @@ import {
 } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
 import {
   Table,
   TableBody,
@@ -70,6 +71,7 @@ const AdminHome = () => {
   const [teacherToToggle, setTeacherToToggle] = useState<Teacher | null>(null);
   const [isToggleTeacherOpen, setIsToggleTeacherOpen] = useState(false);
   const [teacherToEdit, setTeacherToEdit] = useState<Teacher | null>(null);
+  const [teacherNameFilter, setTeacherNameFilter] = useState('');
   const [editTeacherData, setEditTeacherData] = useState({
     name: '',
     cpf: '',
@@ -1456,6 +1458,14 @@ const AdminHome = () => {
                   value={editTeacherData.password}
                   onChange={(e) => setEditTeacherData({ ...editTeacherData, password: e.target.value })}
                 />
+              </div>
+              <div className="flex items-center space-x-2">
+                <Switch
+                  id="editTeacherIsAdmin"
+                  checked={editTeacherData.isAdmin}
+                  onCheckedChange={(checked) => setEditTeacherData({ ...editTeacherData, isAdmin: checked })}
+                />
+                <Label htmlFor="editTeacherIsAdmin">É administrador</Label>
               </div>
             </div>
             <DialogFooter>
