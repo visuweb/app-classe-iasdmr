@@ -44,12 +44,22 @@ app.use((req, res, next) => {
     await db.execute("SELECT 1");
     console.log("Database connection established");
     
-    // Semear dados de teste apenas se for uma instância de DatabaseStorage
-    if ('seedTestTeacher' in storage) {
-      await (storage as any).seedTestTeacher();
+    // Verifica se estamos em ambiente de desenvolvimento
+    const isDevelopment = process.env.NODE_ENV === 'development';
+    
+    // Semear dados de teste apenas se estiver em ambiente de desenvolvimento
+    // e se for uma instância de DatabaseStorage
+    if (isDevelopment && 'seedTestTeacher' in storage) {
+      // Verificar se a variável SEED_TEST_DATA não está definida como 'false'
+      if (process.env.SEED_TEST_DATA !== 'false') {
+        console.log("Seeding test data (set SEED_TEST_DATA=false to disable)");
+        await (storage as any).seedTestTeacher();
+      } else {
+        console.log("Test data seeding disabled via environment variable");
+      }
     }
     
-    // Criar usuário administrador
+    // Criar usuário administrador (sempre executado, pois é necessário para o login)
     if ('createAdminUser' in storage) {
       await (storage as any).createAdminUser();
     }
