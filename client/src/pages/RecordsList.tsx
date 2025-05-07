@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation } from '@tanstack/react-query';
 import {
   Card,
   CardContent,
@@ -25,8 +25,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
 import { format, startOfMonth, endOfMonth, parse, subMonths } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Calendar, BarChart3, ClipboardList, ChevronLeft, ChevronRight, Filter } from 'lucide-react';
-import { Class, AttendanceRecord, MissionaryActivity } from '@shared/schema';
+import { Calendar, BarChart3, ClipboardList, ChevronLeft, ChevronRight, Filter, Edit, Pencil } from 'lucide-react';
+import { Class, AttendanceRecord, MissionaryActivity, missionaryActivityDefinitions } from '@shared/schema';
 import { Button } from '@/components/ui/button';
 import {
   Popover,
@@ -36,16 +36,63 @@ import {
 import { 
   Calendar as CalendarComponent 
 } from '@/components/ui/calendar';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest, queryClient } from '@/lib/queryClient';
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
+import * as z from "zod";
 
 type AttendanceRecordWithStudent = AttendanceRecord & { studentName: string };
 type MissionaryActivityWithClass = MissionaryActivity & { className: string };
 
+// Esquema de validação para edição de presença
+const attendanceEditSchema = z.object({
+  present: z.enum(['true', 'false']),
+});
+
+type AttendanceEditFormValues = z.infer<typeof attendanceEditSchema>;
+
+// Esquema de validação para edição de atividade missionária
+const missionaryActivityEditSchema = z.object({
+  activityValue: z.coerce.number().nonnegative(),
+});
+
+type MissionaryActivityEditFormValues = z.infer<typeof missionaryActivityEditSchema>;
+
 const RecordsList: React.FC = () => {
+  const { toast } = useToast();
   const [selectedClassId, setSelectedClassId] = useState<string>('');
   
   // Estado para filtro de data
   const [selectedMonth, setSelectedMonth] = useState<Date>(new Date());
   const [datePickerOpen, setDatePickerOpen] = useState(false);
+  
+  // Estados para os modais de edição
+  const [attendanceEditDialogOpen, setAttendanceEditDialogOpen] = useState(false);
+  const [missionaryActivityEditDialogOpen, setMissionaryActivityEditDialogOpen] = useState(false);
+  const [selectedAttendanceRecord, setSelectedAttendanceRecord] = useState<AttendanceRecordWithStudent | null>(null);
+  const [selectedMissionaryActivity, setSelectedMissionaryActivity] = useState<MissionaryActivity | null>(null);
+  const [selectedActivityField, setSelectedActivityField] = useState<string>('');
+  const [selectedActivityLabel, setSelectedActivityLabel] = useState<string>('');
   
   // Calcular o início e fim do mês selecionado
   const startOfSelectedMonth = startOfMonth(selectedMonth);
@@ -121,6 +168,122 @@ const RecordsList: React.FC = () => {
     return format(new Date(dateString), "dd 'de' MMMM, yyyy", { locale: ptBR });
   };
   
+  // Mutação para atualizar presença
+  const updateAttendanceMutation = useMutation({
+    mutationFn: async (data: { id: number, present: boolean }) => {
+      const response = await apiRequest('PATCH', `/api/attendance/${data.id}`, { present: data.present });
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Presença atualizada",
+        description: "O registro de presença foi atualizado com sucesso.",
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/attendance'] });
+      setAttendanceEditDialogOpen(false);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Erro ao atualizar presença",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  });
+  
+  // Mutação para atualizar atividade missionária
+  const updateMissionaryActivityMutation = useMutation({
+    mutationFn: async (data: { id: number, field: string, value: number }) => {
+      const payload = { [data.field]: data.value };
+      const response = await apiRequest('PATCH', `/api/missionary-activities/${data.id}`, payload);
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Atividade atualizada",
+        description: "O registro de atividade missionária foi atualizado com sucesso.",
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/missionary-activities'] });
+      setMissionaryActivityEditDialogOpen(false);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Erro ao atualizar atividade",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  });
+  
+  // Form para edição de presença
+  const attendanceForm = useForm<AttendanceEditFormValues>({
+    resolver: zodResolver(attendanceEditSchema),
+    defaultValues: {
+      present: 'true',
+    },
+  });
+  
+  // Form para edição de atividade missionária
+  const missionaryActivityForm = useForm<MissionaryActivityEditFormValues>({
+    resolver: zodResolver(missionaryActivityEditSchema),
+    defaultValues: {
+      activityValue: 0,
+    },
+  });
+  
+  // Lidar com a abertura do modal de edição de presença
+  const handleEditAttendance = (record: AttendanceRecordWithStudent) => {
+    setSelectedAttendanceRecord(record);
+    attendanceForm.reset({
+      present: record.present ? 'true' : 'false',
+    });
+    setAttendanceEditDialogOpen(true);
+  };
+  
+  // Lidar com a submissão do form de edição de presença
+  const onAttendanceEditSubmit = (values: AttendanceEditFormValues) => {
+    if (!selectedAttendanceRecord) return;
+    
+    updateAttendanceMutation.mutate({
+      id: selectedAttendanceRecord.id,
+      present: values.present === 'true',
+    });
+  };
+  
+  // Lidar com a abertura do modal de edição de atividade missionária
+  const handleEditMissionaryActivity = (activity: MissionaryActivity, field: string, label: string) => {
+    setSelectedMissionaryActivity(activity);
+    setSelectedActivityField(field);
+    setSelectedActivityLabel(label);
+    
+    const value = parseInt((activity as any)[field]?.toString() || '0', 10);
+    missionaryActivityForm.reset({
+      activityValue: value,
+    });
+    
+    setMissionaryActivityEditDialogOpen(true);
+  };
+  
+  // Lidar com a submissão do form de edição de atividade missionária
+  const onMissionaryActivityEditSubmit = (values: MissionaryActivityEditFormValues) => {
+    if (!selectedMissionaryActivity || !selectedActivityField) return;
+    
+    updateMissionaryActivityMutation.mutate({
+      id: selectedMissionaryActivity.id,
+      field: selectedActivityField,
+      value: values.activityValue,
+    });
+  };
+  
+  // Contar presentes e ausentes nos registros
+  const getPresentStudentsCount = (records: AttendanceRecordWithStudent[]) => {
+    return records.filter(record => record.present).length;
+  };
+  
+  const getAbsentStudentsCount = (records: AttendanceRecordWithStudent[]) => {
+    return records.filter(record => !record.present).length;
+  };
+  
   // Render attendance records
   const renderAttendanceRecords = () => {
     if (isLoadingAttendance) {
@@ -152,44 +315,67 @@ const RecordsList: React.FC = () => {
       return acc;
     }, {} as Record<string, AttendanceRecordWithStudent[]>);
     
-    return Object.entries(recordsByDate).map(([date, records]) => (
-      <Card key={date} className="mb-4">
-        <CardHeader className="pb-2">
-          <div className="flex items-center">
-            <Calendar className="h-4 w-4 mr-2 text-primary-500" />
-            <CardTitle className="text-base">{formatDate(date)}</CardTitle>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Aluno</TableHead>
-                <TableHead className="text-right">Status</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {records.map((record) => (
-                <TableRow key={record.id}>
-                  <TableCell>{record.studentName}</TableCell>
-                  <TableCell className="text-right">
-                    <span 
-                      className={`px-2 py-1 rounded-full text-xs font-medium ${
-                        record.present 
-                          ? 'bg-green-100 text-green-800' 
-                          : 'bg-red-100 text-red-800'
-                      }`}
-                    >
-                      {record.present ? 'Presente' : 'Ausente'}
-                    </span>
-                  </TableCell>
+    return Object.entries(recordsByDate).map(([date, records]) => {
+      const presentCount = getPresentStudentsCount(records);
+      const absentCount = getAbsentStudentsCount(records);
+      
+      return (
+        <Card key={date} className="mb-4">
+          <CardHeader className="pb-2">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center">
+                <Calendar className="h-4 w-4 mr-2 text-primary-500" />
+                <CardTitle className="text-base">{formatDate(date)}</CardTitle>
+              </div>
+            </div>
+            <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm">
+              <span className="text-green-600 font-medium">Presentes ({presentCount})</span>
+              <span className="text-red-600 font-medium">Ausentes ({absentCount})</span>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Aluno</TableHead>
+                  <TableHead className="text-center">Status</TableHead>
+                  <TableHead className="text-right">Ações</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
-    ));
+              </TableHeader>
+              <TableBody>
+                {records.map((record) => (
+                  <TableRow key={record.id}>
+                    <TableCell>{record.studentName}</TableCell>
+                    <TableCell className="text-center">
+                      <span 
+                        className={`px-2 py-1 rounded-full text-xs font-medium ${
+                          record.present 
+                            ? 'bg-green-100 text-green-800' 
+                            : 'bg-red-100 text-red-800'
+                        }`}
+                      >
+                        {record.present ? 'Presente' : 'Ausente'}
+                      </span>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        onClick={() => handleEditAttendance(record)}
+                        className="h-8 px-2"
+                      >
+                        <Pencil className="h-3.5 w-3.5 mr-1" />
+                        <span className="text-xs">Editar</span>
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      );
+    });
   };
   
   // Render missionary activities
@@ -222,27 +408,112 @@ const RecordsList: React.FC = () => {
           </div>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-2 gap-y-2">
-            <div className="text-sm text-gray-500">Contatos Missionários:</div>
-            <div className="text-sm font-medium text-right">{activity.qtdContatosMissionarios}</div>
-            
-            <div className="text-sm text-gray-500">Literaturas Distribuídas:</div>
-            <div className="text-sm font-medium text-right">{activity.literaturasDistribuidas}</div>
-            
-            <div className="text-sm text-gray-500">Visitas Missionárias:</div>
-            <div className="text-sm font-medium text-right">{activity.visitasMissionarias}</div>
-            
-            <div className="text-sm text-gray-500">Estudos Bíblicos Ministrados:</div>
-            <div className="text-sm font-medium text-right">
-              {(activity.estudosBiblicos || 0) + (activity.ministrados || 0)}
-            </div>
-            
-            <div className="text-sm text-gray-500">Pessoas Auxiliadas:</div>
-            <div className="text-sm font-medium text-right">{activity.pessoasAuxiliadas}</div>
-            
-            <div className="text-sm text-gray-500">Pessoas Trazidas à Igreja:</div>
-            <div className="text-sm font-medium text-right">{activity.pessoasTrazidasIgreja}</div>
-          </div>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Atividade</TableHead>
+                <TableHead className="text-center">Quantidade</TableHead>
+                <TableHead className="text-right">Ações</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              <TableRow>
+                <TableCell>Contatos Missionários</TableCell>
+                <TableCell className="text-center">{activity.qtdContatosMissionarios}</TableCell>
+                <TableCell className="text-right">
+                  <Button 
+                    variant="ghost" 
+                    size="sm"
+                    onClick={() => handleEditMissionaryActivity(activity, 'qtdContatosMissionarios', 'Contatos Missionários')}
+                    className="h-8 px-2"
+                  >
+                    <Pencil className="h-3.5 w-3.5 mr-1" />
+                    <span className="text-xs">Editar</span>
+                  </Button>
+                </TableCell>
+              </TableRow>
+              
+              <TableRow>
+                <TableCell>Literaturas Distribuídas</TableCell>
+                <TableCell className="text-center">{activity.literaturasDistribuidas}</TableCell>
+                <TableCell className="text-right">
+                  <Button 
+                    variant="ghost" 
+                    size="sm"
+                    onClick={() => handleEditMissionaryActivity(activity, 'literaturasDistribuidas', 'Literaturas Distribuídas')}
+                    className="h-8 px-2"
+                  >
+                    <Pencil className="h-3.5 w-3.5 mr-1" />
+                    <span className="text-xs">Editar</span>
+                  </Button>
+                </TableCell>
+              </TableRow>
+              
+              <TableRow>
+                <TableCell>Visitas Missionárias</TableCell>
+                <TableCell className="text-center">{activity.visitasMissionarias}</TableCell>
+                <TableCell className="text-right">
+                  <Button 
+                    variant="ghost" 
+                    size="sm"
+                    onClick={() => handleEditMissionaryActivity(activity, 'visitasMissionarias', 'Visitas Missionárias')}
+                    className="h-8 px-2"
+                  >
+                    <Pencil className="h-3.5 w-3.5 mr-1" />
+                    <span className="text-xs">Editar</span>
+                  </Button>
+                </TableCell>
+              </TableRow>
+              
+              <TableRow>
+                <TableCell>Estudos Bíblicos Ministrados</TableCell>
+                <TableCell className="text-center">{(activity.estudosBiblicos || 0) + (activity.ministrados || 0)}</TableCell>
+                <TableCell className="text-right">
+                  <Button 
+                    variant="ghost" 
+                    size="sm"
+                    onClick={() => handleEditMissionaryActivity(activity, 'estudosBiblicos', 'Estudos Bíblicos Ministrados')}
+                    className="h-8 px-2"
+                  >
+                    <Pencil className="h-3.5 w-3.5 mr-1" />
+                    <span className="text-xs">Editar</span>
+                  </Button>
+                </TableCell>
+              </TableRow>
+              
+              <TableRow>
+                <TableCell>Pessoas Auxiliadas</TableCell>
+                <TableCell className="text-center">{activity.pessoasAuxiliadas}</TableCell>
+                <TableCell className="text-right">
+                  <Button 
+                    variant="ghost" 
+                    size="sm"
+                    onClick={() => handleEditMissionaryActivity(activity, 'pessoasAuxiliadas', 'Pessoas Auxiliadas')}
+                    className="h-8 px-2"
+                  >
+                    <Pencil className="h-3.5 w-3.5 mr-1" />
+                    <span className="text-xs">Editar</span>
+                  </Button>
+                </TableCell>
+              </TableRow>
+              
+              <TableRow>
+                <TableCell>Pessoas Trazidas à Igreja</TableCell>
+                <TableCell className="text-center">{activity.pessoasTrazidasIgreja}</TableCell>
+                <TableCell className="text-right">
+                  <Button 
+                    variant="ghost" 
+                    size="sm"
+                    onClick={() => handleEditMissionaryActivity(activity, 'pessoasTrazidasIgreja', 'Pessoas Trazidas à Igreja')}
+                    className="h-8 px-2"
+                  >
+                    <Pencil className="h-3.5 w-3.5 mr-1" />
+                    <span className="text-xs">Editar</span>
+                  </Button>
+                </TableCell>
+              </TableRow>
+            </TableBody>
+          </Table>
         </CardContent>
       </Card>
     ));
@@ -343,6 +614,142 @@ const RecordsList: React.FC = () => {
           <p className="text-gray-400 text-sm">Os dados serão exibidos após a seleção</p>
         </div>
       )}
+      
+      {/* Modal de edição de presença */}
+      <Dialog open={attendanceEditDialogOpen} onOpenChange={setAttendanceEditDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Editar Presença</DialogTitle>
+            <DialogDescription>
+              {selectedAttendanceRecord && (
+                <span>Alterar presença do aluno <strong>{selectedAttendanceRecord.studentName}</strong></span>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          
+          <Form {...attendanceForm}>
+            <form onSubmit={attendanceForm.handleSubmit(onAttendanceEditSubmit)} className="space-y-4">
+              <FormField
+                control={attendanceForm.control}
+                name="present"
+                render={({ field }) => (
+                  <FormItem className="space-y-3">
+                    <FormLabel>Status</FormLabel>
+                    <FormControl>
+                      <RadioGroup
+                        onValueChange={field.onChange}
+                        defaultValue={field.value}
+                        className="flex flex-col space-y-1"
+                      >
+                        <FormItem className="flex items-center space-x-3 space-y-0">
+                          <FormControl>
+                            <RadioGroupItem value="true" />
+                          </FormControl>
+                          <FormLabel className="font-normal text-green-600">
+                            Presente
+                          </FormLabel>
+                        </FormItem>
+                        <FormItem className="flex items-center space-x-3 space-y-0">
+                          <FormControl>
+                            <RadioGroupItem value="false" />
+                          </FormControl>
+                          <FormLabel className="font-normal text-red-600">
+                            Ausente
+                          </FormLabel>
+                        </FormItem>
+                      </RadioGroup>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <DialogFooter>
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={() => setAttendanceEditDialogOpen(false)}
+                >
+                  Cancelar
+                </Button>
+                <Button 
+                  type="submit"
+                  disabled={updateAttendanceMutation.isPending}
+                >
+                  {updateAttendanceMutation.isPending ? (
+                    <>Salvando...</>
+                  ) : (
+                    <>Salvar Alterações</>
+                  )}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Modal de edição de atividade missionária */}
+      <Dialog open={missionaryActivityEditDialogOpen} onOpenChange={setMissionaryActivityEditDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Editar Atividade Missionária</DialogTitle>
+            <DialogDescription>
+              {selectedActivityLabel && (
+                <span>Alterar quantidade de <strong>{selectedActivityLabel}</strong></span>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          
+          <Form {...missionaryActivityForm}>
+            <form onSubmit={missionaryActivityForm.handleSubmit(onMissionaryActivityEditSubmit)} className="space-y-4">
+              <FormField
+                control={missionaryActivityForm.control}
+                name="activityValue"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Quantidade</FormLabel>
+                    <FormControl>
+                      <Input 
+                        type="number" 
+                        min="0" 
+                        {...field}
+                        onChange={(e) => {
+                          // Certifique-se de que o valor é um número positivo
+                          const value = parseInt(e.target.value, 10);
+                          if (!isNaN(value) && value >= 0) {
+                            field.onChange(value);
+                          }
+                        }}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <DialogFooter>
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={() => setMissionaryActivityEditDialogOpen(false)}
+                >
+                  Cancelar
+                </Button>
+                <Button 
+                  type="submit"
+                  disabled={updateMissionaryActivityMutation.isPending}
+                >
+                  {updateMissionaryActivityMutation.isPending ? (
+                    <>Salvando...</>
+                  ) : (
+                    <>Salvar Alterações</>
+                  )}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
