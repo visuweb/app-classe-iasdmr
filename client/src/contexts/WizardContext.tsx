@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { format } from 'date-fns';
 import { apiRequest } from '@/lib/queryClient';
+import { getCurrentDateBRT } from '@/lib/date-utils';
 import { 
   Student, 
   AttendanceRecord, 
@@ -71,7 +72,9 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   const [attendanceRecords, setAttendanceRecords] = useState<Record<number, boolean>>({});
   const [missionaryActivities, setMissionaryActivities] = useState<Partial<Record<MissionaryActivityType, number>>>({});
   const [currentActivityIndex, setCurrentActivityIndex] = useState(0);
-  const [wizardDate, setWizardDate] = useState<Date>(new Date());
+  // Usar a data atual ajustada ao fuso horário de Brasília
+  const currentDateBRT = getCurrentDateBRT();
+  const [wizardDate, setWizardDate] = useState<Date>(new Date(currentDateBRT));
   const [isEditingExistingRecords, setIsEditingExistingRecords] = useState(false);
   
   // Calculator state
