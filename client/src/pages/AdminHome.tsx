@@ -69,6 +69,7 @@ const AdminHome = () => {
     classId: 0,
   });
   const [selectedClassForReports, setSelectedClassForReports] = useState<number | null>(null);
+  const [selectedDateForReports, setSelectedDateForReports] = useState<string | null>(null);
   const [teacherToToggle, setTeacherToToggle] = useState<Teacher | null>(null);
   const [isToggleTeacherOpen, setIsToggleTeacherOpen] = useState(false);
   const [teacherToEdit, setTeacherToEdit] = useState<Teacher | null>(null);
@@ -101,12 +102,24 @@ const AdminHome = () => {
   const {
     data: attendanceRecords = [],
     isLoading: attendanceLoading,
-  } = useQuery<(AttendanceRecord & { studentName: string })[]>({
-    queryKey: ['/api/attendance', selectedClassForReports],
+  } = useQuery<(AttendanceRecord & { studentName: string, className: string })[]>({
+    queryKey: ['/api/attendance', selectedClassForReports, selectedDateForReports],
     queryFn: async () => {
-      const url = selectedClassForReports 
-        ? `/api/attendance?classId=${selectedClassForReports}`
-        : '/api/attendance';
+      let url = '/api/attendance';
+      const params = new URLSearchParams();
+      
+      if (selectedClassForReports) {
+        params.append('classId', selectedClassForReports.toString());
+      }
+      
+      if (selectedDateForReports) {
+        params.append('date', selectedDateForReports);
+      }
+      
+      if (params.toString()) {
+        url += `?${params.toString()}`;
+      }
+      
       const res = await apiRequest('GET', url);
       return res.json();
     },
@@ -117,11 +130,23 @@ const AdminHome = () => {
     data: missionaryActivities = [],
     isLoading: activitiesLoading,
   } = useQuery<(MissionaryActivity & { className: string })[]>({
-    queryKey: ['/api/missionary-activities', selectedClassForReports],
+    queryKey: ['/api/missionary-activities', selectedClassForReports, selectedDateForReports],
     queryFn: async () => {
-      const url = selectedClassForReports 
-        ? `/api/missionary-activities?classId=${selectedClassForReports}`
-        : '/api/missionary-activities';
+      let url = '/api/missionary-activities';
+      const params = new URLSearchParams();
+      
+      if (selectedClassForReports) {
+        params.append('classId', selectedClassForReports.toString());
+      }
+      
+      if (selectedDateForReports) {
+        params.append('date', selectedDateForReports);
+      }
+      
+      if (params.toString()) {
+        url += `?${params.toString()}`;
+      }
+      
       const res = await apiRequest('GET', url);
       return res.json();
     },
@@ -1194,6 +1219,16 @@ const AdminHome = () => {
                       ))}
                     </select>
                   </div>
+                  <div>
+                    <Label htmlFor="dateFilter">Filtrar por Data</Label>
+                    <Input
+                      id="dateFilter"
+                      type="date"
+                      className="w-full mt-1"
+                      value={selectedDateForReports || ''}
+                      onChange={(e) => setSelectedDateForReports(e.target.value || null)}
+                    />
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -1239,14 +1274,7 @@ const AdminHome = () => {
                               <TableCell>{formatBrazilianDate(record.date)}</TableCell>
                               <TableCell>{record.studentName}</TableCell>
                               <TableCell>
-                                {studentClass?.name || (
-                                  // Fallback: buscar todas as classes e todos os alunos para tentar determinar a classe
-                                  classes.find(c => {
-                                    // Para cada classe, verificamos se o aluno pertence a ela
-                                    return record.studentId && c.id && 
-                                      students.some(s => s.id === record.studentId && s.classId === c.id);
-                                  })?.name || 'N/A'
-                                )}
+                                {record.className || 'N/A'}
                               </TableCell>
                               <TableCell>
                                 {record.present ? (
