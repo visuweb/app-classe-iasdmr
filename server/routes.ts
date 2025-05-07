@@ -16,6 +16,16 @@ import {
   missionaryActivities
 } from "@shared/schema";
 import { setupAuth } from "./auth";
+import { scrypt, randomBytes, timingSafeEqual } from "crypto";
+import { promisify } from "util";
+
+// Função para criptografar senhas
+const scryptAsync = promisify(scrypt);
+async function hashPassword(password: string) {
+  const salt = randomBytes(16).toString("hex");
+  const buf = (await scryptAsync(password, salt, 64)) as Buffer;
+  return `${buf.toString("hex")}.${salt}`;
+}
 
 // Middleware to check if user is authenticated
 const ensureAuthenticated = (req: any, res: any, next: any) => {
@@ -147,15 +157,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Dados de professor inválidos" });
       }
       
-      // Não podemos alterar o campo isAdmin desta forma para segurança
-      // Isso evita que um administrador seja rebaixado acidentalmente
-      if (parsed.data.isAdmin !== undefined) {
-        delete parsed.data.isAdmin;
-      }
-      
-      // Não permitir alteração de senha por esta rota
-      if (parsed.data.password !== undefined) {
-        delete parsed.data.password;
+      // Verificar se a senha foi fornecida e criptografá-la
+      if (parsed.data.password) {
+        // Se o CPF for "admin", manter a senha sem criptografia (para compatibilidade)
+        if (existingTeacher.cpf !== 'admin') {
+          // Criptografar a senha antes de salvar
+          parsed.data.password = await storage.comparePasswords.hashPassword(parsed.data.password);
+        }
       }
       
       // Verificar se tentar atualizar o CPF, se ele já existe
