@@ -505,13 +505,23 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
             setCalculatorResult(value || '0');
             setCalculatorExpression(value || '0');
           } else if (calculatorExpression.includes('+')) {
-            // Se estamos adicionando o segundo número após o operador +
-            setCalculatorResult(value || '0');
-            setCalculatorExpression(prev => {
-              // Manter a parte antes do operador + e substituir o que vem depois
-              const parts = prev.split('+');
-              return parts[0] + '+ ' + (value || '0');
-            });
+            // Se estamos adicionando dígitos após o operador +
+            // Verificar se já existe algum número após o +
+            const parts = calculatorExpression.split('+');
+            const afterPlus = parts[1] ? parts[1].trim() : '';
+            
+            if (afterPlus === '0' || afterPlus === '') {
+              // Se tiver apenas '0' após o +, substituir
+              setCalculatorResult(value || '0');
+              setCalculatorExpression(parts[0] + '+ ' + (value || '0'));
+            } else {
+              // Caso contrário, concatenar ao número atual após o +
+              setCalculatorResult(prev => {
+                if (prev === '0') return value || '0';
+                return prev + (value || '');
+              });
+              setCalculatorExpression(parts[0] + '+ ' + (afterPlus + (value || '')));
+            }
           } else {
             // Concatenar dígitos para formar um número maior
             setCalculatorResult(prev => prev + (value || ''));

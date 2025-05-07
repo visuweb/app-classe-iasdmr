@@ -42,7 +42,7 @@ const Calculator: React.FC = () => {
             <div className="text-2xl font-medium text-gray-900 text-right">{calculatorResult}</div>
           </div>
           
-          {/* Calculator grid */}
+          {/* Calculator grid - Redesenhada conforme a imagem de referência */}
           <div className="calculator-grid grid grid-cols-4 gap-2">
             {/* Row 1 */}
             <button 
@@ -68,33 +68,25 @@ const Calculator: React.FC = () => {
             </button>
             
             {/* Row 2 */}
-            {[7, 8, 9].map(num => (
-              <button 
-                key={num}
-                className="bg-white hover:bg-gray-100 text-gray-800 font-medium py-3 rounded border"
-                onClick={() => handleCalculatorAction('number', num.toString())}
-              >
-                {num}
-              </button>
-            ))}
             <button 
-              className="bg-primary-500 hover:bg-primary-600 text-white font-medium py-3 rounded"
-              onClick={() => handleCalculatorAction('equals')}
+              className="bg-white hover:bg-gray-100 text-gray-800 font-medium py-3 rounded border"
+              onClick={() => handleCalculatorAction('number', '7')}
             >
-              =
+              7
             </button>
-            
-            {/* Row 3 */}
-            {[4, 5, 6].map(num => (
-              <button 
-                key={num}
-                className="bg-white hover:bg-gray-100 text-gray-800 font-medium py-3 rounded border"
-                onClick={() => handleCalculatorAction('number', num.toString())}
-              >
-                {num}
-              </button>
-            ))}
-            <div className="row-span-2">
+            <button 
+              className="bg-white hover:bg-gray-100 text-gray-800 font-medium py-3 rounded border"
+              onClick={() => handleCalculatorAction('number', '8')}
+            >
+              8
+            </button>
+            <button 
+              className="bg-white hover:bg-gray-100 text-gray-800 font-medium py-3 rounded border"
+              onClick={() => handleCalculatorAction('number', '9')}
+            >
+              9
+            </button>
+            <div className="row-span-3">
               <button 
                 className="bg-green-500 hover:bg-green-600 text-white font-medium py-3 rounded h-full w-full"
                 onClick={applyCalculatorResult}
@@ -106,16 +98,45 @@ const Calculator: React.FC = () => {
               </button>
             </div>
             
+            {/* Row 3 */}
+            <button 
+              className="bg-white hover:bg-gray-100 text-gray-800 font-medium py-3 rounded border"
+              onClick={() => handleCalculatorAction('number', '4')}
+            >
+              4
+            </button>
+            <button 
+              className="bg-white hover:bg-gray-100 text-gray-800 font-medium py-3 rounded border"
+              onClick={() => handleCalculatorAction('number', '5')}
+            >
+              5
+            </button>
+            <button 
+              className="bg-white hover:bg-gray-100 text-gray-800 font-medium py-3 rounded border"
+              onClick={() => handleCalculatorAction('number', '6')}
+            >
+              6
+            </button>
+            
             {/* Row 4 */}
-            {[1, 2, 3].map(num => (
-              <button 
-                key={num}
-                className="bg-white hover:bg-gray-100 text-gray-800 font-medium py-3 rounded border"
-                onClick={() => handleCalculatorAction('number', num.toString())}
-              >
-                {num}
-              </button>
-            ))}
+            <button 
+              className="bg-white hover:bg-gray-100 text-gray-800 font-medium py-3 rounded border"
+              onClick={() => handleCalculatorAction('number', '1')}
+            >
+              1
+            </button>
+            <button 
+              className="bg-white hover:bg-gray-100 text-gray-800 font-medium py-3 rounded border"
+              onClick={() => handleCalculatorAction('number', '2')}
+            >
+              2
+            </button>
+            <button 
+              className="bg-white hover:bg-gray-100 text-gray-800 font-medium py-3 rounded border"
+              onClick={() => handleCalculatorAction('number', '3')}
+            >
+              3
+            </button>
             
             {/* Row 5 */}
             <button 

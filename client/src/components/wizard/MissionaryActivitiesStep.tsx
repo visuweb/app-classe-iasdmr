@@ -104,7 +104,7 @@ const MissionaryActivitiesStep: React.FC<MissionaryActivitiesStepProps> = ({ isA
                       type="number" 
                       placeholder="Quantidade"
                       min="0"
-                      value={missionaryActivities[currentActivity.id as MissionaryActivityType] ?? ""}
+                      value={missionaryActivities[currentActivity.id as MissionaryActivityType] ?? "0"}
                       onChange={handleInputChange}
                       className={`w-full ${
                         isEditingExistingRecords && 
@@ -136,7 +136,20 @@ const MissionaryActivitiesStep: React.FC<MissionaryActivitiesStepProps> = ({ isA
               </div>
               
               <div className="flex gap-2">
-                {currentActivityIndex > 0 && (
+                {/* Botão VOLTAR - deve voltar para a tela de presença se for a primeira atividade missionária */}
+                {currentActivityIndex === 0 ? (
+                  <Button 
+                    variant="outline" 
+                    className="flex-1"
+                    onClick={() => {
+                      // Voltar para a última tela de chamada (passo anterior do wizard)
+                      const { goToStep, currentStep, previousStep } = useWizard();
+                      previousStep();
+                    }}
+                  >
+                    VOLTAR PARA CHAMADA
+                  </Button>
+                ) : (
                   <Button 
                     variant="outline" 
                     className="flex-1"
