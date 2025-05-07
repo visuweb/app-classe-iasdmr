@@ -193,6 +193,7 @@ const ClassList: React.FC = () => {
     try {
       const response = await apiRequest('GET', `/api/check-today-records/${classId}`);
       const data = await response.json();
+      console.log(`Verificação de registros para classe ${classId}:`, data);
       return data.hasRecords || false;
     } catch (error) {
       console.error('Erro ao verificar registros do dia:', error);
