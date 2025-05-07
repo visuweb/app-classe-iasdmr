@@ -392,12 +392,7 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
       [studentId]: present
     }));
     
-    if (currentStudentIndex < students.length - 1) {
-      setCurrentStudentIndex(currentStudentIndex + 1);
-    } else {
-      // When all students are processed, move to next step
-      nextStep();
-    }
+    // Não avança automaticamente mais - isso será controlado pelo botão AVANÇAR
   };
   
   // Voltar para o aluno anterior
