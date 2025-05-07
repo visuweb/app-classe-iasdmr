@@ -90,9 +90,6 @@ const AttendanceStep: React.FC<AttendanceStepProps> = ({ isActive }) => {
                 >
                   <Check className="h-4 w-4 mr-2" />
                   PRESENTE
-                  {isEditingExistingRecords && currentStudent && attendanceRecords[currentStudent.id] === true && (
-                    <span className="ml-1 text-xs">(salvo)</span>
-                  )}
                 </Button>
                 <Button 
                   variant="default" 
@@ -105,14 +102,11 @@ const AttendanceStep: React.FC<AttendanceStepProps> = ({ isActive }) => {
                 >
                   <X className="h-4 w-4 mr-2" />
                   AUSENTE
-                  {isEditingExistingRecords && currentStudent && attendanceRecords[currentStudent.id] === false && (
-                    <span className="ml-1 text-xs">(salvo)</span>
-                  )}
                 </Button>
               </div>
               
-              {currentStudentIndex > 0 && (
-                <div className="flex gap-2">
+              <div className="flex gap-2">
+                {currentStudentIndex > 0 && (
                   <Button 
                     variant="outline" 
                     className="flex-1"
@@ -120,8 +114,17 @@ const AttendanceStep: React.FC<AttendanceStepProps> = ({ isActive }) => {
                   >
                     VOLTAR
                   </Button>
-                </div>
-              )}
+                )}
+                {currentStudentIndex < students.length - 1 && (
+                  <Button 
+                    variant="outline" 
+                    className="flex-1"
+                    onClick={() => markStudentAttendance(currentStudent.id, attendanceRecords[currentStudent.id] ?? false)}
+                  >
+                    AVANÇAR
+                  </Button>
+                )}
+              </div>
             </motion.div>
           ) : (
             <div className="text-center p-8">

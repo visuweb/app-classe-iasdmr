@@ -660,41 +660,40 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     if (!currentClassId) return false;
     
     try {
-      // Format data for submission
+      // Obter a data formatada para submissão (que pode ser a data atual ou a data que estamos editando)
       const formattedDate = format(wizardDate, 'yyyy-MM-dd');
       
       // Log dos valores das atividades missionárias antes da submissão
       console.log('Valores das atividades missionárias antes da submissão:', missionaryActivities);
+      console.log('Data do registro:', formattedDate);
       
-      // Verificar se já existem registros para o dia atual da classe
-      const checkResponse = await apiRequest('GET', `/api/check-today-records/${currentClassId}`);
-      const checkData = await checkResponse.json();
-      const hasExistingRecords = checkData.hasRecords;
-      
-      // Log para depuração
-      console.log('Verificando registros existentes:', hasExistingRecords);
-      
-      if (hasExistingRecords) {
-        console.log('Atualizando registros existentes para o dia:', formattedDate);
+      // Se estamos editando registros existentes, precisamos excluí-los primeiro
+      if (isEditingExistingRecords) {
+        console.log('Modo de edição: excluindo registros existentes para a data', formattedDate);
         
-        // Neste momento, a API não suporta atualizações diretamente (PUT/PATCH)
-        // Então vamos excluir os registros antigos e inserir os novos
-        // Idealmente, no futuro, isso seria substituído por um endpoint de atualização real
-      }
-      
-      // Se há registros existentes, excluímos antes de criar novos
-      if (hasExistingRecords) {
-        console.log('Excluindo registros existentes para a data', formattedDate);
         try {
-          // O endpoint da API já está configurado para excluir registros antigos no backend
-          // quando um novo registro é criado para a mesma classe e data
+          // Excluir registros de presença existentes
+          const deleteAttendanceResponse = await apiRequest('DELETE', `/api/attendance/${currentClassId}/${formattedDate}`);
+          if (deleteAttendanceResponse.ok) {
+            console.log('Registros de presença excluídos com sucesso');
+          } else {
+            console.error('Falha ao excluir registros de presença:', await deleteAttendanceResponse.text());
+          }
+          
+          // Excluir atividades missionárias existentes
+          const deleteMissionaryResponse = await apiRequest('DELETE', `/api/missionary-activities/${currentClassId}/${formattedDate}`);
+          if (deleteMissionaryResponse.ok) {
+            console.log('Atividades missionárias excluídas com sucesso');
+          } else {
+            console.error('Falha ao excluir atividades missionárias:', await deleteMissionaryResponse.text());
+          }
         } catch (error) {
           console.error('Erro ao excluir registros antigos:', error);
           return false;
         }
       }
       
-      // Submit attendance records
+      // Criar novos registros de presença
       for (const [studentId, present] of Object.entries(attendanceRecords)) {
         await apiRequest('POST', '/api/attendance', {
           studentId: parseInt(studentId, 10),
