@@ -17,7 +17,8 @@ const AttendanceStep: React.FC<AttendanceStepProps> = ({ isActive }) => {
     markStudentAttendance, 
     goToPreviousStudent,
     wizardDate,
-    attendanceRecords
+    attendanceRecords,
+    isEditingExistingRecords
   } = useWizard();
   
   if (!isActive) return null;
@@ -49,7 +50,7 @@ const AttendanceStep: React.FC<AttendanceStepProps> = ({ isActive }) => {
           <span className="material-icons text-4xl text-primary-500 mb-2">fact_check</span>
           <h3 className="text-xl font-medium text-gray-900">
             Lista de Chamada
-            {Object.keys(attendanceRecords).length > 0 && 
+            {isEditingExistingRecords && 
               <span className="text-orange-500 ml-1 text-sm">(editando...)</span>
             }
           </h3>

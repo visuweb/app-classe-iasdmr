@@ -20,7 +20,8 @@ const MissionaryActivitiesStep: React.FC<MissionaryActivitiesStepProps> = ({ isA
     setActivityValue, 
     advanceToNextActivity,
     missionaryActivities,
-    openCalculator 
+    openCalculator,
+    isEditingExistingRecords
   } = useWizard();
   
   if (!isActive) return null;
@@ -67,7 +68,12 @@ const MissionaryActivitiesStep: React.FC<MissionaryActivitiesStepProps> = ({ isA
       <div className="bg-white shadow rounded-lg p-6 max-w-md mx-auto">
         <div className="text-center mb-6">
           <span className="material-icons text-4xl text-primary-500 mb-2">assignment</span>
-          <h3 className="text-xl font-medium text-gray-900">Atividades Missionárias</h3>
+          <h3 className="text-xl font-medium text-gray-900">
+            Atividades Missionárias
+            {isEditingExistingRecords && 
+              <span className="text-orange-500 ml-1 text-sm">(editando...)</span>
+            }
+          </h3>
           <p className="text-sm text-gray-500 mt-1">Registre as atividades da semana</p>
         </div>
 

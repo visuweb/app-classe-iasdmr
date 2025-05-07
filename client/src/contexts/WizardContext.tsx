@@ -114,6 +114,7 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
           
           if (data.hasRecords) {
             console.log('Carregando dados existentes para o dia:', formattedDate);
+            setIsEditingExistingRecords(true);
             
             // Carregar registros de presença
             if (data.attendanceRecords && data.attendanceRecords.length > 0) {
@@ -276,6 +277,7 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     setAttendanceRecords({});
     setMissionaryActivities({});
     setCurrentActivityIndex(0);
+    setIsEditingExistingRecords(false);
   };
   
   // Class methods
@@ -628,6 +630,7 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     missionaryActivities,
     currentActivityIndex,
     wizardDate,
+    isEditingExistingRecords,
     calculatorOpen,
     calculatorExpression,
     calculatorResult,
