@@ -44,7 +44,8 @@ import {
   Plus,
   ClipboardList,
   FileText,
-  CheckSquare
+  CheckSquare,
+  Pencil
 } from 'lucide-react';
 import { Class, insertClassSchema, insertStudentSchema } from '@shared/schema';
 import Header from '@/components/Header';
