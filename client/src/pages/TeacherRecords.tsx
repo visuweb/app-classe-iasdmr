@@ -66,8 +66,8 @@ const TeacherRecords: React.FC = () => {
   const isMobile = useIsMobile();
   const { toast } = useToast();
 
-  // Estado para a data selecionada - inicializado com a data atual como padrão
-  const [selectedDate, setSelectedDate] = useState<string | null>(getCurrentDateBRT());
+  // Estado para a data selecionada - inicializado como null (sem data selecionada por padrão)
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
 
   // Estados para os modais de edição
   const [isEditAttendanceOpen, setIsEditAttendanceOpen] = useState(false);
@@ -238,15 +238,21 @@ const TeacherRecords: React.FC = () => {
     .reverse(); // Mais recentes primeiro
 
   // Combinar todas as datas únicas para o dropdown
-  // Incluir a data atual por padrão
+  // Incluir a data atual apenas se houver registros para exibir no dropdown
   const todayDate = getCurrentDateBRT();
   const allUniqueDatesArray = [
     ...uniqueDatesArray,
     ...uniqueActivityDatesArray,
-    todayDate // Adicionar a data atual
   ];
   const allUniqueDatesSet = new Set(allUniqueDatesArray);
   const allUniqueDates = Array.from(allUniqueDatesSet).sort().reverse();
+  
+  // Verificar se há registros para a data atual e, se houver, selecionar
+  useEffect(() => {
+    if (!selectedDate && allUniqueDates.includes(todayDate)) {
+      setSelectedDate(todayDate);
+    }
+  }, [allUniqueDates, selectedDate, todayDate]);
 
   // Filtrar registros pela data selecionada usando recordDate
   const attendanceRecords = selectedDate
