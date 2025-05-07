@@ -4,6 +4,7 @@ import { useQuery, useMutation } from '@tanstack/react-query';
 import { queryClient, apiRequest } from '@/lib/queryClient';
 import { Button } from '@/components/ui/button';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { formatBrazilianDate } from '@/lib/date-utils';
 import { LogOut, School, User, Book, BarChart, Plus, UserPlus, Calendar, Filter, Trash2, Check, Pencil, MinusCircle, Search } from 'lucide-react';
 import {
   Card,
@@ -101,11 +102,11 @@ const AdminHome = () => {
     data: attendanceRecords = [],
     isLoading: attendanceLoading,
   } = useQuery<(AttendanceRecord & { studentName: string })[]>({
-    queryKey: ['/api/attendance-records', selectedClassForReports],
+    queryKey: ['/api/attendance', selectedClassForReports],
     queryFn: async () => {
       const url = selectedClassForReports 
-        ? `/api/attendance-records?classId=${selectedClassForReports}`
-        : '/api/attendance-records';
+        ? `/api/attendance?classId=${selectedClassForReports}`
+        : '/api/attendance';
       const res = await apiRequest('GET', url);
       return res.json();
     },
@@ -1226,10 +1227,15 @@ const AdminHome = () => {
                       <TableBody>
                         {attendanceRecords.map((record) => (
                           <TableRow key={record.id}>
-                            <TableCell>{new Date(record.date).toLocaleDateString('pt-BR')}</TableCell>
+                            <TableCell>{formatBrazilianDate(record.date)}</TableCell>
                             <TableCell>{record.studentName}</TableCell>
                             <TableCell>
-                              {classes.find(c => c.id === record.studentId)?.name || ''}
+                              {classes.find(c => {
+                                // Encontrar o estudante primeiro
+                                const student = students.find(s => s.id === record.studentId);
+                                // Retornar true se a classe corresponde à classe do estudante
+                                return student && c.id === student.classId;
+                              })?.name || ''}
                             </TableCell>
                             <TableCell>
                               {record.present ? (
@@ -1280,7 +1286,7 @@ const AdminHome = () => {
                           if (activity.qtdContatosMissionarios) {
                             activityEntries.push(
                               <TableRow key={`${activity.id}-contatos`}>
-                                <TableCell>{new Date(activity.date).toLocaleDateString('pt-BR')}</TableCell>
+                                <TableCell>{formatBrazilianDate(activity.date)}</TableCell>
                                 <TableCell>{activity.className}</TableCell>
                                 <TableCell>Contatos Missionários</TableCell>
                                 <TableCell>{activity.qtdContatosMissionarios}</TableCell>
