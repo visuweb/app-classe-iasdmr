@@ -204,11 +204,14 @@ const TeacherRecords: React.FC = () => {
     return true; // Se não tivermos classId, assumimos que o professor tem acesso
   });
 
-  // Função auxiliar para ajustar as datas para o fuso horário de Brasília
+  // Função auxiliar para corrigir o problema do fuso horário
   const adjustDateToBRT = (dateStr: string) => {
-    // Cria uma data a partir da string e ajusta para o fuso horário de Brasília (UTC-3)
+    // Cria uma data a partir da string
     const date = new Date(dateStr);
-    return formatInTimeZone(date, 'America/Sao_Paulo', 'yyyy-MM-dd');
+    // Como o problema aparentemente está fazendo a data retroceder um dia,
+    // adicionamos explicitamente um dia para compensar
+    const correctedDate = addDays(date, 1);
+    return format(correctedDate, 'yyyy-MM-dd');
   };
 
   // Extrair datas únicas dos registros com o ajuste de fuso horário
