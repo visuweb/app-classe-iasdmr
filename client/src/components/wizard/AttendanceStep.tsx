@@ -19,7 +19,8 @@ const AttendanceStep: React.FC<AttendanceStepProps> = ({ isActive }) => {
     wizardDate,
     attendanceRecords,
     isEditingExistingRecords,
-    nextStep
+    nextStep,
+    setCurrentStudentIndex
   } = useWizard();
   
   if (!isActive) return null;
