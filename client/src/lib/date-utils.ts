@@ -46,12 +46,27 @@ export function formatBrazilianDateExtended(dateStr: string): string {
 }
 
 /**
- * Obter a data atual no formato 'yyyy-MM-dd' no fuso horário de Brasília
+ * Obter a data atual no formato 'yyyy-MM-dd' no fuso horário de Brasília (UTC-3)
+ * Garante que a data esteja correta para o horário de Brasília, independentemente do fuso do servidor
  * 
  * @returns String de data no formato 'yyyy-MM-dd'
  */
 export function getCurrentDateBRT(): string {
+  // Criar data atual
   const now = new Date();
-  // Já ajusta automaticamente para o fuso horário de Brasília
-  return format(now, 'yyyy-MM-dd');
+  
+  // Obter o offset atual do servidor em minutos
+  const serverOffset = now.getTimezoneOffset();
+  
+  // Offset de Brasília é UTC-3, ou seja, -180 minutos
+  const brazilOffset = -180;
+  
+  // Calcular a diferença de offset em milissegundos
+  const offsetDiff = (serverOffset - brazilOffset) * 60 * 1000;
+  
+  // Ajustar a data para o fuso de Brasília
+  const brazilTime = new Date(now.getTime() + offsetDiff);
+  
+  // Formatar no padrão ISO (yyyy-MM-dd)
+  return format(brazilTime, 'yyyy-MM-dd');
 }

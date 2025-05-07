@@ -207,8 +207,8 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     if (currentClassId) {
       const checkAndLoadTodayRecords = async () => {
         try {
-          // Obter a data atual formatada como yyyy-mm-dd
-          const formattedDate = format(wizardDate, 'yyyy-MM-dd');
+          // Obter a data atual formatada como yyyy-mm-dd usando o utilitário de ajuste de fuso horário
+          const formattedDate = getCurrentDateBRT();
           
           // Verificar registros para o dia atual
           const response = await apiRequest('GET', `/api/check-today-records/${currentClassId}`);
@@ -670,7 +670,8 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     
     try {
       // Obter a data formatada para submissão (que pode ser a data atual ou a data que estamos editando)
-      const formattedDate = format(wizardDate, 'yyyy-MM-dd');
+      // Usar o utilitário para garantir a consistência do fuso horário
+      const formattedDate = getCurrentDateBRT();
       
       // Log dos valores das atividades missionárias antes da submissão
       console.log('Valores das atividades missionárias antes da submissão:', missionaryActivities);
