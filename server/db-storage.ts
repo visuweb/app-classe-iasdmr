@@ -368,7 +368,7 @@ export class DatabaseStorage implements IStorage {
   }
   
   // Attendance operations
-  async getAttendanceRecords(classId?: number): Promise<(AttendanceRecord & { studentName: string })[]> {
+  async getAttendanceRecords(classId?: number): Promise<(AttendanceRecord & { studentName: string, className: string })[]> {
     // Buscar todos os registros agrupando por studentId e date para evitar duplicações
     // Isso vai pegar sempre o registro mais recente para cada combinação de aluno e data
     
@@ -395,10 +395,12 @@ export class DatabaseStorage implements IStorage {
           present: attendanceRecords.present,
           date: attendanceRecords.date,
           recordDate: attendanceRecords.recordDate,
-          studentName: students.name
+          studentName: students.name,
+          className: classes.name
         })
         .from(attendanceRecords)
         .innerJoin(students, eq(attendanceRecords.studentId, students.id))
+        .innerJoin(classes, eq(students.classId, classes.id))
         .innerJoin(latestRecords, eq(attendanceRecords.id, latestRecords.maxId));
     } else {
       // Subconsulta para obter o ID mais recente para cada combinação de aluno e data
@@ -420,15 +422,17 @@ export class DatabaseStorage implements IStorage {
           present: attendanceRecords.present,
           date: attendanceRecords.date,
           recordDate: attendanceRecords.recordDate,
-          studentName: students.name
+          studentName: students.name,
+          className: classes.name
         })
         .from(attendanceRecords)
         .innerJoin(students, eq(attendanceRecords.studentId, students.id))
+        .innerJoin(classes, eq(students.classId, classes.id))
         .innerJoin(latestRecords, eq(attendanceRecords.id, latestRecords.maxId));
     }
   }
   
-  async getAttendanceRecordsForClassAndDate(classId: number, date: string): Promise<(AttendanceRecord & { studentName: string })[]> {
+  async getAttendanceRecordsForClassAndDate(classId: number, date: string): Promise<(AttendanceRecord & { studentName: string, className: string })[]> {
     // Subconsulta para obter o ID mais recente para cada aluno nesta data
     const latestRecords = db
       .select({
@@ -455,10 +459,12 @@ export class DatabaseStorage implements IStorage {
         present: attendanceRecords.present,
         date: attendanceRecords.date,
         recordDate: attendanceRecords.recordDate,
-        studentName: students.name
+        studentName: students.name,
+        className: classes.name
       })
       .from(attendanceRecords)
       .innerJoin(students, eq(attendanceRecords.studentId, students.id))
+      .innerJoin(classes, eq(students.classId, classes.id))
       .innerJoin(latestRecords, eq(attendanceRecords.id, latestRecords.maxId));
   }
   
