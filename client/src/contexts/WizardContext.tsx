@@ -742,7 +742,19 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
       // Garantir que todos os campos estejam presentes, preenchendo com 0 se não existirem
       missionaryActivityDefinitions.forEach(def => {
         const fieldName = def.id;
-        completeActivities[fieldName] = missionaryActivities[fieldName as MissionaryActivityType] || 0;
+        // Garantir que todos os valores sejam números, mesmo quando undefined/null
+        let value = missionaryActivities[fieldName as MissionaryActivityType];
+        
+        // Explicitamente tratar todos os casos possíveis para garantir um valor numérico
+        if (value === undefined || value === null) {
+          value = 0;
+        } else if (typeof value !== 'number') {
+          // Tentar converter para número se for string
+          value = parseInt(String(value), 10);
+          if (isNaN(value)) value = 0;
+        }
+        
+        completeActivities[fieldName] = value;
       });
       
       console.log('Submetendo atividades missionárias completas:', completeActivities);

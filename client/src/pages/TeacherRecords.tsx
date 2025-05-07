@@ -207,7 +207,8 @@ const TeacherRecords: React.FC = () => {
   const uniqueDatesArray = teacherAttendanceRecords.map((record) =>
     format(new Date(record.date), "yyyy-MM-dd"),
   );
-  const uniqueDates = [...new Set(uniqueDatesArray)].sort().reverse(); // Mais recentes primeiro
+  const uniqueDatesSet = new Set(uniqueDatesArray);
+  const uniqueDates = Array.from(uniqueDatesSet).sort().reverse(); // Mais recentes primeiro
 
   // Se não houver data selecionada e houver datas disponíveis, selecione a mais recente
   useEffect(() => {
@@ -259,6 +260,8 @@ const TeacherRecords: React.FC = () => {
         return activityDate === selectedDate;
       })
     : [];
+    
+  console.log("Atividades missionárias filtradas:", missionaryActivities);
 
   // Função para formatar data
   const formatDate = (dateStr: string) => {
