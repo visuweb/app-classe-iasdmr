@@ -21,7 +21,8 @@ const MissionaryActivitiesStep: React.FC<MissionaryActivitiesStepProps> = ({ isA
     advanceToNextActivity,
     missionaryActivities,
     openCalculator,
-    isEditingExistingRecords
+    isEditingExistingRecords,
+    previousStep
   } = useWizard();
   
   if (!isActive) return null;
@@ -143,7 +144,6 @@ const MissionaryActivitiesStep: React.FC<MissionaryActivitiesStepProps> = ({ isA
                     className="flex-1"
                     onClick={() => {
                       // Voltar para a última tela de chamada (passo anterior do wizard)
-                      const { goToStep, currentStep, previousStep } = useWizard();
                       previousStep();
                     }}
                   >
