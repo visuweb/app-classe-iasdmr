@@ -571,6 +571,11 @@ const AdminHome = () => {
   const handleClassSelectionForReports = (classId: number | null) => {
     setSelectedClassForReports(classId);
   };
+  
+  // Handle date selection for reports
+  const handleDateSelectionForReports = (date: string | null) => {
+    setSelectedDateForReports(date);
+  };
 
   // Handle create class
   const handleCreateClass = (e: React.FormEvent) => {
@@ -1226,7 +1231,7 @@ const AdminHome = () => {
                       type="date"
                       className="w-full mt-1"
                       value={selectedDateForReports || ''}
-                      onChange={(e) => setSelectedDateForReports(e.target.value || null)}
+                      onChange={(e) => handleDateSelectionForReports(e.target.value || null)}
                     />
                   </div>
                 </div>
@@ -1241,6 +1246,7 @@ const AdminHome = () => {
                   {selectedClassForReports
                     ? `Classe: ${classes.find(c => c.id === selectedClassForReports)?.name || ''}`
                     : 'Todas as Classes'}
+                  {selectedDateForReports && ` | Data: ${formatBrazilianDate(selectedDateForReports)}`}
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -1301,6 +1307,7 @@ const AdminHome = () => {
                   {selectedClassForReports
                     ? `Classe: ${classes.find(c => c.id === selectedClassForReports)?.name || ''}`
                     : 'Todas as Classes'}
+                  {selectedDateForReports && ` | Data: ${formatBrazilianDate(selectedDateForReports)}`}
                 </CardDescription>
               </CardHeader>
               <CardContent>
