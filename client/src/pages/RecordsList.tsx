@@ -617,7 +617,7 @@ const RecordsList: React.FC = () => {
       
       {/* Modal de edição de presença */}
       <Dialog open={attendanceEditDialogOpen} onOpenChange={setAttendanceEditDialogOpen}>
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent className="w-[400px] max-w-full">
           <DialogHeader>
             <DialogTitle>Editar Presença</DialogTitle>
             <DialogDescription>
@@ -664,11 +664,12 @@ const RecordsList: React.FC = () => {
                 )}
               />
               
-              <DialogFooter>
+              <DialogFooter className="flex justify-end pt-2">
                 <Button 
                   type="button" 
                   variant="outline" 
                   onClick={() => setAttendanceEditDialogOpen(false)}
+                  className="mr-2"
                 >
                   Cancelar
                 </Button>
@@ -690,7 +691,7 @@ const RecordsList: React.FC = () => {
       
       {/* Modal de edição de atividade missionária */}
       <Dialog open={missionaryActivityEditDialogOpen} onOpenChange={setMissionaryActivityEditDialogOpen}>
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent className="w-[400px] max-w-full">
           <DialogHeader>
             <DialogTitle>Editar Atividade Missionária</DialogTitle>
             <DialogDescription>
@@ -710,14 +711,15 @@ const RecordsList: React.FC = () => {
                     <FormLabel>Quantidade</FormLabel>
                     <FormControl>
                       <Input 
-                        type="number" 
-                        min="0" 
+                        type="text" 
                         {...field}
                         onChange={(e) => {
                           // Certifique-se de que o valor é um número positivo
                           const value = parseInt(e.target.value, 10);
                           if (!isNaN(value) && value >= 0) {
                             field.onChange(value);
+                          } else if (e.target.value === '') {
+                            field.onChange(0);
                           }
                         }}
                       />
@@ -727,11 +729,12 @@ const RecordsList: React.FC = () => {
                 )}
               />
               
-              <DialogFooter>
+              <DialogFooter className="flex justify-end pt-2">
                 <Button 
                   type="button" 
                   variant="outline" 
                   onClick={() => setMissionaryActivityEditDialogOpen(false)}
+                  className="mr-2"
                 >
                   Cancelar
                 </Button>
