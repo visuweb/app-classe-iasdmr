@@ -5,7 +5,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { adjustDateToBRT, formatBrazilianDate, formatBrazilianDateExtended } from "@/lib/date-utils";
+import { adjustDateToBRT, formatBrazilianDate, formatBrazilianDateExtended, getCurrentDateBRT } from "@/lib/date-utils";
 import { AttendanceRecord, MissionaryActivity, Class } from "@shared/schema";
 import {
   Calendar,
@@ -242,10 +242,14 @@ const TeacherRecords: React.FC = () => {
     },
   );
 
-  // Extrair datas únicas das atividades com ajuste de fuso horário
-  const uniqueActivityDatesArray = teacherMissionaryActivities.map((activity) =>
-    adjustDateToBRT(activity.date),
-  );
+  // Extrair datas únicas das atividades usando recordDate ao invés de date
+  const uniqueActivityDatesArray = teacherMissionaryActivities.map((activity) => {
+    // Usar a data de registro (recordDate) ao invés da data normal (date) para capturar a data correta
+    const recordDateStr = typeof activity.recordDate === 'string' 
+      ? activity.recordDate.split('T')[0] 
+      : activity.date;
+    return recordDateStr;
+  });
   const uniqueActivityDatesSet = new Set(uniqueActivityDatesArray);
   const uniqueActivityDates = Array.from(uniqueActivityDatesSet)
     .sort()
@@ -259,11 +263,14 @@ const TeacherRecords: React.FC = () => {
   const allUniqueDatesSet = new Set(allUniqueDatesArray);
   const allUniqueDates = Array.from(allUniqueDatesSet).sort().reverse();
 
-  // Filtrar atividades pela data selecionada usando o ajuste de fuso horário
+  // Filtrar atividades pela data selecionada usando recordDate ao invés de date
   const missionaryActivities = selectedDate
     ? teacherMissionaryActivities.filter((activity) => {
-        const activityDate = adjustDateToBRT(activity.date);
-        return activityDate === selectedDate;
+        // Usar a data de registro (recordDate) ao invés da data normal (date)
+        const recordDateStr = typeof activity.recordDate === 'string'
+          ? activity.recordDate.split('T')[0] 
+          : activity.date;
+        return recordDateStr === selectedDate;
       })
     : [];
     
