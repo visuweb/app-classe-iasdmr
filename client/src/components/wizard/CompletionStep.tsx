@@ -3,6 +3,7 @@ import { useLocation } from 'wouter';
 import { useWizard } from '@/contexts/WizardContext';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { formatBrazilianDate } from '@/lib/date-utils';
 import { CheckCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
@@ -50,6 +51,7 @@ const CompletionStep: React.FC<CompletionStepProps> = ({ isActive }) => {
   
   if (!isActive) return null;
   
+  // Formatar data com o utilitário que ajusta para o fuso horário do Brasil
   const formattedDate = format(wizardDate, "dd/MM/yyyy", { locale: ptBR });
   const studentsPresent = getStudentsPresentCount();
   const studentsAbsent = getStudentsAbsentCount();

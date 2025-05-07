@@ -3,9 +3,9 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { formatInTimeZone } from "date-fns-tz";
-import { format, parseISO, addDays } from "date-fns";
+import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { adjustDateToBRT, formatBrazilianDate, formatBrazilianDateExtended } from "@/lib/date-utils";
 import { AttendanceRecord, MissionaryActivity, Class } from "@shared/schema";
 import {
   Calendar,
@@ -204,15 +204,8 @@ const TeacherRecords: React.FC = () => {
     return true; // Se não tivermos classId, assumimos que o professor tem acesso
   });
 
-  // Função auxiliar para corrigir o problema do fuso horário
-  const adjustDateToBRT = (dateStr: string) => {
-    // Cria uma data a partir da string
-    const date = new Date(dateStr);
-    // Como o problema aparentemente está fazendo a data retroceder um dia,
-    // adicionamos explicitamente um dia para compensar
-    const correctedDate = addDays(date, 1);
-    return format(correctedDate, 'yyyy-MM-dd');
-  };
+  // Usando a função utilitária para corrigir o problema do fuso horário
+  // adjustDateToBRT importado de @/lib/date-utils
 
   // Extrair datas únicas dos registros com o ajuste de fuso horário
   const uniqueDatesArray = teacherAttendanceRecords.map((record) =>
@@ -282,9 +275,9 @@ const TeacherRecords: React.FC = () => {
     return format(date, "dd/MM/yyyy");
   };
 
-  // Formatar data selecionada para exibição
+  // Formatar data selecionada para exibição usando nosso utilitário que ajusta para o fuso horário
   const formattedSelectedDate = selectedDate
-    ? format(parseISO(selectedDate), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })
+    ? formatBrazilianDateExtended(selectedDate)
     : "Selecione uma data";
 
   return (
