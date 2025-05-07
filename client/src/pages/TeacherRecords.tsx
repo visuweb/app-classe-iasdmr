@@ -366,7 +366,7 @@ const TeacherRecords: React.FC = () => {
                     Presença dos alunos nas aulas - {formattedSelectedDate}
                   </CardDescription>
                   {attendanceRecords.length > 0 && (
-                    <div className="flex flex-col gap-1 mt-2">
+                    <div className="flex items-center gap-4 mt-2">
                       <span className="text-sm text-green-600 flex items-center">
                         <Check className="h-3.5 w-3.5 mr-1" />
                         Presentes ({attendanceRecords.filter(record => record.present).length})
