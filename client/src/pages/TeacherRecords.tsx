@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation } from '@tanstack/react-query';
 import { useLocation } from 'wouter';
 import { useAuth } from '@/hooks/use-auth';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -13,7 +13,9 @@ import {
   Users, 
   Check, 
   X, 
-  Filter 
+  Filter,
+  Edit,
+  PenSquare
 } from 'lucide-react';
 import {
   Card,
