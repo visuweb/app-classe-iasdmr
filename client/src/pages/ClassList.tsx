@@ -248,8 +248,13 @@ const ClassList: React.FC = () => {
     }
   }, [classes]);
 
-  const goToWizard = (classObj: Class) => {
-    setLocation(`/wizard?classId=${classObj.id}&className=${encodeURIComponent(classObj.name)}`);
+  const goToWizard = async (classObj: Class) => {
+    // Determinar se estamos editando ou iniciando um novo registro
+    const hasExistingRecords = await checkTodayRecords(classObj.id);
+    console.log(`Indo para chamada na classe ${classObj.id}, com registros existentes: ${hasExistingRecords}`);
+    
+    // Ao navegar para o wizard, passamos o parâmetro de edição
+    setLocation(`/wizard?classId=${classObj.id}&className=${encodeURIComponent(classObj.name)}&isEditing=${hasExistingRecords}`);
   };
 
   // Render class list

@@ -79,24 +79,84 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   const [calculatorResult, setCalculatorResult] = useState('0');
   const [calculatorTarget, setCalculatorTarget] = useState<MissionaryActivityType | null>(null);
   
-  // Fetch students when class ID changes
+  // Verificar se há registros existentes quando a classe muda
   useEffect(() => {
     if (currentClassId) {
-      const fetchStudents = async () => {
+      const fetchStudentsAndRecords = async () => {
         try {
-          const response = await fetch(`/api/classes/${currentClassId}/students`);
-          if (response.ok) {
-            const data = await response.json();
+          // Buscar alunos
+          const studentsResponse = await fetch(`/api/classes/${currentClassId}/students`);
+          if (studentsResponse.ok) {
+            const data = await studentsResponse.json();
             // Filtrar apenas alunos ativos para a chamada
             const activeStudents = data.filter((student: Student) => student.active === true);
             setStudents(activeStudents);
           }
+          
+          // Verificar se estamos editando ou criando novos registros
+          // Obter a URL atual para verificar o parâmetro isEditing
+          const url = new URL(window.location.href);
+          const isEditing = url.searchParams.get('isEditing') === 'true';
+          
+          if (isEditing) {
+            setIsEditingExistingRecords(true);
+            console.log("Configurado para modo de edição - carregando registros existentes");
+            
+            // Carregar registros existentes
+            const today = new Date();
+            const formattedDate = today.toISOString().split('T')[0]; // yyyy-mm-dd
+            
+            // Buscar registros de presença para hoje
+            const attendanceResponse = await fetch(`/api/attendance?classId=${currentClassId}&date=${formattedDate}`);
+            if (attendanceResponse.ok) {
+              const attendanceData = await attendanceResponse.json();
+              console.log("Registros de presença existentes:", attendanceData);
+              
+              // Criar mapa de presença a partir dos registros
+              const presenceMap: Record<number, boolean> = {};
+              attendanceData.forEach((record: AttendanceRecord) => {
+                presenceMap[record.studentId] = record.present;
+              });
+              
+              setAttendanceRecords(presenceMap);
+            }
+            
+            // Buscar atividades missionárias para hoje
+            const activitiesResponse = await fetch(`/api/missionary-activities?classId=${currentClassId}&date=${formattedDate}`);
+            if (activitiesResponse.ok) {
+              const activitiesData = await activitiesResponse.json();
+              
+              if (activitiesData.length > 0) {
+                console.log("Atividades missionárias existentes:", activitiesData[0]);
+                
+                // Criar mapa de atividades a partir do registro
+                const activityRecord = activitiesData[0];
+                const activitiesMap: Partial<Record<MissionaryActivityType, number>> = {};
+                
+                // Para cada tipo de atividade missionária, tentar obter o valor
+                missionaryActivityDefinitions.forEach(def => {
+                  const fieldName = def.id;
+                  
+                  if (activityRecord[fieldName] !== undefined && activityRecord[fieldName] !== null) {
+                    activitiesMap[fieldName] = Number(activityRecord[fieldName]);
+                  }
+                });
+                
+                setMissionaryActivities(activitiesMap);
+              }
+            }
+          } else {
+            // Se não estamos editando, resetar os registros
+            setIsEditingExistingRecords(false);
+            setAttendanceRecords({});
+            setMissionaryActivities({});
+          }
         } catch (error) {
-          console.error('Error fetching students:', error);
+          console.error('Erro ao buscar alunos e registros:', error);
         }
       };
       
-      fetchStudents();
+      fetchStudentsAndRecords();
     }
   }, [currentClassId]);
   
