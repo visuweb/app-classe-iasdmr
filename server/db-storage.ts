@@ -458,7 +458,12 @@ export class DatabaseStorage implements IStorage {
   }
   
   async createAttendanceRecord(data: InsertAttendanceRecord): Promise<AttendanceRecord> {
-    const results = await db.insert(attendanceRecords).values(data).returning();
+    // Usar o objeto data diretamente e adicionar recordDate
+    const results = await db.insert(attendanceRecords).values({
+      ...data,
+      recordDate: new Date()
+    }).returning();
+    
     return results[0];
   }
   
@@ -600,7 +605,8 @@ export class DatabaseStorage implements IStorage {
   
   async createMissionaryActivity(data: InsertMissionaryActivity): Promise<MissionaryActivity> {
     // Garantir que todos os campos tenham um valor (mesmo que seja 0)
-    const completeData = {
+    // Adicionar timestamp atual como objeto Date
+    const results = await db.insert(missionaryActivities).values({
       ...data,
       qtdContatosMissionarios: data.qtdContatosMissionarios ?? 0,
       literaturasDistribuidas: data.literaturasDistribuidas ?? 0,
@@ -609,9 +615,9 @@ export class DatabaseStorage implements IStorage {
       ministrados: data.ministrados ?? 0,
       pessoasAuxiliadas: data.pessoasAuxiliadas ?? 0,
       pessoasTrazidasIgreja: data.pessoasTrazidasIgreja ?? 0,
-    };
+      recordDate: new Date()
+    }).returning();
     
-    const results = await db.insert(missionaryActivities).values(completeData).returning();
     return results[0];
   }
   
