@@ -702,7 +702,7 @@ const TeacherRecords: React.FC = () => {
         open={isEditAttendanceOpen}
         onOpenChange={setIsEditAttendanceOpen}
       >
-        <DialogContent className="max-w-sm">
+        <DialogContent className="w-[400px] max-w-full">
           <DialogHeader>
             <DialogTitle>Editar Registro de Presença</DialogTitle>
           </DialogHeader>
@@ -735,16 +735,16 @@ const TeacherRecords: React.FC = () => {
 
               <div className="mb-4">
                 <div className="text-sm font-medium mb-2">Alterar Status</div>
-                <div className="flex flex-col gap-3 sm:flex-row">
+                <div className="flex flex-col gap-3 sm:flex-row sm:gap-4">
                   <Button
                     variant={
                       selectedAttendanceRecord.present ? "outline" : "default"
                     }
-                    className={
+                    className={`w-full sm:flex-1 ${
                       selectedAttendanceRecord.present
                         ? ""
                         : "bg-green-600 hover:bg-green-700"
-                    }
+                    }`}
                     onClick={() => handleAttendanceUpdate(true)}
                     disabled={attendanceMutation.isPending}
                   >
@@ -755,11 +755,11 @@ const TeacherRecords: React.FC = () => {
                     variant={
                       !selectedAttendanceRecord.present ? "outline" : "default"
                     }
-                    className={
+                    className={`w-full sm:flex-1 ${
                       !selectedAttendanceRecord.present
                         ? ""
                         : "bg-red-600 hover:bg-red-700"
-                    }
+                    }`}
                     onClick={() => handleAttendanceUpdate(false)}
                     disabled={attendanceMutation.isPending}
                   >
@@ -771,7 +771,7 @@ const TeacherRecords: React.FC = () => {
             </div>
           )}
 
-          <DialogFooter className="flex justify-center sm:justify-end pt-2">
+          <DialogFooter className="flex justify-end pt-2">
             <DialogClose asChild>
               <Button variant="outline">Cancelar</Button>
             </DialogClose>
@@ -781,7 +781,7 @@ const TeacherRecords: React.FC = () => {
 
       {/* Modal de edição de atividade missionária */}
       <Dialog open={isEditActivityOpen} onOpenChange={setIsEditActivityOpen}>
-        <DialogContent className="max-w-sm">
+        <DialogContent className="w-[400px] max-w-full">
           <DialogHeader>
             <DialogTitle>Editar Atividade Missionária</DialogTitle>
           </DialogHeader>
@@ -830,7 +830,7 @@ const TeacherRecords: React.FC = () => {
             </div>
           )}
 
-          <DialogFooter className="flex justify-center sm:justify-end pt-2">
+          <DialogFooter className="flex justify-end pt-2">
             <Button
               variant="outline"
               onClick={() => setIsEditActivityOpen(false)}
