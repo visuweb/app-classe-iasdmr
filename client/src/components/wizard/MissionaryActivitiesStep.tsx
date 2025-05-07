@@ -137,9 +137,9 @@ const MissionaryActivitiesStep: React.FC<MissionaryActivitiesStepProps> = ({ isA
                   <Button 
                     variant="default" 
                     size="icon"
-                    className="bg-yellow-500 hover:bg-yellow-600"
-                    onClick={handleOpenCalculator}
-                    title="Abrir calculadora"
+                    className="bg-gray-400 cursor-not-allowed"
+                    disabled
+                    title="Calculadora temporariamente desativada"
                   >
                     <Calculator className="h-5 w-5" />
                   </Button>
