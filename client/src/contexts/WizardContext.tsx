@@ -668,16 +668,28 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         console.log('Modo de edição: excluindo registros existentes para a data', formattedDate);
         
         try {
-          // Excluir registros de presença existentes
-          const deleteAttendanceResponse = await apiRequest('DELETE', `/api/attendance/${currentClassId}/${formattedDate}`);
+          // Buscar quais datas têm registros existentes para esta classe
+          const recordsResponse = await fetch(`/api/class-has-recent-records/${currentClassId}`);
+          const recordsData = await recordsResponse.json();
+          console.log("Datas com registros existentes:", recordsData);
+          
+          // Obter a data do registro existente (pode ser diferente da data atual)
+          let targetDate = formattedDate;
+          if (recordsData.hasRecords && recordsData.datesFound && recordsData.datesFound.length > 0) {
+            targetDate = recordsData.datesFound[0];
+            console.log(`Usando data existente para exclusão: ${targetDate}`);
+          }
+          
+          // Excluir registros de presença existentes na data correta
+          const deleteAttendanceResponse = await apiRequest('DELETE', `/api/attendance/${currentClassId}/${targetDate}`);
           if (deleteAttendanceResponse.ok) {
             console.log('Registros de presença excluídos com sucesso');
           } else {
             console.error('Falha ao excluir registros de presença:', await deleteAttendanceResponse.text());
           }
           
-          // Excluir atividades missionárias existentes
-          const deleteMissionaryResponse = await apiRequest('DELETE', `/api/missionary-activities/${currentClassId}/${formattedDate}`);
+          // Excluir atividades missionárias existentes na data correta
+          const deleteMissionaryResponse = await apiRequest('DELETE', `/api/missionary-activities/${currentClassId}/${targetDate}`);
           if (deleteMissionaryResponse.ok) {
             console.log('Atividades missionárias excluídas com sucesso');
           } else {
@@ -689,19 +701,32 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         }
       }
       
-      // Criar novos registros de presença
+      // Obter a data alvo para uso em ambos os registros (presença e atividades)
+      // Se estamos em modo de edição, usa a data existente; caso contrário, usa a data atual
+      let targetDate = formattedDate;
+      if (isEditingExistingRecords) {
+        // Verifica se já obtivemos a data do registro existente
+        const recordsResponse = await fetch(`/api/class-has-recent-records/${currentClassId}`);
+        const recordsData = await recordsResponse.json();
+        if (recordsData.hasRecords && recordsData.datesFound && recordsData.datesFound.length > 0) {
+          targetDate = recordsData.datesFound[0];
+          console.log(`Usando data existente para submissão: ${targetDate}`);
+        }
+      }
+      
+      // Criar novos registros de presença com a data correta
       for (const [studentId, present] of Object.entries(attendanceRecords)) {
         await apiRequest('POST', '/api/attendance', {
           studentId: parseInt(studentId, 10),
           present,
-          date: formattedDate
+          date: targetDate
         });
       }
       
       // Montar um objeto para as atividades missionárias com todos os campos, mesmo que zerados
       const completeActivities: Record<string, any> = {
         classId: currentClassId,
-        date: formattedDate,
+        date: targetDate, // Usar a data alvo determinada
       };
       
       // Garantir que todos os campos estejam presentes, preenchendo com 0 se não existirem
