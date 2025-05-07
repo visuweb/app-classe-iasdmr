@@ -162,7 +162,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Se o CPF for "admin", manter a senha sem criptografia (para compatibilidade)
         if (existingTeacher.cpf !== 'admin') {
           // Criptografar a senha antes de salvar
-          parsed.data.password = await storage.comparePasswords.hashPassword(parsed.data.password);
+          parsed.data.password = await hashPassword(parsed.data.password);
         }
       }
       
