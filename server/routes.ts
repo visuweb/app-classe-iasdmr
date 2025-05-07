@@ -157,13 +157,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Dados de professor inválidos" });
       }
       
-      // Verificar se a senha foi fornecida e criptografá-la
-      if (parsed.data.password) {
-        // Se o CPF for "admin", manter a senha sem criptografia (para compatibilidade)
-        if (existingTeacher.cpf !== 'admin') {
-          // Criptografar a senha antes de salvar
-          parsed.data.password = await hashPassword(parsed.data.password);
-        }
+      // A criptografia da senha já é tratada diretamente no método updateTeacher
+      // No caso do admin, mantemos a senha em texto plano
+      if (parsed.data.password && existingTeacher.cpf === 'admin') {
+        // Forçar a senha do admin a ser tratada como já criptografada (adicionando um separador para que ela não seja rehashada)
+        parsed.data.password = `${parsed.data.password}.plain`;
       }
       
       // Verificar se tentar atualizar o CPF, se ele já existe
