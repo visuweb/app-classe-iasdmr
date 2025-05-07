@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { useWizard } from '@/contexts/WizardContext';
-import { X, Delete, CheckCircle, PlusCircle } from 'lucide-react';
+import { X, Delete, CheckCircle, Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const Calculator: React.FC = () => {
@@ -13,6 +13,41 @@ const Calculator: React.FC = () => {
     handleCalculatorAction
   } = useWizard();
   
+  const calculatorRef = useRef<HTMLDivElement>(null);
+  
+  // Adicionar suporte ao teclado físico
+  useEffect(() => {
+    if (!calculatorOpen) return;
+    
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Números
+      if (/^[0-9]$/.test(e.key)) {
+        handleCalculatorAction('number', e.key);
+      }
+      // Operadores
+      else if (['+', 'Enter'].includes(e.key)) {
+        handleCalculatorAction('add');
+      }
+      // Backspace
+      else if (e.key === 'Backspace') {
+        handleCalculatorAction('backspace');
+      }
+      // Limpar
+      else if (e.key === 'Escape') {
+        closeCalculator();
+      }
+      // Confirmar
+      else if (e.key === 'Enter' && e.ctrlKey) {
+        applyCalculatorResult();
+      }
+    };
+    
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [calculatorOpen, handleCalculatorAction, closeCalculator, applyCalculatorResult]);
+  
   if (!calculatorOpen) {
     return null;
   }
@@ -23,6 +58,7 @@ const Calculator: React.FC = () => {
         "fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50 transition-opacity duration-300",
         calculatorOpen ? "opacity-100" : "opacity-0 pointer-events-none"
       )}
+      ref={calculatorRef}
     >
       <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 overflow-hidden transform transition-all">
         <div className="bg-primary-500 px-4 py-3 flex justify-between items-center">
@@ -42,7 +78,7 @@ const Calculator: React.FC = () => {
             <div className="text-2xl font-medium text-gray-900 text-right">{calculatorResult}</div>
           </div>
           
-          {/* Calculator grid - Redesenhada conforme a imagem de referência */}
+          {/* Calculator grid - Redesenhada conforme os novos requisitos */}
           <div className="calculator-grid grid grid-cols-4 gap-2">
             {/* Row 1 */}
             <button 
@@ -58,12 +94,15 @@ const Calculator: React.FC = () => {
               <Delete className="h-4 w-4 mx-auto" />
             </button>
             <button 
-              className="bg-blue-500 hover:bg-blue-600 text-white font-medium py-3 rounded col-span-2"
+              className="bg-white hover:bg-gray-100 invisible"
+            >
+            </button>
+            <button 
+              className="bg-blue-500 hover:bg-blue-600 text-white font-medium py-3 rounded"
               onClick={() => handleCalculatorAction('add')}
             >
               <div className="flex items-center justify-center">
-                <PlusCircle className="h-4 w-4 mr-1" />
-                <span>Adicionar</span>
+                <Plus className="h-5 w-5" />
               </div>
             </button>
             
@@ -86,17 +125,10 @@ const Calculator: React.FC = () => {
             >
               9
             </button>
-            <div className="row-span-3">
-              <button 
-                className="bg-green-500 hover:bg-green-600 text-white font-medium py-3 rounded h-full w-full"
-                onClick={applyCalculatorResult}
-              >
-                <div className="flex flex-col items-center justify-center h-full">
-                  <CheckCircle className="h-5 w-5 mb-1" />
-                  <span className="text-xs">Confirmar</span>
-                </div>
-              </button>
-            </div>
+            <button 
+              className="bg-white hover:bg-gray-100 invisible"
+            >
+            </button>
             
             {/* Row 3 */}
             <button 
@@ -116,6 +148,10 @@ const Calculator: React.FC = () => {
               onClick={() => handleCalculatorAction('number', '6')}
             >
               6
+            </button>
+            <button 
+              className="bg-white hover:bg-gray-100 invisible"
+            >
             </button>
             
             {/* Row 4 */}
@@ -137,14 +173,37 @@ const Calculator: React.FC = () => {
             >
               3
             </button>
+            <button 
+              className="bg-white hover:bg-gray-100 invisible"
+            >
+            </button>
             
             {/* Row 5 */}
             <button 
-              className="bg-white hover:bg-gray-100 text-gray-800 font-medium py-3 rounded border col-span-3"
+              className="bg-white hover:bg-gray-100 text-gray-800 font-medium py-3 rounded border col-span-4"
               onClick={() => handleCalculatorAction('number', '0')}
             >
               0
             </button>
+            
+            {/* Rodapé com os botões de ação */}
+            <div className="col-span-4 grid grid-cols-2 gap-2 mt-4">
+              <button 
+                className="bg-gray-500 hover:bg-gray-600 text-white font-medium py-3 rounded"
+                onClick={closeCalculator}
+              >
+                Fechar
+              </button>
+              <button 
+                className="bg-green-500 hover:bg-green-600 text-white font-medium py-3 rounded"
+                onClick={applyCalculatorResult}
+              >
+                <div className="flex items-center justify-center">
+                  <CheckCircle className="h-5 w-5 mr-2" />
+                  <span>Confirmar</span>
+                </div>
+              </button>
+            </div>
           </div>
         </div>
       </div>
