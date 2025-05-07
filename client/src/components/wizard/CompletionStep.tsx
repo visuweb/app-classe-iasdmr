@@ -107,27 +107,17 @@ const CompletionStep: React.FC<CompletionStepProps> = ({ isActive }) => {
           <div className="mb-3">
             <h5 className="text-sm font-medium text-gray-700 mb-1 text-left">Atividades Missionárias</h5>
             <div className="grid grid-cols-2 gap-2 text-sm">
-              {Object.entries(missionaryActivities).map(([key, value]) => {
-                // Mostrar apenas atividades com valores maior que zero
-                if (value && value > 0) {
-                  // Verificar se temos um rótulo para esta atividade
-                  const label = activityLabels[key as keyof typeof activityLabels] || key;
-                  return (
-                    <React.Fragment key={key}>
-                      <div className="text-left text-gray-500">{label}:</div>
-                      <div className="text-right font-medium text-gray-800">{value}</div>
-                    </React.Fragment>
-                  );
-                }
-                return null;
+              {Object.entries(activityLabels).map(([key, label]) => {
+                // Obter o valor da atividade, tratando nulos como zero
+                const value = missionaryActivities[key as keyof typeof missionaryActivities] || 0;
+                
+                return (
+                  <React.Fragment key={key}>
+                    <div className="text-left text-gray-500">{label}:</div>
+                    <div className="text-right font-medium text-gray-800">{value}</div>
+                  </React.Fragment>
+                );
               })}
-              
-              {/* Se não houver atividades registradas */}
-              {Object.values(missionaryActivities).every(v => !v || v === 0) && (
-                <div className="col-span-2 text-center text-gray-500 italic py-1">
-                  Nenhuma atividade registrada
-                </div>
-              )}
             </div>
           </div>
           
