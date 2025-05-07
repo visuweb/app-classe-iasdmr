@@ -8,7 +8,12 @@ import { ptBR } from 'date-fns/locale';
  * @param dateStr String de data no formato ISO ou 'yyyy-MM-dd'
  * @returns String de data no formato 'yyyy-MM-dd'
  */
-export function adjustDateToBRT(dateStr: string): string {
+export function adjustDateToBRT(dateStr: string | null | undefined): string {
+  // Se for nulo ou indefinido, retorna string vazia
+  if (!dateStr) {
+    return '';
+  }
+  
   // Se a data já estiver no formato yyyy-MM-dd sem parte de hora, ela já está correta
   if (typeof dateStr === 'string' && dateStr.length === 10 && dateStr.includes('-')) {
     return dateStr;
@@ -36,12 +41,22 @@ export function adjustDateToBRT(dateStr: string): string {
  * @param formatStr Formato desejado (ex: 'dd/MM/yyyy')
  * @returns String com a data formatada
  */
-export function formatBrazilianDate(dateStr: string, formatStr: string = 'dd/MM/yyyy'): string {
-  // Primeiro ajusta para o fuso horário correto
-  const correctedDateStr = adjustDateToBRT(dateStr);
-  // Depois formata
-  const date = parseISO(correctedDateStr);
-  return format(date, formatStr, { locale: ptBR });
+export function formatBrazilianDate(dateStr: string | null | undefined, formatStr: string = 'dd/MM/yyyy'): string {
+  // Verificar se a data é válida
+  if (!dateStr) {
+    return '';
+  }
+  
+  try {
+    // Primeiro ajusta para o fuso horário correto
+    const correctedDateStr = adjustDateToBRT(dateStr);
+    // Depois formata
+    const date = parseISO(correctedDateStr);
+    return format(date, formatStr, { locale: ptBR });
+  } catch (error) {
+    console.error('Erro ao formatar data:', error);
+    return dateStr; // Em caso de erro, retorna a string original
+  }
 }
 
 /**
@@ -50,12 +65,22 @@ export function formatBrazilianDate(dateStr: string, formatStr: string = 'dd/MM/
  * @param dateStr String de data a ser formatada
  * @returns String com a data formatada por extenso (ex: "07 de maio de 2025")
  */
-export function formatBrazilianDateExtended(dateStr: string): string {
-  // Primeiro ajusta para o fuso horário correto
-  const correctedDateStr = adjustDateToBRT(dateStr);
-  // Depois formata
-  const date = parseISO(correctedDateStr);
-  return format(date, "dd 'de' MMMM 'de' yyyy", { locale: ptBR });
+export function formatBrazilianDateExtended(dateStr: string | null | undefined): string {
+  // Verificar se a data é válida
+  if (!dateStr) {
+    return '';
+  }
+  
+  try {
+    // Primeiro ajusta para o fuso horário correto
+    const correctedDateStr = adjustDateToBRT(dateStr);
+    // Depois formata
+    const date = parseISO(correctedDateStr);
+    return format(date, "dd 'de' MMMM 'de' yyyy", { locale: ptBR });
+  } catch (error) {
+    console.error('Erro ao formatar data estendida:', error);
+    return dateStr; // Em caso de erro, retorna a string original
+  }
 }
 
 /**
