@@ -633,6 +633,60 @@ export class DatabaseStorage implements IStorage {
     }
   }
   
+  // Método para atualizar um registro de presença
+  async updateAttendanceRecord(id: number, data: { present: boolean }): Promise<AttendanceRecord | undefined> {
+    try {
+      // Verificar se o registro existe
+      const records = await db.select()
+        .from(attendanceRecords)
+        .where(eq(attendanceRecords.id, id))
+        .limit(1);
+      
+      if (records.length === 0) {
+        return undefined;
+      }
+      
+      // Atualizar o registro
+      const results = await db
+        .update(attendanceRecords)
+        .set(data)
+        .where(eq(attendanceRecords.id, id))
+        .returning();
+      
+      return results.length > 0 ? results[0] : undefined;
+    } catch (error) {
+      console.error('Erro ao atualizar registro de presença:', error);
+      return undefined;
+    }
+  }
+  
+  // Método para atualizar uma atividade missionária
+  async updateMissionaryActivity(id: number, data: Partial<Record<string, number>>): Promise<MissionaryActivity | undefined> {
+    try {
+      // Verificar se o registro existe
+      const activities = await db.select()
+        .from(missionaryActivities)
+        .where(eq(missionaryActivities.id, id))
+        .limit(1);
+      
+      if (activities.length === 0) {
+        return undefined;
+      }
+      
+      // Atualizar o registro
+      const results = await db
+        .update(missionaryActivities)
+        .set(data)
+        .where(eq(missionaryActivities.id, id))
+        .returning();
+      
+      return results.length > 0 ? results[0] : undefined;
+    } catch (error) {
+      console.error('Erro ao atualizar atividade missionária:', error);
+      return undefined;
+    }
+  }
+  
   // Método para inicializar o banco com um professor de teste
   async seedTestTeacher(): Promise<void> {
     try {

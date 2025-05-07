@@ -412,6 +412,61 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Rota para atualizar um registro de presença
+  app.patch("/api/attendance/:id", ensureAuthenticated, async (req, res) => {
+    try {
+      const attendanceId = parseInt(req.params.id, 10);
+      if (isNaN(attendanceId)) {
+        return res.status(400).json({ message: "ID de registro inválido" });
+      }
+      
+      // Validar os dados de atualização
+      if (typeof req.body.present !== 'boolean') {
+        return res.status(400).json({ message: "Valor de presença inválido" });
+      }
+      
+      // Buscar o registro para verificar a classe e o aluno
+      const allRecords = await storage.getAttendanceRecords();
+      const record = allRecords.find(r => r.id === attendanceId);
+      
+      if (!record) {
+        return res.status(404).json({ message: "Registro de presença não encontrado" });
+      }
+      
+      // Buscar informações do aluno para verificar a classe
+      const student = await storage.getStudent(record.studentId);
+      if (!student) {
+        return res.status(404).json({ message: "Aluno não encontrado" });
+      }
+      
+      // Verificar se o professor tem permissão para editar este registro
+      const teacher = req.user as Teacher;
+      if (!teacher.isAdmin) {
+        const teacherClasses = await storage.getClassesByTeacherId(teacher.id);
+        const hasAccess = teacherClasses.some(c => c.id === student.classId);
+        if (!hasAccess) {
+          return res.status(403).json({ 
+            message: "Você não tem permissão para editar registros desta classe" 
+          });
+        }
+      }
+      
+      // Atualizar o registro
+      const updatedRecord = await storage.updateAttendanceRecord(
+        attendanceId, 
+        { present: req.body.present }
+      );
+      
+      if (!updatedRecord) {
+        return res.status(500).json({ message: "Falha ao atualizar registro" });
+      }
+      
+      res.json(updatedRecord);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message || "Falha ao atualizar registro de presença" });
+    }
+  });
+  
   // Rota para verificar se já existe registro de chamada e atividades para o dia atual da classe
   app.get("/api/check-today-records/:classId", ensureAuthenticated, async (req, res) => {
     try {
@@ -514,6 +569,72 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(201).json(newActivity);
     } catch (error) {
       res.status(500).json({ message: "Falha ao criar atividade missionária" });
+    }
+  });
+  
+  // Rota para atualizar atividade missionária
+  app.patch("/api/missionary-activities/:id", ensureAuthenticated, async (req, res) => {
+    try {
+      const activityId = parseInt(req.params.id, 10);
+      if (isNaN(activityId)) {
+        return res.status(400).json({ message: "ID de atividade inválido" });
+      }
+      
+      // Verificar se a atividade existe
+      const activities = await storage.getMissionaryActivities();
+      const activity = activities.find(a => a.id === activityId);
+      
+      if (!activity) {
+        return res.status(404).json({ message: "Atividade missionária não encontrada" });
+      }
+      
+      // Verificar se tem permissão para editar esta atividade
+      const teacher = req.user as Teacher;
+      if (!teacher.isAdmin) {
+        const teacherClasses = await storage.getClassesByTeacherId(teacher.id);
+        const hasAccess = teacherClasses.some(c => c.id === activity.classId);
+        if (!hasAccess) {
+          return res.status(403).json({ 
+            message: "Você não tem permissão para editar atividades desta classe" 
+          });
+        }
+      }
+      
+      // Campos permitidos para atualização
+      const allowedFields = [
+        'qtdContatosMissionarios', 
+        'literaturasDistribuidas', 
+        'visitasMissionarias', 
+        'estudosBiblicos', 
+        'ministrados',
+        'pessoasAuxiliadas',
+        'pessoasTrazidasIgreja'
+      ];
+      
+      // Verificar quais campos foram enviados
+      const updateData: Record<string, number> = {};
+      let fieldCount = 0;
+      
+      for (const field of allowedFields) {
+        if (typeof req.body[field] === 'number') {
+          updateData[field] = req.body[field];
+          fieldCount++;
+        }
+      }
+      
+      if (fieldCount === 0) {
+        return res.status(400).json({ message: "Nenhum campo válido para atualização" });
+      }
+      
+      // Atualizar atividade
+      const updatedActivity = await storage.updateMissionaryActivity(activityId, updateData);
+      if (!updatedActivity) {
+        return res.status(500).json({ message: "Falha ao atualizar atividade" });
+      }
+      
+      res.json(updatedActivity);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message || "Falha ao atualizar atividade missionária" });
     }
   });
 
