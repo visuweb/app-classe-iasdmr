@@ -70,7 +70,7 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   const [attendanceRecords, setAttendanceRecords] = useState<Record<number, boolean>>({});
   const [missionaryActivities, setMissionaryActivities] = useState<Partial<Record<MissionaryActivityType, number>>>({});
   const [currentActivityIndex, setCurrentActivityIndex] = useState(0);
-  const [wizardDate] = useState<Date>(new Date());
+  const [wizardDate, setWizardDate] = useState<Date>(new Date());
   const [isEditingExistingRecords, setIsEditingExistingRecords] = useState(false);
   
   // Calculator state
@@ -154,8 +154,15 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
               if (activitiesData.length > 0) {
                 console.log("Atividades missionárias existentes:", activitiesData[0]);
                 
-                // Criar mapa de atividades a partir do registro
-                const activityRecord = activitiesData[0];
+                // Extrair os dados da atividade, considerando diferentes formatos de resposta
+                let activityRecord: any = activitiesData[0];
+                
+                // Se tivermos um formato aninhado, extrair os dados da atividade real
+                if (activityRecord.missionary_activities) {
+                  activityRecord = activityRecord.missionary_activities;
+                  console.log("Usando dados aninhados de missionary_activities:", activityRecord);
+                }
+                
                 const activitiesMap: Partial<Record<MissionaryActivityType, number>> = {};
                 
                 // Para cada tipo de atividade missionária, tentar obter o valor
@@ -164,6 +171,7 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
                   
                   if (activityRecord[fieldName] !== undefined && activityRecord[fieldName] !== null) {
                     activitiesMap[fieldName] = Number(activityRecord[fieldName]);
+                    console.log(`Valor encontrado para ${fieldName}: ${activitiesMap[fieldName]}`);
                   }
                 });
                 
