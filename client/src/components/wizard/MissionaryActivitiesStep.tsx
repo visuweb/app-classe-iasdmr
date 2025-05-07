@@ -106,9 +106,19 @@ const MissionaryActivitiesStep: React.FC<MissionaryActivitiesStepProps> = ({ isA
                       min="0"
                       value={missionaryActivities[currentActivity.id as MissionaryActivityType] ?? ""}
                       onChange={handleInputChange}
-                      className="w-full"
+                      className={`w-full ${
+                        isEditingExistingRecords && 
+                        missionaryActivities[currentActivity.id as MissionaryActivityType] !== undefined
+                          ? 'border-2 border-blue-500 bg-blue-50' 
+                          : ''
+                      }`}
                     />
-
+                    {isEditingExistingRecords && 
+                     missionaryActivities[currentActivity.id as MissionaryActivityType] !== undefined && (
+                      <div className="absolute right-3 top-2 text-xs text-blue-600 bg-blue-100 px-1 rounded">
+                        Valor salvo
+                      </div>
+                    )}
                   </div>
                   <Button 
                     variant="default" 

@@ -83,25 +83,31 @@ const AttendanceStep: React.FC<AttendanceStepProps> = ({ isActive }) => {
                   variant="default" 
                   className={`flex-1 bg-green-600 hover:bg-green-700 ${
                     currentStudent && attendanceRecords[currentStudent.id] === true 
-                      ? 'ring-4 ring-green-300' 
+                      ? 'ring-4 ring-green-300 border-2 border-green-800' 
                       : ''
                   }`}
                   onClick={handleMarkPresent}
                 >
                   <Check className="h-4 w-4 mr-2" />
                   PRESENTE
+                  {isEditingExistingRecords && currentStudent && attendanceRecords[currentStudent.id] === true && (
+                    <span className="ml-1 text-xs">(salvo)</span>
+                  )}
                 </Button>
                 <Button 
                   variant="default" 
                   className={`flex-1 bg-red-600 hover:bg-red-700 ${
                     currentStudent && attendanceRecords[currentStudent.id] === false 
-                      ? 'ring-4 ring-red-300' 
+                      ? 'ring-4 ring-red-300 border-2 border-red-800' 
                       : ''
                   }`}
                   onClick={handleMarkAbsent}
                 >
                   <X className="h-4 w-4 mr-2" />
                   AUSENTE
+                  {isEditingExistingRecords && currentStudent && attendanceRecords[currentStudent.id] === false && (
+                    <span className="ml-1 text-xs">(salvo)</span>
+                  )}
                 </Button>
               </div>
               

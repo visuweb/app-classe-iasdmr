@@ -102,12 +102,32 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
             setIsEditingExistingRecords(true);
             console.log("Configurado para modo de edição - carregando registros existentes");
             
-            // Carregar registros existentes
-            const today = new Date();
-            const formattedDate = today.toISOString().split('T')[0]; // yyyy-mm-dd
+            // Primeiro, vamos verificar quais datas têm registros
+            const recordsResponse = await fetch(`/api/class-has-recent-records/${currentClassId}`);
+            const recordsData = await recordsResponse.json();
+            console.log("Verificando datas com registros:", recordsData);
             
-            // Buscar registros de presença para hoje
-            const attendanceResponse = await fetch(`/api/attendance?classId=${currentClassId}&date=${formattedDate}`);
+            let targetDate = '';
+            if (recordsData.hasRecords && recordsData.datesFound && recordsData.datesFound.length > 0) {
+              // Usar a primeira data encontrada para carregar os registros
+              targetDate = recordsData.datesFound[0];
+              console.log(`Encontrada data com registros existentes: ${targetDate}`);
+              setWizardDate(new Date(targetDate));
+            } else {
+              // Se não encontrou registros, usar a data de hoje
+              const today = new Date();
+              targetDate = today.toISOString().split('T')[0]; // yyyy-mm-dd
+            }
+            
+            if (!targetDate) {
+              console.error("Não foi possível determinar uma data para carregar os registros");
+              return;
+            }
+            
+            console.log(`Carregando registros para a data: ${targetDate}`);
+            
+            // Buscar registros de presença
+            const attendanceResponse = await fetch(`/api/attendance?classId=${currentClassId}&date=${targetDate}`);
             if (attendanceResponse.ok) {
               const attendanceData = await attendanceResponse.json();
               console.log("Registros de presença existentes:", attendanceData);
@@ -118,11 +138,16 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
                 presenceMap[record.studentId] = record.present;
               });
               
-              setAttendanceRecords(presenceMap);
+              if (Object.keys(presenceMap).length > 0) {
+                console.log("Definindo mapa de presença:", presenceMap);
+                setAttendanceRecords(presenceMap);
+              } else {
+                console.log("Nenhum registro de presença encontrado para edição");
+              }
             }
             
-            // Buscar atividades missionárias para hoje
-            const activitiesResponse = await fetch(`/api/missionary-activities?classId=${currentClassId}&date=${formattedDate}`);
+            // Buscar atividades missionárias
+            const activitiesResponse = await fetch(`/api/missionary-activities?classId=${currentClassId}&date=${targetDate}`);
             if (activitiesResponse.ok) {
               const activitiesData = await activitiesResponse.json();
               
@@ -142,7 +167,12 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
                   }
                 });
                 
-                setMissionaryActivities(activitiesMap);
+                if (Object.keys(activitiesMap).length > 0) {
+                  console.log("Definindo mapa de atividades:", activitiesMap);
+                  setMissionaryActivities(activitiesMap);
+                } else {
+                  console.log("Nenhuma atividade missionária encontrada para edição");
+                }
               }
             }
           } else {
