@@ -107,6 +107,19 @@ const MissionaryActivitiesStep: React.FC<MissionaryActivitiesStepProps> = ({ isA
                       min="0"
                       value={missionaryActivities[currentActivity.id as MissionaryActivityType] ?? "0"}
                       onChange={handleInputChange}
+                      onFocus={(e) => {
+                        if (e.target.value === "0") {
+                          e.target.value = "";
+                        }
+                      }}
+                      onBlur={(e) => {
+                        if (e.target.value === "" || e.target.value === "0") {
+                          e.target.value = "0";
+                          if (currentActivity) {
+                            setActivityValue(currentActivity.id as MissionaryActivityType, 0);
+                          }
+                        }
+                      }}
                       className={`w-full ${
                         isEditingExistingRecords && 
                         missionaryActivities[currentActivity.id as MissionaryActivityType] !== undefined
