@@ -19,6 +19,11 @@ const MobileMenu: React.FC = () => {
   const [location, setLocation] = useLocation();
   const { logoutMutation, teacher } = useAuth();
   
+  // Se não houver professor autenticado, não renderizar o menu
+  if (!teacher) {
+    return null;
+  }
+  
   const handleLogout = () => {
     logoutMutation.mutate(undefined, {
       onSuccess: () => {
@@ -27,7 +32,7 @@ const MobileMenu: React.FC = () => {
     });
   };
 
-  const isAdmin = teacher?.isAdmin;
+  const isAdmin = teacher.isAdmin;
 
   return (
     <Sheet>
@@ -129,6 +134,11 @@ const Header: React.FC = () => {
       }
     });
   };
+  
+  // Se não houver professor autenticado, não renderizar o cabeçalho
+  if (!teacher) {
+    return null;
+  }
   
   return (
     <header className="bg-white shadow">

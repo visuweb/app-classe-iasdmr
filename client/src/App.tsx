@@ -20,19 +20,33 @@ import { useEffect } from "react";
 
 // Componente para redirecionamento baseado no papel do usuário
 const UserRoleRedirect = () => {
-  const { teacher } = useAuth();
+  const { teacher, isLoading } = useAuth();
   const [_, navigate] = useLocation();
 
   useEffect(() => {
-    if (teacher) {
-      if (teacher.isAdmin) {
-        navigate('/admin');
+    if (!isLoading) {
+      if (teacher) {
+        if (teacher.isAdmin) {
+          navigate('/admin');
+        } else {
+          navigate('/classes');
+        }
       } else {
-        navigate('/classes');
+        // Redireciona para a página de autenticação se não houver usuário logado
+        navigate('/auth');
       }
     }
-  }, [teacher, navigate]);
+  }, [teacher, isLoading, navigate]);
 
+  // Exibir um loader enquanto verifica a autenticação
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary-500 border-t-transparent"></div>
+      </div>
+    );
+  }
+  
   return null;
 };
 

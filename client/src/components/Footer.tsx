@@ -1,7 +1,14 @@
 import React from 'react';
+import { useAuth } from '@/hooks/use-auth';
 
 const Footer: React.FC = () => {
   const currentYear = new Date().getFullYear();
+  const { teacher } = useAuth();
+  
+  // Se não houver professor autenticado, não renderizar o rodapé
+  if (!teacher) {
+    return null;
+  }
   
   return (
     <footer className="bg-white border-t border-gray-200 mt-auto">
