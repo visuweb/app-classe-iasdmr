@@ -188,13 +188,39 @@ const ClassList: React.FC = () => {
     });
   };
 
-  // Função para verificar se a classe já tem registro para o dia atual
+  // Função para verificar se a classe já tem registro para o dia atual - versão melhorada
   const checkTodayRecords = async (classId: number) => {
     try {
-      const response = await apiRequest('GET', `/api/check-today-records/${classId}`);
-      const data = await response.json();
-      console.log(`Verificação de registros para classe ${classId}:`, data);
-      return data.hasRecords || false;
+      // Forçar data para hoje
+      const today = new Date();
+      const formattedDate = today.toISOString().split('T')[0]; // yyyy-mm-dd
+      
+      // Buscar registros de presença para hoje
+      const attendanceResponse = await apiRequest(
+        'GET', 
+        `/api/attendance?classId=${classId}&date=${formattedDate}`
+      );
+      const attendanceData = await attendanceResponse.json();
+      
+      // Buscar atividades missionárias para hoje
+      const activitiesResponse = await apiRequest(
+        'GET', 
+        `/api/missionary-activities?classId=${classId}&date=${formattedDate}`
+      );
+      const activitiesData = await activitiesResponse.json();
+      
+      // Verificar se existem registros de qualquer tipo
+      const hasAttendanceRecords = Array.isArray(attendanceData) && attendanceData.length > 0;
+      const hasActivities = Array.isArray(activitiesData) && activitiesData.length > 0;
+      
+      const hasRecords = hasAttendanceRecords || hasActivities;
+      console.log(`Verificação direta para classe ${classId} (${formattedDate}):`, {
+        hasAttendanceRecords,
+        hasActivities,
+        hasRecords
+      });
+      
+      return hasRecords;
     } catch (error) {
       console.error('Erro ao verificar registros do dia:', error);
       return false;

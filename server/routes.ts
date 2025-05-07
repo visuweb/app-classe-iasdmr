@@ -1,6 +1,8 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
+import { db } from "./db";
+import { and, eq, sql } from "drizzle-orm";
 import { 
   insertClassSchema, 
   insertStudentSchema, 
@@ -8,7 +10,10 @@ import {
   insertMissionaryActivitySchema,
   insertTeacherSchema,
   insertTeacherClassSchema,
-  Teacher
+  Teacher,
+  attendanceRecords,
+  students,
+  missionaryActivities
 } from "@shared/schema";
 import { setupAuth } from "./auth";
 
@@ -493,14 +498,69 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       console.log(`Encontrados: ${attendanceRecords.length} registros de presença e ${missionaryActivities.length} atividades missionárias`);
       
+      // Verificação adicional - Buscar diretamente na base através de SQL bruto
+      const hasRecordsFromDb = 
+        attendanceRecords.length > 0 || 
+        missionaryActivities.length > 0;
+      
       res.json({
-        hasRecords: attendanceRecords.length > 0 || missionaryActivities.length > 0,
+        hasRecords: hasRecordsFromDb,
         attendanceRecords: attendanceRecords,
         missionaryActivities: missionaryActivities.length > 0 ? missionaryActivities[0] : null
       });
     } catch (error) {
       console.error('Erro ao verificar registros:', error);
       res.status(500).json({ message: "Falha ao verificar registros do dia" });
+    }
+  });
+  
+  // Rota alternativa para verificação simplificada de registros existentes
+  app.get("/api/class-has-records-today/:classId", ensureAuthenticated, async (req, res) => {
+    try {
+      const classId = parseInt(req.params.classId, 10);
+      if (isNaN(classId)) {
+        return res.status(400).json({ message: "ID de classe inválido" });
+      }
+      
+      const today = new Date();
+      const date = today.toISOString().split('T')[0]; // yyyy-mm-dd
+      
+      // Verificar registros de frequência para a data usando Drizzle
+      const attendanceResult = await db.select({
+        count: sql<number>`count(*)`
+      })
+      .from(attendanceRecords)
+      .innerJoin(students, eq(attendanceRecords.studentId, students.id))
+      .where(
+        and(
+          eq(students.classId, classId),
+          eq(attendanceRecords.date, date)
+        )
+      );
+      
+      // Verificar atividades missionárias para a data usando Drizzle
+      const activityResult = await db.select({
+        count: sql<number>`count(*)`
+      })
+      .from(missionaryActivities)
+      .where(
+        and(
+          eq(missionaryActivities.classId, classId),
+          eq(missionaryActivities.date, date)
+        )
+      );
+      
+      const attendanceCount = attendanceResult.length > 0 ? Number(attendanceResult[0].count) : 0;
+      const activityCount = activityResult.length > 0 ? Number(activityResult[0].count) : 0;
+      
+      console.log(`Verificação direta: Classe ${classId} em ${date} - Presenças: ${attendanceCount}, Atividades: ${activityCount}`);
+      
+      res.json({
+        hasRecords: attendanceCount > 0 || activityCount > 0
+      });
+    } catch (error) {
+      console.error('Erro na verificação direta:', error);
+      res.status(500).json({ message: "Falha ao verificar registros" });
     }
   });
 
