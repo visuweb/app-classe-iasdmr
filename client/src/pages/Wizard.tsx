@@ -79,25 +79,7 @@ const WizardContent: React.FC = () => {
         <Calculator />
       </div>
       
-      {/* Navigation buttons */}
-      <div className="flex justify-between mt-8">
-        <Button
-          variant="outline"
-          onClick={previousStep}
-          className={`${currentStep === 1 ? 'invisible' : ''}`}
-        >
-          <ArrowLeftIcon className="h-4 w-4 mr-2" />
-          VOLTAR
-        </Button>
-        
-        <Button
-          onClick={nextStep}
-          className={`${currentStep === totalSteps ? 'invisible' : ''}`}
-        >
-          PULAR
-          <ArrowRightIcon className="h-4 w-4 ml-2" />
-        </Button>
-      </div>
+      {/* Navigation buttons removed */}
     </div>
   );
 };
