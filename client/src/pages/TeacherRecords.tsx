@@ -16,6 +16,7 @@ import {
   Filter,
   Edit,
   PenSquare,
+  Pencil,
 } from "lucide-react";
 import {
   Card,
@@ -564,19 +565,18 @@ const TeacherRecords: React.FC = () => {
                                         {activity.qtdContatosMissionarios}
                                       </TableCell>
                                       <TableCell className="text-right">
-                                        <Button
-                                          variant="outline"
-                                          size="sm"
+                                        <Button 
+                                          variant="ghost" 
+                                          size="icon" 
+                                          className="h-8 w-8 text-blue-600"
                                           onClick={() =>
                                             handleEditActivity(
                                               activity,
                                               "qtdContatosMissionarios",
                                             )
                                           }
-                                          className="h-8 px-2 text-xs"
                                         >
-                                          <Edit className="h-3.5 w-3.5 mr-1" />
-                                          Editar
+                                          <Pencil className="h-4 w-4" />
                                         </Button>
                                       </TableCell>
                                     </TableRow>
@@ -592,19 +592,18 @@ const TeacherRecords: React.FC = () => {
                                           (activity.ministrados || 0)}
                                       </TableCell>
                                       <TableCell className="text-right">
-                                        <Button
-                                          variant="outline"
-                                          size="sm"
+                                        <Button 
+                                          variant="ghost" 
+                                          size="icon" 
+                                          className="h-8 w-8 text-blue-600"
                                           onClick={() =>
                                             handleEditActivity(
                                               activity,
                                               "estudosBiblicos",
                                             )
                                           }
-                                          className="h-8 px-2 text-xs"
                                         >
-                                          <Edit className="h-3.5 w-3.5 mr-1" />
-                                          Editar
+                                          <Pencil className="h-4 w-4" />
                                         </Button>
                                       </TableCell>
                                     </TableRow>
@@ -618,19 +617,18 @@ const TeacherRecords: React.FC = () => {
                                         {activity.visitasMissionarias}
                                       </TableCell>
                                       <TableCell className="text-right">
-                                        <Button
-                                          variant="outline"
-                                          size="sm"
+                                        <Button 
+                                          variant="ghost" 
+                                          size="icon" 
+                                          className="h-8 w-8 text-blue-600"
                                           onClick={() =>
                                             handleEditActivity(
                                               activity,
                                               "visitasMissionarias",
                                             )
                                           }
-                                          className="h-8 px-2 text-xs"
                                         >
-                                          <Edit className="h-3.5 w-3.5 mr-1" />
-                                          Editar
+                                          <Pencil className="h-4 w-4" />
                                         </Button>
                                       </TableCell>
                                     </TableRow>
@@ -644,19 +642,18 @@ const TeacherRecords: React.FC = () => {
                                         {activity.pessoasAuxiliadas}
                                       </TableCell>
                                       <TableCell className="text-right">
-                                        <Button
-                                          variant="outline"
-                                          size="sm"
+                                        <Button 
+                                          variant="ghost" 
+                                          size="icon" 
+                                          className="h-8 w-8 text-blue-600"
                                           onClick={() =>
                                             handleEditActivity(
                                               activity,
                                               "pessoasAuxiliadas",
                                             )
                                           }
-                                          className="h-8 px-2 text-xs"
                                         >
-                                          <Edit className="h-3.5 w-3.5 mr-1" />
-                                          Editar
+                                          <Pencil className="h-4 w-4" />
                                         </Button>
                                       </TableCell>
                                     </TableRow>
@@ -670,19 +667,18 @@ const TeacherRecords: React.FC = () => {
                                         {activity.pessoasTrazidasIgreja}
                                       </TableCell>
                                       <TableCell className="text-right">
-                                        <Button
-                                          variant="outline"
-                                          size="sm"
+                                        <Button 
+                                          variant="ghost" 
+                                          size="icon" 
+                                          className="h-8 w-8 text-blue-600"
                                           onClick={() =>
                                             handleEditActivity(
                                               activity,
                                               "pessoasTrazidasIgreja",
                                             )
                                           }
-                                          className="h-8 px-2 text-xs"
                                         >
-                                          <Edit className="h-3.5 w-3.5 mr-1" />
-                                          Editar
+                                          <Pencil className="h-4 w-4" />
                                         </Button>
                                       </TableCell>
                                     </TableRow>
@@ -706,7 +702,7 @@ const TeacherRecords: React.FC = () => {
         open={isEditAttendanceOpen}
         onOpenChange={setIsEditAttendanceOpen}
       >
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent className="max-w-sm">
           <DialogHeader>
             <DialogTitle>Editar Registro de Presença</DialogTitle>
           </DialogHeader>
@@ -739,7 +735,7 @@ const TeacherRecords: React.FC = () => {
 
               <div className="mb-4">
                 <div className="text-sm font-medium mb-2">Alterar Status</div>
-                <div className="flex gap-3">
+                <div className="flex flex-col gap-3 sm:flex-row">
                   <Button
                     variant={
                       selectedAttendanceRecord.present ? "outline" : "default"
@@ -775,7 +771,7 @@ const TeacherRecords: React.FC = () => {
             </div>
           )}
 
-          <DialogFooter>
+          <DialogFooter className="flex justify-center sm:justify-end pt-2">
             <DialogClose asChild>
               <Button variant="outline">Cancelar</Button>
             </DialogClose>
@@ -785,7 +781,7 @@ const TeacherRecords: React.FC = () => {
 
       {/* Modal de edição de atividade missionária */}
       <Dialog open={isEditActivityOpen} onOpenChange={setIsEditActivityOpen}>
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent className="max-w-sm">
           <DialogHeader>
             <DialogTitle>Editar Atividade Missionária</DialogTitle>
           </DialogHeader>
@@ -823,37 +819,23 @@ const TeacherRecords: React.FC = () => {
 
               <div className="mb-4">
                 <div className="text-sm font-medium mb-2">Novo Valor</div>
-                <div className="flex items-center">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() =>
-                      setEditActivityValue(Math.max(0, editActivityValue - 1))
-                    }
-                    disabled={editActivityValue <= 0}
-                  >
-                    -
-                  </Button>
-                  <div className="mx-3 text-center w-16">
-                    {editActivityValue}
-                  </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setEditActivityValue(editActivityValue + 1)}
-                  >
-                    +
-                  </Button>
-                </div>
+                <input
+                  type="number"
+                  min="0"
+                  value={editActivityValue}
+                  onChange={(e) => setEditActivityValue(Math.max(0, parseInt(e.target.value) || 0))}
+                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                />
               </div>
             </div>
           )}
 
-          <DialogFooter>
+          <DialogFooter className="flex justify-center sm:justify-end pt-2">
             <Button
               variant="outline"
               onClick={() => setIsEditActivityOpen(false)}
               disabled={activityMutation.isPending}
+              className="mr-2"
             >
               Cancelar
             </Button>
