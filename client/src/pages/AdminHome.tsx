@@ -60,6 +60,7 @@ const AdminHome = () => {
     name: '',
     cpf: '',
     password: '',
+    isAdmin: false,
   });
   const [teacherClassAssignment, setTeacherClassAssignment] = useState({
     teacherId: 0,
@@ -73,6 +74,7 @@ const AdminHome = () => {
     name: '',
     cpf: '',
     password: '',
+    isAdmin: false,
   });
   const [classToToggle, setClassToToggle] = useState<Class | null>(null);
   const [isToggleClassOpen, setIsToggleClassOpen] = useState(false);
@@ -234,7 +236,7 @@ const AdminHome = () => {
         title: 'Sucesso',
         description: 'Professor criado com sucesso',
       });
-      setNewTeacherData({ name: '', cpf: '', password: '' });
+      setNewTeacherData({ name: '', cpf: '', password: '', isAdmin: false });
     },
     onError: (error) => {
       toast({
@@ -277,6 +279,7 @@ const AdminHome = () => {
       if (editTeacherData.name) data.name = editTeacherData.name;
       if (editTeacherData.cpf) data.cpf = editTeacherData.cpf;
       if (editTeacherData.password) data.password = editTeacherData.password;
+      data.isAdmin = editTeacherData.isAdmin;
       
       const res = await apiRequest('PUT', `/api/teachers/${teacherToEdit.id}`, data);
       if (!res.ok) {
@@ -292,7 +295,7 @@ const AdminHome = () => {
       });
       queryClient.invalidateQueries({ queryKey: ['/api/teachers'] });
       setTeacherToEdit(null);
-      setEditTeacherData({ name: '', cpf: '', password: '' });
+      setEditTeacherData({ name: '', cpf: '', password: '', isAdmin: false });
     },
     onError: (error: Error) => {
       toast({
@@ -618,7 +621,8 @@ const AdminHome = () => {
     setEditTeacherData({
       name: teacher.name,
       cpf: teacher.cpf,
-      password: ''
+      password: '',
+      isAdmin: teacher.isAdmin
     });
   };
 
@@ -1109,6 +1113,14 @@ const AdminHome = () => {
                             onChange={(e) => setNewTeacherData({ ...newTeacherData, password: e.target.value })}
                             required
                           />
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Switch
+                            id="teacherIsAdmin"
+                            checked={newTeacherData.isAdmin}
+                            onCheckedChange={(checked) => setNewTeacherData({ ...newTeacherData, isAdmin: checked })}
+                          />
+                          <Label htmlFor="teacherIsAdmin">É administrador</Label>
                         </div>
                       </div>
                       <DialogFooter>
