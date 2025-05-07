@@ -3,7 +3,8 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { format, parseISO } from "date-fns";
+import { formatInTimeZone } from "date-fns-tz";
+import { format, parseISO, addDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { AttendanceRecord, MissionaryActivity, Class } from "@shared/schema";
 import {
@@ -203,9 +204,16 @@ const TeacherRecords: React.FC = () => {
     return true; // Se não tivermos classId, assumimos que o professor tem acesso
   });
 
-  // Extrair datas únicas dos registros
+  // Função auxiliar para ajustar as datas para o fuso horário de Brasília
+  const adjustDateToBRT = (dateStr: string) => {
+    // Cria uma data a partir da string e ajusta para o fuso horário de Brasília (UTC-3)
+    const date = new Date(dateStr);
+    return formatInTimeZone(date, 'America/Sao_Paulo', 'yyyy-MM-dd');
+  };
+
+  // Extrair datas únicas dos registros com o ajuste de fuso horário
   const uniqueDatesArray = teacherAttendanceRecords.map((record) =>
-    format(new Date(record.date), "yyyy-MM-dd"),
+    adjustDateToBRT(record.date)
   );
   const uniqueDatesSet = new Set(uniqueDatesArray);
   const uniqueDates = Array.from(uniqueDatesSet).sort().reverse(); // Mais recentes primeiro
@@ -220,7 +228,7 @@ const TeacherRecords: React.FC = () => {
   // Filtrar registros pela data selecionada
   const attendanceRecords = selectedDate
     ? teacherAttendanceRecords.filter((record) => {
-        const recordDate = format(new Date(record.date), "yyyy-MM-dd");
+        const recordDate = adjustDateToBRT(record.date);
         return recordDate === selectedDate;
       })
     : [];
@@ -228,13 +236,7 @@ const TeacherRecords: React.FC = () => {
   // Carregar atividades missionárias
   const { data: allMissionaryActivities = [], isLoading: activitiesLoading } =
     useQuery<MissionaryActivityWithClass[]>({
-      queryKey: ["/api/missionary-activities"],
-      onSuccess: (data) => {
-        console.log("Atividades missionárias carregadas com sucesso:", data);
-      },
-      onError: (error) => {
-        console.error("Erro ao carregar atividades missionárias:", error);
-      }
+      queryKey: ["/api/missionary-activities"]
     });
 
   // Filtrar atividades apenas das classes do professor
@@ -244,9 +246,9 @@ const TeacherRecords: React.FC = () => {
     },
   );
 
-  // Extrair datas únicas das atividades
+  // Extrair datas únicas das atividades com ajuste de fuso horário
   const uniqueActivityDatesArray = teacherMissionaryActivities.map((activity) =>
-    format(new Date(activity.date), "yyyy-MM-dd"),
+    adjustDateToBRT(activity.date),
   );
   const uniqueActivityDatesSet = new Set(uniqueActivityDatesArray);
   const uniqueActivityDates = Array.from(uniqueActivityDatesSet)
@@ -261,10 +263,10 @@ const TeacherRecords: React.FC = () => {
   const allUniqueDatesSet = new Set(allUniqueDatesArray);
   const allUniqueDates = Array.from(allUniqueDatesSet).sort().reverse();
 
-  // Filtrar atividades pela data selecionada
+  // Filtrar atividades pela data selecionada usando o ajuste de fuso horário
   const missionaryActivities = selectedDate
     ? teacherMissionaryActivities.filter((activity) => {
-        const activityDate = format(new Date(activity.date), "yyyy-MM-dd");
+        const activityDate = adjustDateToBRT(activity.date);
         return activityDate === selectedDate;
       })
     : [];
