@@ -1225,27 +1225,39 @@ const AdminHome = () => {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {attendanceRecords.map((record) => (
-                          <TableRow key={record.id}>
-                            <TableCell>{formatBrazilianDate(record.date)}</TableCell>
-                            <TableCell>{record.studentName}</TableCell>
-                            <TableCell>
-                              {classes.find(c => {
-                                // Encontrar o estudante primeiro
-                                const student = students.find(s => s.id === record.studentId);
-                                // Retornar true se a classe corresponde à classe do estudante
-                                return student && c.id === student.classId;
-                              })?.name || ''}
-                            </TableCell>
-                            <TableCell>
-                              {record.present ? (
-                                <span className="text-green-600 font-medium">Presente</span>
-                              ) : (
-                                <span className="text-red-600 font-medium">Ausente</span>
-                              )}
-                            </TableCell>
-                          </TableRow>
-                        ))}
+                        {attendanceRecords.map((record) => {
+                          // Encontrar o aluno deste registro
+                          const student = record.studentId ? students.find(s => s.id === record.studentId) : null;
+                          
+                          // Encontrar a classe do aluno
+                          const studentClass = student && student.classId
+                            ? classes.find(c => c.id === student.classId)
+                            : null;
+                            
+                          return (
+                            <TableRow key={record.id}>
+                              <TableCell>{formatBrazilianDate(record.date)}</TableCell>
+                              <TableCell>{record.studentName}</TableCell>
+                              <TableCell>
+                                {studentClass?.name || (
+                                  // Fallback: buscar todas as classes e todos os alunos para tentar determinar a classe
+                                  classes.find(c => {
+                                    // Para cada classe, verificamos se o aluno pertence a ela
+                                    return record.studentId && c.id && 
+                                      students.some(s => s.id === record.studentId && s.classId === c.id);
+                                  })?.name || 'N/A'
+                                )}
+                              </TableCell>
+                              <TableCell>
+                                {record.present ? (
+                                  <span className="text-green-600 font-medium">Presente</span>
+                                ) : (
+                                  <span className="text-red-600 font-medium">Ausente</span>
+                                )}
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
                       </TableBody>
                     </Table>
                   </ScrollArea>
@@ -1297,7 +1309,7 @@ const AdminHome = () => {
                           if (activity.literaturasDistribuidas) {
                             activityEntries.push(
                               <TableRow key={`${activity.id}-literaturas`}>
-                                <TableCell>{new Date(activity.date).toLocaleDateString('pt-BR')}</TableCell>
+                                <TableCell>{formatBrazilianDate(activity.date)}</TableCell>
                                 <TableCell>{activity.className}</TableCell>
                                 <TableCell>Literaturas Distribuídas</TableCell>
                                 <TableCell>{activity.literaturasDistribuidas}</TableCell>
@@ -1308,7 +1320,7 @@ const AdminHome = () => {
                           if (activity.visitasMissionarias) {
                             activityEntries.push(
                               <TableRow key={`${activity.id}-visitas`}>
-                                <TableCell>{new Date(activity.date).toLocaleDateString('pt-BR')}</TableCell>
+                                <TableCell>{formatBrazilianDate(activity.date)}</TableCell>
                                 <TableCell>{activity.className}</TableCell>
                                 <TableCell>Visitas Missionárias</TableCell>
                                 <TableCell>{activity.visitasMissionarias}</TableCell>
@@ -1319,7 +1331,7 @@ const AdminHome = () => {
                           if (activity.estudosBiblicos) {
                             activityEntries.push(
                               <TableRow key={`${activity.id}-estudos`}>
-                                <TableCell>{new Date(activity.date).toLocaleDateString('pt-BR')}</TableCell>
+                                <TableCell>{formatBrazilianDate(activity.date)}</TableCell>
                                 <TableCell>{activity.className}</TableCell>
                                 <TableCell>Estudos Bíblicos</TableCell>
                                 <TableCell>{activity.estudosBiblicos}</TableCell>
@@ -1330,7 +1342,7 @@ const AdminHome = () => {
                           if (activity.ministrados) {
                             activityEntries.push(
                               <TableRow key={`${activity.id}-ministrados`}>
-                                <TableCell>{new Date(activity.date).toLocaleDateString('pt-BR')}</TableCell>
+                                <TableCell>{formatBrazilianDate(activity.date)}</TableCell>
                                 <TableCell>{activity.className}</TableCell>
                                 <TableCell>Ministrados</TableCell>
                                 <TableCell>{activity.ministrados}</TableCell>
@@ -1341,7 +1353,7 @@ const AdminHome = () => {
                           if (activity.pessoasAuxiliadas) {
                             activityEntries.push(
                               <TableRow key={`${activity.id}-auxiliadas`}>
-                                <TableCell>{new Date(activity.date).toLocaleDateString('pt-BR')}</TableCell>
+                                <TableCell>{formatBrazilianDate(activity.date)}</TableCell>
                                 <TableCell>{activity.className}</TableCell>
                                 <TableCell>Pessoas Auxiliadas</TableCell>
                                 <TableCell>{activity.pessoasAuxiliadas}</TableCell>
@@ -1352,7 +1364,7 @@ const AdminHome = () => {
                           if (activity.pessoasTrazidasIgreja) {
                             activityEntries.push(
                               <TableRow key={`${activity.id}-trazidas`}>
-                                <TableCell>{new Date(activity.date).toLocaleDateString('pt-BR')}</TableCell>
+                                <TableCell>{formatBrazilianDate(activity.date)}</TableCell>
                                 <TableCell>{activity.className}</TableCell>
                                 <TableCell>Pessoas Trazidas à Igreja</TableCell>
                                 <TableCell>{activity.pessoasTrazidasIgreja}</TableCell>
@@ -1364,7 +1376,7 @@ const AdminHome = () => {
                           if (activityEntries.length === 0) {
                             activityEntries.push(
                               <TableRow key={activity.id}>
-                                <TableCell>{new Date(activity.date).toLocaleDateString('pt-BR')}</TableCell>
+                                <TableCell>{formatBrazilianDate(activity.date)}</TableCell>
                                 <TableCell>{activity.className}</TableCell>
                                 <TableCell>Sem atividades registradas</TableCell>
                                 <TableCell>0</TableCell>
