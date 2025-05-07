@@ -349,36 +349,48 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   
   const applyCalculatorResult = () => {
     if (calculatorTarget && calculatorResult) {
-      // Se há uma expressão de adição que não foi calculada, calcular primeiro
-      if (calculatorExpression.includes('+') && !calculatorExpression.includes('=')) {
-        // Executar o cálculo como se tivesse pressionado "="
-        const parts = calculatorExpression.split('+').filter(part => part.trim() !== '');
-        
-        // Adicionar o número atual se não estiver na expressão
-        if (calculatorResult && calculatorResult !== '0') {
-          const lastPartIndex = calculatorExpression.lastIndexOf('+');
-          const lastPart = calculatorExpression.substring(lastPartIndex + 1).trim();
+      try {
+        // Se há uma expressão de adição que não foi calculada, calcular primeiro
+        if (calculatorExpression.includes('+') && !calculatorExpression.includes('=')) {
+          // Executar o cálculo como se tivesse pressionado "="
+          const parts = calculatorExpression.split('+').filter(part => part.trim() !== '');
           
-          if (lastPart !== calculatorResult) {
-            parts.push(calculatorResult);
+          // Adicionar o número atual se não estiver na expressão
+          if (calculatorResult && calculatorResult !== '0') {
+            const lastPartIndex = calculatorExpression.lastIndexOf('+');
+            if (lastPartIndex >= 0) {
+              const lastPart = calculatorExpression.substring(lastPartIndex + 1).trim();
+              
+              if (lastPart !== calculatorResult) {
+                parts.push(calculatorResult);
+              }
+            } else {
+              // Se não encontrou '+', apenas adicione o resultado atual
+              parts.push(calculatorResult);
+            }
           }
+          
+          // Somar todas as partes
+          const result = parts.reduce((sum, num) => {
+            const parsed = parseInt(num.trim(), 10);
+            return isNaN(parsed) ? sum : sum + parsed;
+          }, 0);
+          
+          // Usar o resultado calculado
+          setActivityValue(calculatorTarget, result);
+        } else if (calculatorExpression.includes('=')) {
+          // Se já tem um resultado calculado (após '='), usar esse resultado
+          const parts = calculatorExpression.split('=');
+          const finalResult = parseInt(parts[parts.length - 1].trim(), 10) || 0;
+          setActivityValue(calculatorTarget, finalResult);
+        } else {
+          // Caso contrário, usar o valor atual
+          const value = parseInt(calculatorResult, 10) || 0;
+          setActivityValue(calculatorTarget, value);
         }
-        
-        // Somar todas as partes
-        const result = parts.reduce((sum, num) => {
-          const parsed = parseInt(num.trim(), 10);
-          return isNaN(parsed) ? sum : sum + parsed;
-        }, 0);
-        
-        // Usar o resultado calculado
-        setActivityValue(calculatorTarget, result);
-      } else if (calculatorExpression.includes('=')) {
-        // Se já tem um resultado calculado (após '='), usar esse resultado
-        const parts = calculatorExpression.split('=');
-        const finalResult = parseInt(parts[parts.length - 1].trim(), 10) || 0;
-        setActivityValue(calculatorTarget, finalResult);
-      } else {
-        // Caso contrário, usar o valor atual
+      } catch (error) {
+        console.error('Erro ao aplicar resultado da calculadora:', error);
+        // Em caso de erro, usar o valor atual como está
         const value = parseInt(calculatorResult, 10) || 0;
         setActivityValue(calculatorTarget, value);
       }
@@ -425,29 +437,40 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         
         // Iniciar a operação de adição ou continuar a somar
         if (calculatorExpression.includes('+')) {
-          // Se já houver uma operação de adição, calcular o resultado primeiro
-          const parts = calculatorExpression.split('+').filter(part => part.trim() !== '');
-          
-          // Adicionar o número atual à lista de partes se não estiver vazio
-          if (calculatorResult && calculatorResult !== '0') {
-            // Não adicionar se já for parte da expressão
-            const lastPartIndex = calculatorExpression.lastIndexOf('+');
-            const lastPart = calculatorExpression.substring(lastPartIndex + 1).trim();
+          try {
+            // Se já houver uma operação de adição, calcular o resultado primeiro
+            const parts = calculatorExpression.split('+').filter(part => part.trim() !== '');
             
-            if (lastPart !== calculatorResult) {
-              parts.push(calculatorResult);
+            // Adicionar o número atual à lista de partes se não estiver vazio
+            if (calculatorResult && calculatorResult !== '0') {
+              // Não adicionar se já for parte da expressão
+              const lastPartIndex = calculatorExpression.lastIndexOf('+');
+              if (lastPartIndex >= 0) {
+                const lastPart = calculatorExpression.substring(lastPartIndex + 1).trim();
+                
+                if (lastPart !== calculatorResult) {
+                  parts.push(calculatorResult);
+                }
+              } else {
+                // Se não encontrou '+', apenas adicione o resultado atual
+                parts.push(calculatorResult);
+              }
             }
+            
+            // Somar todas as partes como números inteiros
+            const result = parts.reduce((sum, num) => {
+              const trimmed = num.trim();
+              const parsed = parseInt(trimmed, 10);
+              return isNaN(parsed) ? sum : sum + parsed;
+            }, 0);
+            
+            setCalculatorResult(result.toString());
+            setCalculatorExpression(`${result} + `);
+          } catch (error) {
+            console.error('Erro na operação de adição:', error);
+            // Em caso de erro, simplesmente inicie uma nova operação de adição
+            setCalculatorExpression(`${calculatorResult} + `);
           }
-          
-          // Somar todas as partes como números inteiros
-          const result = parts.reduce((sum, num) => {
-            const trimmed = num.trim();
-            const parsed = parseInt(trimmed, 10);
-            return isNaN(parsed) ? sum : sum + parsed;
-          }, 0);
-          
-          setCalculatorResult(result.toString());
-          setCalculatorExpression(`${result} + `);
         } else {
           // Iniciar nova operação de adição
           setCalculatorExpression(`${calculatorResult} + `);
@@ -456,24 +479,39 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         
       case 'equals':
         // Calcular o resultado da operação
-        if (calculatorExpression.includes('+')) {
-          // Filtrar apenas partes não vazias após split
-          const parts = calculatorExpression.split('+').filter(part => part.trim() !== '');
-          
-          // Converter cada parte para número e somar
-          const result = parts.reduce((sum, num) => {
-            // Remover espaços e converter para número inteiro
-            const parsed = parseInt(num.trim(), 10);
-            // Adicionar apenas se for um número válido
-            return isNaN(parsed) ? sum : sum + parsed;
-          }, 0);
-          
-          // Atualizar resultado e expressão
-          setCalculatorResult(result.toString());
-          setCalculatorExpression(`${calculatorExpression} = ${result}`);
-        } else {
-          // Se não há operação de adição, apenas manter o valor atual
-          setCalculatorExpression(`${calculatorExpression} = ${calculatorResult}`);
+        try {
+          if (calculatorExpression.includes('+')) {
+            // Filtrar apenas partes não vazias após split
+            const parts = calculatorExpression.split('+').filter(part => part.trim() !== '');
+            
+            // Verificar se há valores válidos após o último '+'
+            const lastPartIndex = calculatorExpression.lastIndexOf('+');
+            if (lastPartIndex >= 0 && lastPartIndex < calculatorExpression.length - 1) {
+              const lastPart = calculatorExpression.substring(lastPartIndex + 1).trim();
+              if (lastPart !== calculatorResult && calculatorResult !== '0' && calculatorResult !== '') {
+                parts.push(calculatorResult);
+              }
+            }
+            
+            // Converter cada parte para número e somar
+            const result = parts.reduce((sum, num) => {
+              // Remover espaços e converter para número inteiro
+              const parsed = parseInt(num.trim(), 10);
+              // Adicionar apenas se for um número válido
+              return isNaN(parsed) ? sum : sum + parsed;
+            }, 0);
+            
+            // Atualizar resultado e expressão
+            setCalculatorResult(result.toString());
+            setCalculatorExpression(`${calculatorExpression} = ${result}`);
+          } else {
+            // Se não há operação de adição, apenas manter o valor atual
+            setCalculatorExpression(`${calculatorExpression} = ${calculatorResult}`);
+          }
+        } catch (error) {
+          console.error('Erro na operação de igual:', error);
+          // Em caso de erro, apenas mostrar o resultado atual
+          setCalculatorExpression(`${calculatorResult} = ${calculatorResult}`);
         }
         break;
         

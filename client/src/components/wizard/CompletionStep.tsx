@@ -23,7 +23,8 @@ const CompletionStep: React.FC<CompletionStepProps> = ({ isActive }) => {
     missionaryActivities,
     submitWizardData,
     resetWizard,
-    attendanceRecords
+    attendanceRecords,
+    isEditingExistingRecords
   } = useWizard();
   
   useEffect(() => {
@@ -137,22 +138,13 @@ const CompletionStep: React.FC<CompletionStepProps> = ({ isActive }) => {
           </div>
         </div>
         
-        <div className="flex space-x-3">
+        <div className="flex justify-center">
           <Button 
             variant="default" 
-            className="flex-1"
-            onClick={handleViewRecords}
+            className="px-8"
+            onClick={() => setLocation('/classes')}
           >
-            VER REGISTROS
-          </Button>
-          <Button 
-            variant="outline" 
-            className={`flex-1 ${Object.keys(attendanceRecords).length > 0 
-              ? 'border-orange-500 text-orange-500 hover:bg-orange-50 hover:text-orange-600' 
-              : ''}`}
-            onClick={handleStartNew}
-          >
-            {Object.keys(attendanceRecords).length > 0 ? 'EDITAR REGISTRO' : 'NOVO REGISTRO'}
+            VOLTAR
           </Button>
         </div>
       </div>
