@@ -619,15 +619,14 @@ const AdminHome = () => {
   
   // Handle edit teacher
   const handleEditTeacher = (teacher: Teacher) => {
-    setTeacherToEdit(teacher);
     setEditTeacherData({
       name: teacher.name,
       cpf: teacher.cpf,
       password: '',
       isAdmin: teacher.isAdmin
     });
-    // Abre o modal de edição
-    document.getElementById('editTeacherDialog')?.click();
+    // Define o professor para edição (isso abrirá o modal automaticamente)
+    setTeacherToEdit(teacher);
   };
 
   // Handle logout
