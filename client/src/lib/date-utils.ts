@@ -70,3 +70,36 @@ export function getCurrentDateBRT(): string {
   // Formatar no padrão ISO (yyyy-MM-dd)
   return format(brazilTime, 'yyyy-MM-dd');
 }
+
+/**
+ * Função auxiliar para extrair a parte da data (yyyy-MM-dd) de um campo recordDate 
+ * que pode vir em diferentes formatos
+ * 
+ * @param recordDate Um valor que pode ser string ISO, objeto Date, ou outro formato
+ * @param fallbackDate Data de fallback se não for possível extrair a data
+ * @returns String de data no formato 'yyyy-MM-dd'
+ */
+export function extractDateFromRecord(recordDate: any, fallbackDate?: string): string {
+  // Se for uma string com formato ISO (com 'T')
+  if (typeof recordDate === 'string' && recordDate.includes('T')) {
+    return recordDate.split('T')[0];
+  }
+  
+  // Se for uma string de data normal
+  if (typeof recordDate === 'string' && !recordDate.includes('T')) {
+    try {
+      const parsedDate = parseISO(recordDate);
+      return format(parsedDate, 'yyyy-MM-dd');
+    } catch (e) {
+      return fallbackDate || recordDate;
+    }
+  }
+  
+  // Se for um objeto Date
+  if (recordDate instanceof Date) {
+    return format(recordDate, 'yyyy-MM-dd');
+  }
+  
+  // Fallback para o valor atual no formato correto
+  return fallbackDate || getCurrentDateBRT();
+}

@@ -5,7 +5,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { adjustDateToBRT, formatBrazilianDate, formatBrazilianDateExtended, getCurrentDateBRT } from "@/lib/date-utils";
+import { adjustDateToBRT, formatBrazilianDate, formatBrazilianDateExtended, getCurrentDateBRT, extractDateFromRecord } from "@/lib/date-utils";
 import { AttendanceRecord, MissionaryActivity, Class } from "@shared/schema";
 import {
   Calendar,
@@ -207,9 +207,9 @@ const TeacherRecords: React.FC = () => {
   // Usando a função utilitária para corrigir o problema do fuso horário
   // adjustDateToBRT importado de @/lib/date-utils
 
-  // Extrair datas únicas dos registros com o ajuste de fuso horário
+  // Extrair datas únicas dos registros de presença usando recordDate
   const uniqueDatesArray = teacherAttendanceRecords.map((record) =>
-    adjustDateToBRT(record.date)
+    extractDateFromRecord(record.recordDate, record.date)
   );
   const uniqueDatesSet = new Set(uniqueDatesArray);
   const uniqueDates = Array.from(uniqueDatesSet).sort().reverse(); // Mais recentes primeiro
@@ -221,11 +221,11 @@ const TeacherRecords: React.FC = () => {
     }
   }, [uniqueDates, selectedDate]);
 
-  // Filtrar registros pela data selecionada
+  // Filtrar registros pela data selecionada usando recordDate
   const attendanceRecords = selectedDate
     ? teacherAttendanceRecords.filter((record) => {
-        const recordDate = adjustDateToBRT(record.date);
-        return recordDate === selectedDate;
+        const recordDateStr = extractDateFromRecord(record.recordDate, record.date);
+        return recordDateStr === selectedDate;
       })
     : [];
 
@@ -244,11 +244,8 @@ const TeacherRecords: React.FC = () => {
 
   // Extrair datas únicas das atividades usando recordDate ao invés de date
   const uniqueActivityDatesArray = teacherMissionaryActivities.map((activity) => {
-    // Usar a data de registro (recordDate) ao invés da data normal (date) para capturar a data correta
-    const recordDateStr = typeof activity.recordDate === 'string' 
-      ? activity.recordDate.split('T')[0] 
-      : activity.date;
-    return recordDateStr;
+    // Usar a função auxiliar para extrair a data do recordDate de forma segura
+    return extractDateFromRecord(activity.recordDate, activity.date);
   });
   const uniqueActivityDatesSet = new Set(uniqueActivityDatesArray);
   const uniqueActivityDates = Array.from(uniqueActivityDatesSet)
@@ -266,10 +263,8 @@ const TeacherRecords: React.FC = () => {
   // Filtrar atividades pela data selecionada usando recordDate ao invés de date
   const missionaryActivities = selectedDate
     ? teacherMissionaryActivities.filter((activity) => {
-        // Usar a data de registro (recordDate) ao invés da data normal (date)
-        const recordDateStr = typeof activity.recordDate === 'string'
-          ? activity.recordDate.split('T')[0] 
-          : activity.date;
+        // Usar a função auxiliar para extrair a data do recordDate de forma segura
+        const recordDateStr = extractDateFromRecord(activity.recordDate, activity.date);
         return recordDateStr === selectedDate;
       })
     : [];
