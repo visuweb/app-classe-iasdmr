@@ -38,6 +38,7 @@ type WizardContextType = {
   // Attendance methods
   markStudentAttendance: (studentId: number, present: boolean) => void;
   goToPreviousStudent: () => void;
+  setCurrentStudentIndex: (index: number) => void;
   
   // Activity methods
   setActivityValue: (activity: MissionaryActivityType, value: number) => void;
@@ -775,6 +776,7 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     
     markStudentAttendance,
     goToPreviousStudent,
+    setCurrentStudentIndex,
     
     setActivityValue,
     advanceToNextActivity,

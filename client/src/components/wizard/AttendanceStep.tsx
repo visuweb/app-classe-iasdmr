@@ -2,7 +2,7 @@ import React from 'react';
 import { useWizard } from '@/contexts/WizardContext';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Check, X } from 'lucide-react';
+import { Check, X, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -18,7 +18,8 @@ const AttendanceStep: React.FC<AttendanceStepProps> = ({ isActive }) => {
     goToPreviousStudent,
     wizardDate,
     attendanceRecords,
-    isEditingExistingRecords
+    isEditingExistingRecords,
+    nextStep
   } = useWizard();
   
   if (!isActive) return null;
@@ -115,15 +116,26 @@ const AttendanceStep: React.FC<AttendanceStepProps> = ({ isActive }) => {
                     VOLTAR
                   </Button>
                 )}
-                {currentStudentIndex < students.length - 1 && (
-                  <Button 
-                    variant="outline" 
-                    className="flex-1"
-                    onClick={() => markStudentAttendance(currentStudent.id, attendanceRecords[currentStudent.id] ?? false)}
-                  >
-                    AVANÇAR
-                  </Button>
-                )}
+                
+                {/* Botão Avançar para próximo aluno ou atividades missionárias */}
+                <Button 
+                  variant="outline" 
+                  className="flex-1"
+                  // Botão habilitado apenas se o registro atual estiver salvo
+                  disabled={attendanceRecords[currentStudent.id] === undefined}
+                  onClick={() => {
+                    if (currentStudentIndex < students.length - 1) {
+                      // Vai para o próximo aluno
+                      setCurrentStudentIndex(currentStudentIndex + 1);
+                    } else {
+                      // Se for o último aluno, avança para atividades missionárias
+                      nextStep();
+                    }
+                  }}
+                >
+                  <ArrowRight className="h-4 w-4 mr-2" />
+                  AVANÇAR
+                </Button>
               </div>
             </motion.div>
           ) : (
