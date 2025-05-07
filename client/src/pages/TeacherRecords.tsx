@@ -25,6 +25,16 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { useToast } from '@/hooks/use-toast';
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogHeader, 
+  DialogTitle,
+  DialogFooter,
+  DialogClose
+} from '@/components/ui/dialog';
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import {
   Table,
   TableBody,
@@ -49,9 +59,105 @@ const TeacherRecords: React.FC = () => {
   const [, navigate] = useLocation();
   const { teacher } = useAuth();
   const isMobile = useIsMobile();
+  const { toast } = useToast();
   
   // Estado para a data selecionada
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  
+  // Estados para os modais de edição
+  const [isEditAttendanceOpen, setIsEditAttendanceOpen] = useState(false);
+  const [selectedAttendanceRecord, setSelectedAttendanceRecord] = useState<AttendanceRecordWithStudent | null>(null);
+  
+  const [isEditActivityOpen, setIsEditActivityOpen] = useState(false);
+  const [selectedActivity, setSelectedActivity] = useState<MissionaryActivityWithClass | null>(null);
+  const [selectedActivityField, setSelectedActivityField] = useState<string | null>(null);
+  const [editActivityValue, setEditActivityValue] = useState<number>(0);
+  
+  // Mutação para atualizar registro de presença
+  const attendanceMutation = useMutation({
+    mutationFn: async (data: { id: number, present: boolean }) => {
+      const res = await apiRequest('PATCH', `/api/attendance/${data.id}`, { present: data.present });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/attendance'] });
+      toast({
+        title: "Registro atualizado",
+        description: "O status de presença foi atualizado com sucesso",
+      });
+      setIsEditAttendanceOpen(false);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Erro ao atualizar registro",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  });
+  
+  // Mutação para atualizar atividade missionária
+  const activityMutation = useMutation({
+    mutationFn: async (data: { id: number, field: string, value: number }) => {
+      const updateData = { [data.field]: data.value };
+      const res = await apiRequest('PATCH', `/api/missionary-activities/${data.id}`, updateData);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/missionary-activities'] });
+      toast({
+        title: "Atividade atualizada",
+        description: "O valor da atividade foi atualizado com sucesso",
+      });
+      setIsEditActivityOpen(false);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Erro ao atualizar atividade",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  });
+  
+  // Função para abrir o modal de edição de presença
+  const handleEditAttendance = (record: AttendanceRecordWithStudent) => {
+    setSelectedAttendanceRecord(record);
+    setIsEditAttendanceOpen(true);
+  };
+  
+  // Função para atualizar o status de presença
+  const handleAttendanceUpdate = (present: boolean) => {
+    if (selectedAttendanceRecord) {
+      attendanceMutation.mutate({
+        id: selectedAttendanceRecord.id,
+        present
+      });
+    }
+  };
+  
+  // Função para abrir o modal de edição de atividade missionária
+  const handleEditActivity = (activity: MissionaryActivityWithClass, field: string) => {
+    setSelectedActivity(activity);
+    setSelectedActivityField(field);
+    
+    // Definir o valor atual para edição
+    const currentValue = activity[field as keyof MissionaryActivityWithClass] as number || 0;
+    setEditActivityValue(currentValue);
+    
+    setIsEditActivityOpen(true);
+  };
+  
+  // Função para atualizar o valor da atividade missionária
+  const handleActivityUpdate = () => {
+    if (selectedActivity && selectedActivityField) {
+      activityMutation.mutate({
+        id: selectedActivity.id,
+        field: selectedActivityField,
+        value: editActivityValue
+      });
+    }
+  };
   
   // Carregar classes do professor
   const { 
@@ -72,32 +178,19 @@ const TeacherRecords: React.FC = () => {
     queryKey: ['/api/attendance'],
   });
   
-  // Determinar classId para cada registro de presença
-  const enrichedAttendanceRecords = allAttendanceRecords.map(record => {
-    // Neste ponto, precisamos verificar a relação entre studentId e classId
-    // Idealmente, o backend forneceria essa informação
-    // Como simplificação, vamos apenas verificar se temos essa informação
-    return {
-      ...record,
-      // Se não tivermos classId, precisaremos inferir de outra maneira
-      // Por exemplo, poderíamos fazer uma consulta adicional ao backend
-    };
-  });
-  
   // Filtrar registros apenas das classes do professor
-  const teacherAttendanceRecords = enrichedAttendanceRecords.filter(record => {
+  const teacherAttendanceRecords = allAttendanceRecords.filter(record => {
     if (record.classId) {
       return teacherClassIds.includes(record.classId);
     }
-    // Se não tivermos classId, podemos assumir que o professor tem acesso ao registro
-    // Idealmente, deveríamos verificar se o studentId pertence a uma das classes do professor
-    return true;
+    return true; // Se não tivermos classId, assumimos que o professor tem acesso
   });
   
   // Extrair datas únicas dos registros
-  const uniqueDates = [...new Set(teacherAttendanceRecords.map(record => 
+  const uniqueDatesArray = teacherAttendanceRecords.map(record => 
     format(new Date(record.date), 'yyyy-MM-dd')
-  ))].sort().reverse(); // Mais recentes primeiro
+  );
+  const uniqueDates = [...new Set(uniqueDatesArray)].sort().reverse(); // Mais recentes primeiro
   
   // Se não houver data selecionada e houver datas disponíveis, selecione a mais recente
   useEffect(() => {
@@ -128,12 +221,14 @@ const TeacherRecords: React.FC = () => {
   });
   
   // Extrair datas únicas das atividades
-  const uniqueActivityDates = [...new Set(teacherMissionaryActivities.map(activity => 
+  const uniqueActivityDatesArray = teacherMissionaryActivities.map(activity => 
     format(new Date(activity.date), 'yyyy-MM-dd')
-  ))].sort().reverse(); // Mais recentes primeiro
+  );
+  const uniqueActivityDates = [...new Set(uniqueActivityDatesArray)].sort().reverse(); // Mais recentes primeiro
   
   // Combinar todas as datas únicas para o dropdown
-  const allUniqueDates = [...new Set([...uniqueDates, ...uniqueActivityDates])].sort().reverse();
+  const allUniqueDatesArray = [...uniqueDatesArray, ...uniqueActivityDatesArray];
+  const allUniqueDates = [...new Set(allUniqueDatesArray)].sort().reverse();
   
   // Filtrar atividades pela data selecionada
   const missionaryActivities = selectedDate 
@@ -277,6 +372,7 @@ const TeacherRecords: React.FC = () => {
                           <TableRow>
                             <TableHead>Aluno</TableHead>
                             <TableHead>Presença</TableHead>
+                            <TableHead className="text-right">Ações</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -295,6 +391,17 @@ const TeacherRecords: React.FC = () => {
                                     Ausente
                                   </span>
                                 )}
+                              </TableCell>
+                              <TableCell className="text-right">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleEditAttendance(record)}
+                                  className="h-8 px-2 text-xs"
+                                >
+                                  <Edit className="h-3.5 w-3.5 mr-1" />
+                                  Editar
+                                </Button>
                               </TableCell>
                             </TableRow>
                           ))}
@@ -350,6 +457,7 @@ const TeacherRecords: React.FC = () => {
                           <TableRow>
                             <TableHead>Atividade Missionária</TableHead>
                             <TableHead className="text-right">Quantidade</TableHead>
+                            <TableHead className="text-right">Ações</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -358,42 +466,108 @@ const TeacherRecords: React.FC = () => {
                             const activityKey = `activity-${activity.id}`;
                             return (
                               <React.Fragment key={activityKey}>
-                                {activity.literaturasDistribuidas && activity.literaturasDistribuidas > 0 && (
+                                {activity.literaturasDistribuidas !== null && (
                                   <TableRow key={`${activity.id}-literaturas`}>
                                     <TableCell className="font-medium">Literaturas Distribuídas</TableCell>
                                     <TableCell className="text-right">{activity.literaturasDistribuidas}</TableCell>
+                                    <TableCell className="text-right">
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => handleEditActivity(activity, 'literaturasDistribuidas')}
+                                        className="h-8 px-2 text-xs"
+                                      >
+                                        <Edit className="h-3.5 w-3.5 mr-1" />
+                                        Editar
+                                      </Button>
+                                    </TableCell>
                                   </TableRow>
                                 )}
-                                {activity.qtdContatosMissionarios && activity.qtdContatosMissionarios > 0 && (
+                                {activity.qtdContatosMissionarios !== null && (
                                   <TableRow key={`${activity.id}-contatos`}>
                                     <TableCell className="font-medium">Contatos Missionários</TableCell>
                                     <TableCell className="text-right">{activity.qtdContatosMissionarios}</TableCell>
+                                    <TableCell className="text-right">
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => handleEditActivity(activity, 'qtdContatosMissionarios')}
+                                        className="h-8 px-2 text-xs"
+                                      >
+                                        <Edit className="h-3.5 w-3.5 mr-1" />
+                                        Editar
+                                      </Button>
+                                    </TableCell>
                                   </TableRow>
                                 )}
-                                {(activity.estudosBiblicos && activity.estudosBiblicos > 0) || (activity.ministrados && activity.ministrados > 0) ? (
+                                {(activity.estudosBiblicos !== null || activity.ministrados !== null) && (
                                   <TableRow key={`${activity.id}-estudos`}>
                                     <TableCell className="font-medium">Estudos Bíblicos Ministrados</TableCell>
                                     <TableCell className="text-right">
                                       {(activity.estudosBiblicos || 0) + (activity.ministrados || 0)}
                                     </TableCell>
+                                    <TableCell className="text-right">
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => handleEditActivity(activity, 'estudosBiblicos')}
+                                        className="h-8 px-2 text-xs"
+                                      >
+                                        <Edit className="h-3.5 w-3.5 mr-1" />
+                                        Editar
+                                      </Button>
+                                    </TableCell>
                                   </TableRow>
-                                ) : null}
-                                {activity.visitasMissionarias && activity.visitasMissionarias > 0 && (
+                                )}
+                                {activity.visitasMissionarias !== null && (
                                   <TableRow key={`${activity.id}-visitas`}>
                                     <TableCell className="font-medium">Visitas Missionárias</TableCell>
                                     <TableCell className="text-right">{activity.visitasMissionarias}</TableCell>
+                                    <TableCell className="text-right">
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => handleEditActivity(activity, 'visitasMissionarias')}
+                                        className="h-8 px-2 text-xs"
+                                      >
+                                        <Edit className="h-3.5 w-3.5 mr-1" />
+                                        Editar
+                                      </Button>
+                                    </TableCell>
                                   </TableRow>
                                 )}
-                                {activity.pessoasAuxiliadas && activity.pessoasAuxiliadas > 0 && (
+                                {activity.pessoasAuxiliadas !== null && (
                                   <TableRow key={`${activity.id}-auxiliadas`}>
                                     <TableCell className="font-medium">Pessoas Auxiliadas</TableCell>
                                     <TableCell className="text-right">{activity.pessoasAuxiliadas}</TableCell>
+                                    <TableCell className="text-right">
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => handleEditActivity(activity, 'pessoasAuxiliadas')}
+                                        className="h-8 px-2 text-xs"
+                                      >
+                                        <Edit className="h-3.5 w-3.5 mr-1" />
+                                        Editar
+                                      </Button>
+                                    </TableCell>
                                   </TableRow>
                                 )}
-                                {activity.pessoasTrazidasIgreja && activity.pessoasTrazidasIgreja > 0 && (
+                                {activity.pessoasTrazidasIgreja !== null && (
                                   <TableRow key={`${activity.id}-trazidas`}>
                                     <TableCell className="font-medium">Pessoas Trazidas à Igreja</TableCell>
                                     <TableCell className="text-right">{activity.pessoasTrazidasIgreja}</TableCell>
+                                    <TableCell className="text-right">
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => handleEditActivity(activity, 'pessoasTrazidasIgreja')}
+                                        className="h-8 px-2 text-xs"
+                                      >
+                                        <Edit className="h-3.5 w-3.5 mr-1" />
+                                        Editar
+                                      </Button>
+                                    </TableCell>
                                   </TableRow>
                                 )}
                               </React.Fragment>
@@ -409,6 +583,143 @@ const TeacherRecords: React.FC = () => {
           </Tabs>
         </div>
       </main>
+      
+      {/* Modal de edição de presença */}
+      <Dialog open={isEditAttendanceOpen} onOpenChange={setIsEditAttendanceOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Editar Registro de Presença</DialogTitle>
+          </DialogHeader>
+          
+          {selectedAttendanceRecord && (
+            <div className="py-4">
+              <div className="mb-4">
+                <div className="text-sm font-medium mb-1">Aluno</div>
+                <div className="text-base">{selectedAttendanceRecord.studentName}</div>
+              </div>
+              
+              <div className="mb-4">
+                <div className="text-sm font-medium mb-1">Status Atual</div>
+                <div className="text-base">
+                  {selectedAttendanceRecord.present ? (
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                      <Check className="h-3 w-3 mr-1" />
+                      Presente
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                      <X className="h-3 w-3 mr-1" />
+                      Ausente
+                    </span>
+                  )}
+                </div>
+              </div>
+              
+              <div className="mb-4">
+                <div className="text-sm font-medium mb-2">Alterar Status</div>
+                <div className="flex gap-3">
+                  <Button
+                    variant={selectedAttendanceRecord.present ? "outline" : "default"}
+                    className={selectedAttendanceRecord.present ? "" : "bg-green-600 hover:bg-green-700"}
+                    onClick={() => handleAttendanceUpdate(true)}
+                    disabled={attendanceMutation.isPending}
+                  >
+                    <Check className="h-4 w-4 mr-1" />
+                    Marcar como Presente
+                  </Button>
+                  <Button
+                    variant={!selectedAttendanceRecord.present ? "outline" : "default"}
+                    className={!selectedAttendanceRecord.present ? "" : "bg-red-600 hover:bg-red-700"}
+                    onClick={() => handleAttendanceUpdate(false)}
+                    disabled={attendanceMutation.isPending}
+                  >
+                    <X className="h-4 w-4 mr-1" />
+                    Marcar como Ausente
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+          
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button variant="outline">Cancelar</Button>
+            </DialogClose>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Modal de edição de atividade missionária */}
+      <Dialog open={isEditActivityOpen} onOpenChange={setIsEditActivityOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Editar Atividade Missionária</DialogTitle>
+          </DialogHeader>
+          
+          {selectedActivity && selectedActivityField && (
+            <div className="py-4">
+              <div className="mb-4">
+                <div className="text-sm font-medium mb-1">Atividade</div>
+                <div className="text-base">
+                  {selectedActivityField === 'literaturasDistribuidas' && 'Literaturas Distribuídas'}
+                  {selectedActivityField === 'qtdContatosMissionarios' && 'Contatos Missionários'}
+                  {selectedActivityField === 'estudosBiblicos' && 'Estudos Bíblicos Ministrados'}
+                  {selectedActivityField === 'visitasMissionarias' && 'Visitas Missionárias'}
+                  {selectedActivityField === 'pessoasAuxiliadas' && 'Pessoas Auxiliadas'}
+                  {selectedActivityField === 'pessoasTrazidasIgreja' && 'Pessoas Trazidas à Igreja'}
+                </div>
+              </div>
+              
+              <div className="mb-4">
+                <div className="text-sm font-medium mb-1">Valor Atual</div>
+                <div className="text-base">
+                  {String(selectedActivity[selectedActivityField as keyof MissionaryActivityWithClass] || 0)}
+                </div>
+              </div>
+              
+              <div className="mb-4">
+                <div className="text-sm font-medium mb-2">Novo Valor</div>
+                <div className="flex items-center">
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => setEditActivityValue(Math.max(0, editActivityValue - 1))}
+                    disabled={editActivityValue <= 0}
+                  >
+                    -
+                  </Button>
+                  <div className="mx-3 text-center w-16">
+                    {editActivityValue}
+                  </div>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => setEditActivityValue(editActivityValue + 1)}
+                  >
+                    +
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+          
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => setIsEditActivityOpen(false)}
+              disabled={activityMutation.isPending}
+            >
+              Cancelar
+            </Button>
+            <Button 
+              onClick={handleActivityUpdate}
+              disabled={activityMutation.isPending}
+            >
+              {activityMutation.isPending ? 'Salvando...' : 'Salvar'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
