@@ -269,10 +269,9 @@ const TeacherRecords: React.FC = () => {
     
   console.log("Atividades missionárias filtradas:", missionaryActivities);
 
-  // Função para formatar data
+  // Função para formatar data usando nosso utilitário centralizado
   const formatDate = (dateStr: string) => {
-    const date = new Date(dateStr);
-    return format(date, "dd/MM/yyyy");
+    return formatBrazilianDate(dateStr, "dd/MM/yyyy");
   };
 
   // Formatar data selecionada para exibição usando nosso utilitário que ajusta para o fuso horário
@@ -338,7 +337,7 @@ const TeacherRecords: React.FC = () => {
                       onClick={() => setSelectedDate(date)}
                       className="flex justify-between items-center"
                     >
-                      {format(parseISO(date), "dd/MM/yyyy")}
+                      {formatBrazilianDate(date)}
                       {date === selectedDate && (
                         <Check className="h-4 w-4 text-primary-500" />
                       )}
