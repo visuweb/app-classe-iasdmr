@@ -235,7 +235,7 @@ const TeacherRecords: React.FC = () => {
             <TabsContent value="attendance">
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-xl">Registros de Frequência</CardTitle>
+                  <CardTitle className="text-xl">Registros de Frequência ({attendanceRecords.length})</CardTitle>
                   <CardDescription>
                     Presença dos alunos nas aulas - {formattedSelectedDate}
                   </CardDescription>
@@ -308,7 +308,7 @@ const TeacherRecords: React.FC = () => {
             <TabsContent value="activities">
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-xl">Atividades Missionárias</CardTitle>
+                  <CardTitle className="text-xl">Atividades Missionárias ({missionaryActivities.length})</CardTitle>
                   <CardDescription>
                     Registros de atividades realizadas - {formattedSelectedDate}
                   </CardDescription>
@@ -388,7 +388,7 @@ const TeacherRecords: React.FC = () => {
                                     <TableCell className="text-right">{activity.pessoasAuxiliadas}</TableCell>
                                   </TableRow>
                                 )}
-                                {activity.pessoasTrazidasIgreja > 0 && (
+                                {activity.pessoasTrazidasIgreja && activity.pessoasTrazidasIgreja > 0 && (
                                   <TableRow key={`${activity.id}-trazidas`}>
                                     <TableCell className="font-medium">Pessoas Trazidas à Igreja</TableCell>
                                     <TableCell className="text-right">{activity.pessoasTrazidasIgreja}</TableCell>

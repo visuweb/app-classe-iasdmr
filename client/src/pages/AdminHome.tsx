@@ -76,6 +76,11 @@ const AdminHome = () => {
   });
   const [classToToggle, setClassToToggle] = useState<Class | null>(null);
   const [isToggleClassOpen, setIsToggleClassOpen] = useState(false);
+  
+  // Estado para edição de nome de classe
+  const [classToEdit, setClassToEdit] = useState<Class | null>(null);
+  const [isEditClassOpen, setIsEditClassOpen] = useState(false);
+  const [editClassName, setEditClassName] = useState('');
   const [studentToToggle, setStudentToToggle] = useState<Student | null>(null);
   const [isToggleStudentOpen, setIsToggleStudentOpen] = useState(false);
   
@@ -585,7 +590,7 @@ const AdminHome = () => {
               {/* Classes List */}
               <Card>
                 <CardHeader>
-                  <CardTitle>Classes</CardTitle>
+                  <CardTitle>Classes ({classes.length})</CardTitle>
                   <CardDescription>
                     Selecione uma classe para gerenciar alunos e professores
                   </CardDescription>
@@ -684,7 +689,7 @@ const AdminHome = () => {
                   {/* Students */}
                   <Card>
                     <CardHeader>
-                      <CardTitle>Alunos da Classe</CardTitle>
+                      <CardTitle>Alunos da Classe ({students.length})</CardTitle>
                       <CardDescription>
                         {classes.find(c => c.id === selectedClassId)?.name || ''}
                       </CardDescription>
@@ -759,7 +764,7 @@ const AdminHome = () => {
                   {/* Teachers */}
                   <Card>
                     <CardHeader>
-                      <CardTitle>Professores da Classe</CardTitle>
+                      <CardTitle>Professores da Classe ({classTeachers.length})</CardTitle>
                       <CardDescription>Máximo de 2 professores por classe</CardDescription>
                     </CardHeader>
                     <CardContent>
@@ -863,7 +868,7 @@ const AdminHome = () => {
           <TabsContent value="teachers" className="space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle>Professores</CardTitle>
+                <CardTitle>Professores ({teachers.length})</CardTitle>
                 <CardDescription>Lista de todos os professores cadastrados</CardDescription>
               </CardHeader>
               <CardContent>
@@ -1015,7 +1020,7 @@ const AdminHome = () => {
             {/* Attendance Records */}
             <Card>
               <CardHeader>
-                <CardTitle>Registros de Frequência</CardTitle>
+                <CardTitle>Registros de Frequência ({attendanceRecords.length})</CardTitle>
                 <CardDescription>
                   {selectedClassForReports
                     ? `Classe: ${classes.find(c => c.id === selectedClassForReports)?.name || ''}`
@@ -1065,7 +1070,7 @@ const AdminHome = () => {
             {/* Missionary Activities */}
             <Card>
               <CardHeader>
-                <CardTitle>Atividades Missionárias</CardTitle>
+                <CardTitle>Atividades Missionárias ({missionaryActivities.length})</CardTitle>
                 <CardDescription>
                   {selectedClassForReports
                     ? `Classe: ${classes.find(c => c.id === selectedClassForReports)?.name || ''}`
