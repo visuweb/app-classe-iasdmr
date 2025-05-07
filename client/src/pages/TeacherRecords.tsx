@@ -369,11 +369,21 @@ const TeacherRecords: React.FC = () => {
                     <div className="flex items-center gap-4 mt-2">
                       <span className="text-sm text-green-600 flex items-center">
                         <Check className="h-3.5 w-3.5 mr-1" />
-                        Presentes ({attendanceRecords.filter(record => record.present).length})
+                        Presentes (
+                        {
+                          attendanceRecords.filter((record) => record.present)
+                            .length
+                        }
+                        )
                       </span>
                       <span className="text-sm text-red-600 flex items-center">
                         <X className="h-3.5 w-3.5 mr-1" />
-                        Ausentes ({attendanceRecords.filter(record => !record.present).length})
+                        Ausentes (
+                        {
+                          attendanceRecords.filter((record) => !record.present)
+                            .length
+                        }
+                        )
                       </span>
                     </div>
                   )}
@@ -443,9 +453,9 @@ const TeacherRecords: React.FC = () => {
                                 )}
                               </TableCell>
                               <TableCell className="text-right">
-                                <Button 
-                                  variant="ghost" 
-                                  size="icon" 
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
                                   className="h-8 w-8 text-blue-600"
                                   onClick={() => handleEditAttendance(record)}
                                 >
@@ -539,9 +549,9 @@ const TeacherRecords: React.FC = () => {
                                         {activity.literaturasDistribuidas}
                                       </TableCell>
                                       <TableCell className="text-right">
-                                        <Button 
-                                          variant="ghost" 
-                                          size="icon" 
+                                        <Button
+                                          variant="ghost"
+                                          size="icon"
                                           className="h-8 w-8 text-blue-600"
                                           onClick={() =>
                                             handleEditActivity(
@@ -565,9 +575,9 @@ const TeacherRecords: React.FC = () => {
                                         {activity.qtdContatosMissionarios}
                                       </TableCell>
                                       <TableCell className="text-right">
-                                        <Button 
-                                          variant="ghost" 
-                                          size="icon" 
+                                        <Button
+                                          variant="ghost"
+                                          size="icon"
                                           className="h-8 w-8 text-blue-600"
                                           onClick={() =>
                                             handleEditActivity(
@@ -592,9 +602,9 @@ const TeacherRecords: React.FC = () => {
                                           (activity.ministrados || 0)}
                                       </TableCell>
                                       <TableCell className="text-right">
-                                        <Button 
-                                          variant="ghost" 
-                                          size="icon" 
+                                        <Button
+                                          variant="ghost"
+                                          size="icon"
                                           className="h-8 w-8 text-blue-600"
                                           onClick={() =>
                                             handleEditActivity(
@@ -617,9 +627,9 @@ const TeacherRecords: React.FC = () => {
                                         {activity.visitasMissionarias}
                                       </TableCell>
                                       <TableCell className="text-right">
-                                        <Button 
-                                          variant="ghost" 
-                                          size="icon" 
+                                        <Button
+                                          variant="ghost"
+                                          size="icon"
                                           className="h-8 w-8 text-blue-600"
                                           onClick={() =>
                                             handleEditActivity(
@@ -642,9 +652,9 @@ const TeacherRecords: React.FC = () => {
                                         {activity.pessoasAuxiliadas}
                                       </TableCell>
                                       <TableCell className="text-right">
-                                        <Button 
-                                          variant="ghost" 
-                                          size="icon" 
+                                        <Button
+                                          variant="ghost"
+                                          size="icon"
                                           className="h-8 w-8 text-blue-600"
                                           onClick={() =>
                                             handleEditActivity(
@@ -667,9 +677,9 @@ const TeacherRecords: React.FC = () => {
                                         {activity.pessoasTrazidasIgreja}
                                       </TableCell>
                                       <TableCell className="text-right">
-                                        <Button 
-                                          variant="ghost" 
-                                          size="icon" 
+                                        <Button
+                                          variant="ghost"
+                                          size="icon"
                                           className="h-8 w-8 text-blue-600"
                                           onClick={() =>
                                             handleEditActivity(
@@ -702,7 +712,7 @@ const TeacherRecords: React.FC = () => {
         open={isEditAttendanceOpen}
         onOpenChange={setIsEditAttendanceOpen}
       >
-        <DialogContent className="w-[400px] max-w-full">
+        <DialogContent className="w-[500px] max-w-full">
           <DialogHeader>
             <DialogTitle>Editar Registro de Presença</DialogTitle>
           </DialogHeader>
@@ -823,7 +833,11 @@ const TeacherRecords: React.FC = () => {
                   type="number"
                   min="0"
                   value={editActivityValue}
-                  onChange={(e) => setEditActivityValue(Math.max(0, parseInt(e.target.value) || 0))}
+                  onChange={(e) =>
+                    setEditActivityValue(
+                      Math.max(0, parseInt(e.target.value) || 0),
+                    )
+                  }
                   className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                 />
               </div>
