@@ -238,7 +238,7 @@ const TeacherRecords: React.FC = () => {
     .reverse(); // Mais recentes primeiro
 
   // Combinar todas as datas únicas para o dropdown
-  // Incluir a data atual apenas se houver registros para exibir no dropdown
+  // Usar apenas as datas que realmente têm registros
   const todayDate = getCurrentDateBRT();
   const allUniqueDatesArray = [
     ...uniqueDatesArray,
@@ -247,12 +247,16 @@ const TeacherRecords: React.FC = () => {
   const allUniqueDatesSet = new Set(allUniqueDatesArray);
   const allUniqueDates = Array.from(allUniqueDatesSet).sort().reverse();
   
-  // Verificar se há registros para a data atual e, se houver, selecionar
+  // Log das datas únicas para debug
+  console.log("Datas com registros:", allUniqueDates);
+  
+  // Selecionar a data mais recente como padrão (se houver registros)
   useEffect(() => {
-    if (!selectedDate && allUniqueDates.includes(todayDate)) {
-      setSelectedDate(todayDate);
+    if (!selectedDate && allUniqueDates.length > 0) {
+      // allUniqueDates já está ordenado com as datas mais recentes primeiro
+      setSelectedDate(allUniqueDates[0]);
     }
-  }, [allUniqueDates, selectedDate, todayDate]);
+  }, [allUniqueDates, selectedDate]);
 
   // Filtrar registros pela data selecionada usando recordDate
   const attendanceRecords = selectedDate
