@@ -626,6 +626,8 @@ const AdminHome = () => {
       password: '',
       isAdmin: teacher.isAdmin
     });
+    // Abre o modal de edição
+    document.getElementById('editTeacherDialog')?.click();
   };
 
   // Handle logout
