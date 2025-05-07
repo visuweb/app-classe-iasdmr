@@ -447,10 +447,14 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   const closeCalculator = () => {
     setCalculatorOpen(false);
     setCalculatorTarget(null);
+    setCalculatorResult('0');
+    setCalculatorExpression('');
+    setCalculatorResultConfirmed(false);
   };
   
   const applyCalculatorResult = () => {
-    if (calculatorTarget && calculatorResult) {
+    // Só permitir confirmar o resultado se o botão = foi pressionado (calculatorResultConfirmed é true)
+    if (calculatorTarget && calculatorResult && calculatorResultConfirmed) {
       try {
         // Se há uma expressão de adição que não foi calculada, calcular primeiro
         if (calculatorExpression.includes('+') && !calculatorExpression.includes('=')) {
@@ -496,11 +500,16 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         const value = parseInt(calculatorResult, 10) || 0;
         setActivityValue(calculatorTarget, value);
       }
+      closeCalculator();
     }
-    closeCalculator();
   };
   
   const handleCalculatorAction = (action: string, value?: string) => {
+    // Quando qualquer ação é executada (exceto "equals"), desabilitar o botão confirmar
+    if (action !== 'equals') {
+      setCalculatorResultConfirmed(false);
+    }
+    
     switch (action) {
       case 'number':
         // Iniciar com o número digitado ou substituir o "0" inicial
@@ -616,14 +625,21 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
             // Atualizar resultado e expressão
             setCalculatorResult(result.toString());
             setCalculatorExpression(`${calculatorExpression} = ${result}`);
+            
+            // Habilitar o botão de confirmar após calcular o resultado
+            setCalculatorResultConfirmed(true);
           } else {
             // Se não há operação de adição, apenas manter o valor atual
             setCalculatorExpression(`${calculatorExpression} = ${calculatorResult}`);
+            
+            // Habilitar o botão de confirmar após o cálculo, mesmo se não houve soma
+            setCalculatorResultConfirmed(true);
           }
         } catch (error) {
           console.error('Erro na operação de igual:', error);
-          // Em caso de erro, apenas mostrar o resultado atual
+          // Em caso de erro, apenas mostrar o resultado atual e habilitar confirmação
           setCalculatorExpression(`${calculatorResult} = ${calculatorResult}`);
+          setCalculatorResultConfirmed(true);
         }
         break;
         
@@ -631,6 +647,7 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         // Limpar tudo
         setCalculatorResult('0');
         setCalculatorExpression('');
+        setCalculatorResultConfirmed(false);
         break;
         
       case 'backspace':
@@ -824,6 +841,7 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     calculatorExpression,
     calculatorResult,
     calculatorTarget,
+    calculatorResultConfirmed,
     
     goToStep,
     nextStep,

@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { useWizard } from '@/contexts/WizardContext';
-import { X, Delete, CheckCircle, Plus } from 'lucide-react';
+import { X, Delete, CheckCircle, Plus, Equal } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const Calculator: React.FC = () => {
@@ -10,6 +10,7 @@ const Calculator: React.FC = () => {
     applyCalculatorResult,
     calculatorExpression,
     calculatorResult,
+    calculatorResultConfirmed,
     handleCalculatorAction
   } = useWizard();
   
@@ -25,8 +26,12 @@ const Calculator: React.FC = () => {
         handleCalculatorAction('number', e.key);
       }
       // Operadores
-      else if (['+', 'Enter'].includes(e.key)) {
+      else if (e.key === '+') {
         handleCalculatorAction('add');
+      }
+      // Igual
+      else if (e.key === '=' || e.key === 'Enter') {
+        handleCalculatorAction('equals');
       }
       // Backspace
       else if (e.key === 'Backspace') {
@@ -180,10 +185,20 @@ const Calculator: React.FC = () => {
             
             {/* Row 5 */}
             <button 
-              className="bg-white hover:bg-gray-100 text-gray-800 font-medium py-3 rounded border col-span-4"
+              className="bg-white hover:bg-gray-100 text-gray-800 font-medium py-3 rounded border"
               onClick={() => handleCalculatorAction('number', '0')}
             >
               0
+            </button>
+            
+            {/* Botão de igual que ocupa 3 colunas */}
+            <button 
+              className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 rounded col-span-3"
+              onClick={() => handleCalculatorAction('equals')}
+            >
+              <div className="flex items-center justify-center">
+                <Equal className="h-5 w-5" />
+              </div>
             </button>
             
             {/* Rodapé com os botões de ação */}
@@ -195,8 +210,12 @@ const Calculator: React.FC = () => {
                 Fechar
               </button>
               <button 
-                className="bg-green-500 hover:bg-green-600 text-white font-medium py-3 rounded"
+                className={cn(
+                  "bg-green-500 hover:bg-green-600 text-white font-medium py-3 rounded",
+                  !calculatorResultConfirmed && "opacity-50 cursor-not-allowed"
+                )}
                 onClick={applyCalculatorResult}
+                disabled={!calculatorResultConfirmed}
               >
                 <div className="flex items-center justify-center">
                   <CheckCircle className="h-5 w-5 mr-2" />
