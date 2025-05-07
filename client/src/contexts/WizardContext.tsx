@@ -26,6 +26,7 @@ type WizardContextType = {
   calculatorExpression: string;
   calculatorResult: string;
   calculatorTarget: MissionaryActivityType | null;
+  calculatorResultConfirmed: boolean;
   
   // Navigation methods
   goToStep: (step: number) => void;
@@ -82,6 +83,7 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   const [calculatorExpression, setCalculatorExpression] = useState('');
   const [calculatorResult, setCalculatorResult] = useState('0');
   const [calculatorTarget, setCalculatorTarget] = useState<MissionaryActivityType | null>(null);
+  const [calculatorResultConfirmed, setCalculatorResultConfirmed] = useState(false);
   
   // Verificar se há registros existentes quando a classe muda
   useEffect(() => {
@@ -435,8 +437,11 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
       setCalculatorResult(currentValue.toString());
     } else {
       setCalculatorResult('0');
-      setCalculatorExpression('');
     }
+    // Sempre limpar a expressão ao abrir a calculadora
+    setCalculatorExpression('');
+    // Inicialmente o valor pode ser confirmado
+    setCalculatorResultConfirmed(true);
   };
   
   const closeCalculator = () => {
