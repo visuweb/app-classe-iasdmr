@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { db } from "./db";
+import { db, pool } from "./db";
 import { and, eq, sql } from "drizzle-orm";
 import { 
   insertClassSchema, 
@@ -543,40 +543,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       console.log(`Verificando registros recentes para classe ${classId}. Datas: ${yesterdayFormatted} e ${todayFormatted}`);
       
-      // Verificação mais direta utilizando SQL bruto
-      const { rows: attendanceRows } = await pool.query(
-        `SELECT DISTINCT date FROM attendance_records ar 
-         JOIN students s ON ar.student_id = s.id 
-         WHERE s.class_id = $1 AND (ar.date = $2 OR ar.date = $3)
-         LIMIT 1`,
-        [classId, todayFormatted, yesterdayFormatted]
-      );
+      // Verificar registros de frequência usando Drizzle
+      const attendanceData = await db.select({ date: attendanceRecords.date })
+        .from(attendanceRecords)
+        .innerJoin(students, eq(attendanceRecords.studentId, students.id))
+        .where(
+          and(
+            eq(students.classId, classId),
+            sql`${attendanceRecords.date} IN (${todayFormatted}, ${yesterdayFormatted})`
+          )
+        )
+        .limit(1);
       
-      // Verificar atividades missionárias para ambas as datas
-      const { rows: activityRows } = await pool.query(
-        `SELECT DISTINCT date FROM missionary_activities 
-         WHERE class_id = $1 AND (date = $2 OR date = $3)
-         LIMIT 1`,
-        [classId, todayFormatted, yesterdayFormatted]
-      );
+      // Verificar atividades missionárias usando Drizzle
+      const activityData = await db.select({ date: missionaryActivities.date })
+        .from(missionaryActivities)
+        .where(
+          and(
+            eq(missionaryActivities.classId, classId),
+            sql`${missionaryActivities.date} IN (${todayFormatted}, ${yesterdayFormatted})`
+          )
+        )
+        .limit(1);
       
       // Capturar todas as datas encontradas para debug
       const foundDates = new Set<string>();
       
-      if (attendanceRows.length > 0) {
-        attendanceRows.forEach((record: any) => {
+      if (attendanceData.length > 0) {
+        attendanceData.forEach((record) => {
           if (record.date) foundDates.add(record.date);
         });
       }
       
-      if (activityRows.length > 0) {
-        activityRows.forEach((record: any) => {
+      if (activityData.length > 0) {
+        activityData.forEach((record) => {
           if (record.date) foundDates.add(record.date);
         });
       }
       
-      const hasRecords = (attendanceRows && attendanceRows.length > 0) || 
-                     (activityRows && activityRows.length > 0);
+      const hasRecords = attendanceData.length > 0 || activityData.length > 0;
       console.log(`Verificação de registros recentes. Resultado: ${hasRecords}, datas encontradas: ${Array.from(foundDates).join(', ')}`);
       
       res.json({
