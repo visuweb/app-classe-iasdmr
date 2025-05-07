@@ -334,6 +334,39 @@ const AdminHome = () => {
     }
   });
   
+  // Edit class name mutation
+  const editClassMutation = useMutation({
+    mutationFn: async () => {
+      if (!classToEdit) throw new Error("Nenhuma classe selecionada para edição");
+      
+      const res = await apiRequest('PUT', `/api/classes/${classToEdit.id}`, {
+        name: editClassName
+      });
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.message || "Erro ao editar nome da classe");
+      }
+      return await res.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: 'Classe atualizada',
+        description: 'O nome da classe foi atualizado com sucesso',
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/classes'] });
+      setClassToEdit(null);
+      setEditClassName('');
+      setIsEditClassOpen(false);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Erro ao atualizar classe',
+        description: error.message,
+        variant: 'destructive'
+      });
+    }
+  });
+  
   // Toggle class status mutation
   const toggleClassStatusMutation = useMutation({
     mutationFn: async (classId: number) => {
@@ -509,6 +542,13 @@ const AdminHome = () => {
     setIsToggleClassOpen(true);
   };
   
+  // Handle edit class
+  const handleEditClass = (classObj: Class) => {
+    setClassToEdit(classObj);
+    setEditClassName(classObj.name);
+    setIsEditClassOpen(true);
+  };
+  
   // Handle toggle student status
   const toggleStudentStatus = (student: Student) => {
     setStudentToToggle(student);
@@ -625,6 +665,17 @@ const AdminHome = () => {
                                 }`}>
                                   {classObj.active ? 'Ativa' : 'Inativa'}
                                 </span>
+                                <Button 
+                                  variant="ghost" 
+                                  size="icon"
+                                  className="h-6 w-6 text-blue-600"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleEditClass(classObj);
+                                  }}
+                                >
+                                  <Pencil className="h-3 w-3" />
+                                </Button>
                                 <Button 
                                   variant="ghost" 
                                   size="icon"
@@ -1197,6 +1248,39 @@ const AdminHome = () => {
           </TabsContent>
         </Tabs>
       </main>
+      
+      {/* Dialog de edição de classe */}
+      <Dialog open={isEditClassOpen} onOpenChange={setIsEditClassOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Editar Nome da Classe</DialogTitle>
+            <DialogDescription>
+              Insira o novo nome para a classe
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={(e) => {
+            e.preventDefault();
+            editClassMutation.mutate();
+          }}>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="editClassName">Nome da Classe</Label>
+                <Input
+                  id="editClassName"
+                  value={editClassName}
+                  onChange={(e) => setEditClassName(e.target.value)}
+                  required
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button type="submit" disabled={editClassMutation.isPending}>
+                {editClassMutation.isPending ? 'Salvando...' : 'Salvar Alterações'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
       
       {/* Alert Dialog for toggle teacher status */}
       <AlertDialog open={isToggleTeacherOpen} onOpenChange={setIsToggleTeacherOpen}>
