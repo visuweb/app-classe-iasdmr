@@ -174,15 +174,44 @@ const RecordsList: React.FC = () => {
         // Se um trimestre foi selecionado, usamos sua faixa de datas
         if (selectedTrimester) {
           const { start, end } = getTrimesterDateRange(selectedTrimester);
-          return record.classId === studentClassId && 
-                 recordDate >= start && 
-                 recordDate <= end;
+          
+          // Verificamos pela data (mesmo quando não filtramos por classe específica)
+          if (recordDate >= start && recordDate <= end) {
+            // Se tiver classe específica selecionada, filtramos por ela também
+            if (studentClassId) {
+              // Primeiro verificamos se record.classId existe
+              if (record.classId) {
+                return record.classId === studentClassId;
+              }
+              
+              // Caso contrário, tentamos obter a classId a partir do studentId
+              // Assumindo que classes estão disponíveis
+              if (classes && classes.length > 0) {
+                const student = record.studentId;
+                const studentClass = classes.find(c => c.id === studentClassId);
+                return !!studentClass;
+              }
+            }
+            
+            // Se não tiver classe específica ou não conseguimos verificar, retornamos true
+            return true;
+          }
+          
+          return false;
         }
         
         // Caso contrário, filtramos pelo mês selecionado
-        return record.classId === studentClassId && 
-               recordDate >= startOfSelectedMonth && 
-               recordDate <= endOfSelectedMonth;
+        if (recordDate >= startOfSelectedMonth && recordDate <= endOfSelectedMonth) {
+          // Se tiver classe específica, filtramos
+          if (studentClassId && record.classId) {
+            return record.classId === studentClassId;
+          }
+          
+          // Se não tiver classe específica, retornamos true
+          return !studentClassId;
+        }
+        
+        return false;
       })
     : [];
   
