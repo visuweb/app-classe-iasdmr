@@ -287,8 +287,64 @@ const TeacherRecords: React.FC = () => {
         return isDateInTrimester(recordDateStr, selectedTrimester);
       })
     : [];
+  
+  // Função para agrupar atividades por classe quando o trimestre está selecionado
+  const getActivitiesByClass = () => {
+    if (!selectedTrimester || missionaryActivities.length === 0) return [];
     
-  console.log("Atividades missionárias filtradas:", missionaryActivities);
+    // Agrupar atividades por classId
+    const groupedByClass: Record<number, {
+      classId: number,
+      className: string,
+      activities: MissionaryActivityWithClass[],
+      summary: {
+        literaturasDistribuidas: number,
+        qtdContatosMissionarios: number,
+        estudosBiblicos: number,
+        ministrados: number,
+        visitasMissionarias: number,
+        pessoasAuxiliadas: number,
+        pessoasTrazidasIgreja: number
+      }
+    }> = {};
+    
+    // Inicializar grupos
+    missionaryActivities.forEach(activity => {
+      if (!groupedByClass[activity.classId]) {
+        groupedByClass[activity.classId] = {
+          classId: activity.classId,
+          className: activity.className,
+          activities: [],
+          summary: {
+            literaturasDistribuidas: 0,
+            qtdContatosMissionarios: 0,
+            estudosBiblicos: 0,
+            ministrados: 0,
+            visitasMissionarias: 0,
+            pessoasAuxiliadas: 0,
+            pessoasTrazidasIgreja: 0
+          }
+        };
+      }
+      
+      groupedByClass[activity.classId].activities.push(activity);
+      
+      // Calcular somatórios
+      const summary = groupedByClass[activity.classId].summary;
+      summary.literaturasDistribuidas += activity.literaturasDistribuidas ?? 0;
+      summary.qtdContatosMissionarios += activity.qtdContatosMissionarios ?? 0;
+      summary.estudosBiblicos += activity.estudosBiblicos ?? 0;
+      summary.ministrados += activity.ministrados ?? 0;
+      summary.visitasMissionarias += activity.visitasMissionarias ?? 0;
+      summary.pessoasAuxiliadas += activity.pessoasAuxiliadas ?? 0;
+      summary.pessoasTrazidasIgreja += activity.pessoasTrazidasIgreja ?? 0;
+    });
+    
+    return Object.values(groupedByClass);
+  };
+  
+  // Obter atividades agrupadas por classe
+  const activitiesByClass = getActivitiesByClass();
 
   // Função para formatar data usando nosso utilitário centralizado
   const formatDate = (dateStr: string) => {
@@ -342,11 +398,15 @@ const TeacherRecords: React.FC = () => {
                 <Button
                   variant="outline"
                   className="min-w-[220px] flex justify-between items-center text-left"
-                  disabled={allUniqueDates.length === 0}
+                  disabled={allUniqueDates.length === 0 || selectedTrimester !== null}
                 >
                   <div className="flex items-center truncate">
                     <Calendar className="h-4 w-4 mr-2 flex-shrink-0" />
-                    <span className="truncate">{formattedSelectedDate}</span>
+                    <span className="truncate">
+                      {selectedDate 
+                        ? formatBrazilianDateExtended(selectedDate)
+                        : "Selecione uma data"}
+                    </span>
                   </div>
                   <Filter className="h-4 w-4 ml-2 flex-shrink-0" />
                 </Button>
@@ -390,6 +450,7 @@ const TeacherRecords: React.FC = () => {
               id="trimesterFilter"
               className="w-full min-w-[250px] p-2 border rounded"
               value={selectedTrimester || ''}
+              disabled={selectedDate !== null}
               onChange={(e) => {
                 const value = e.target.value || null;
                 setSelectedTrimester(value);
@@ -406,13 +467,31 @@ const TeacherRecords: React.FC = () => {
               <option value="4">4º Trimestre (Outubro - Dezembro)</option>
             </select>
           </div>
+          
+          {/* Botão para limpar filtros */}
+          <div className="flex items-end">
+            <Button 
+              variant="outline" 
+              className="px-4"
+              onClick={() => {
+                setSelectedDate(null);
+                setSelectedTrimester(null);
+              }}
+            >
+              Limpar Filtros
+            </Button>
+          </div>
         </div>
 
         {/* Conteúdo principal */}
         <div className="max-w-5xl mx-auto">
-          <Tabs defaultValue="attendance">
+          <Tabs defaultValue={selectedTrimester ? "activities" : "attendance"}>
             <TabsList className="mb-4">
-              <TabsTrigger value="attendance" className="flex items-center">
+              <TabsTrigger 
+                value="attendance" 
+                className="flex items-center"
+                disabled={selectedTrimester !== null}
+              >
                 <Users className="h-4 w-4 mr-2" />
                 Frequência
               </TabsTrigger>
@@ -556,8 +635,8 @@ const TeacherRecords: React.FC = () => {
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
+                  {/* Loading State */}
                   {activitiesLoading || isLoadingClasses ? (
-                    // Estado de loading
                     <div className="space-y-3">
                       {Array(3)
                         .fill(0)
@@ -572,210 +651,220 @@ const TeacherRecords: React.FC = () => {
                           </div>
                         ))}
                     </div>
-                  ) : missionaryActivities.length === 0 ? (
-                    // Sem atividades
-                    <div className="text-center py-10 text-gray-500">
-                      <div className="mb-3 flex justify-center">
-                        <div className="h-12 w-12 rounded-full bg-gray-100 flex items-center justify-center">
-                          <FileText className="h-6 w-6 text-gray-400" />
-                        </div>
-                      </div>
-                      <h3 className="font-medium mb-1">
-                        Nenhum registro encontrado
-                      </h3>
-                      <p className="text-sm">
-                        {uniqueActivityDates.length === 0
-                          ? "Você não tem registros de atividades missionárias" 
-                          : selectedDate 
-                            ? "Não há registros de atividades para a data selecionada"
-                            : selectedTrimester
-                              ? `Não há registros de atividades para o ${selectedTrimester}º trimestre`
-                              : "Selecione uma data ou trimestre para visualizar registros"
-                        }
-                      </p>
-                    </div>
                   ) : (
-                    // Tabela de atividades
-                    <div className="rounded border overflow-hidden">
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Atividade Missionária</TableHead>
-                            <TableHead className="text-right">
-                              Quantidade
-                            </TableHead>
-                            <TableHead className="text-right">Ações</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {missionaryActivities.length > 0 &&
-                            missionaryActivities.map((activity) => {
-                              // Criar um ID único para cada atividade
-                              const activityKey = `activity-${activity.id}`;
-                              return (
-                                <React.Fragment key={activityKey}>
-                                  {activity.literaturasDistribuidas !==
-                                    null && (
-                                    <TableRow
-                                      key={`${activity.id}-literaturas`}
-                                    >
+                    /* No Activities */
+                    missionaryActivities.length === 0 ? (
+                      <div className="text-center py-10 text-gray-500">
+                        <div className="mb-3 flex justify-center">
+                          <div className="h-12 w-12 rounded-full bg-gray-100 flex items-center justify-center">
+                            <FileText className="h-6 w-6 text-gray-400" />
+                          </div>
+                        </div>
+                        <h3 className="font-medium mb-1">
+                          Nenhum registro encontrado
+                        </h3>
+                        <p className="text-sm">
+                          {uniqueActivityDates.length === 0
+                            ? "Você não tem registros de atividades missionárias" 
+                            : selectedDate 
+                              ? "Não há registros de atividades para a data selecionada"
+                              : selectedTrimester
+                                ? `Não há registros de atividades para o ${selectedTrimester}º trimestre`
+                                : "Selecione uma data ou trimestre para visualizar registros"
+                          }
+                        </p>
+                      </div>
+                    ) : (
+                      /* Selected Trimester View */
+                      selectedTrimester ? (
+                        <div className="space-y-6">
+                          {activitiesByClass.map((classGroup) => (
+                            <div key={`class-${classGroup.classId}`} className="mt-4">
+                              <h3 className="text-lg font-semibold mb-3 text-primary-700 border-b pb-2">
+                                {classGroup.className} ({selectedTrimester}º Trimestre)
+                              </h3>
+                              <div className="rounded border overflow-hidden">
+                                <Table>
+                                  <TableHeader>
+                                    <TableRow>
+                                      <TableHead>Atividade Missionária</TableHead>
+                                      <TableHead className="text-right">Total no Trimestre</TableHead>
+                                    </TableRow>
+                                  </TableHeader>
+                                  <TableBody>
+                                    <TableRow>
+                                      <TableCell className="font-medium">Literaturas Distribuídas</TableCell>
+                                      <TableCell className="text-right">{classGroup.summary.literaturasDistribuidas}</TableCell>
+                                    </TableRow>
+                                    <TableRow>
+                                      <TableCell className="font-medium">Contatos Missionários</TableCell>
+                                      <TableCell className="text-right">{classGroup.summary.qtdContatosMissionarios}</TableCell>
+                                    </TableRow>
+                                    <TableRow>
+                                      <TableCell className="font-medium">Estudos Bíblicos Ministrados</TableCell>
+                                      <TableCell className="text-right">{classGroup.summary.estudosBiblicos + classGroup.summary.ministrados}</TableCell>
+                                    </TableRow>
+                                    <TableRow>
+                                      <TableCell className="font-medium">Visitas Missionárias</TableCell>
+                                      <TableCell className="text-right">{classGroup.summary.visitasMissionarias}</TableCell>
+                                    </TableRow>
+                                    <TableRow>
+                                      <TableCell className="font-medium">Pessoas Auxiliadas</TableCell>
+                                      <TableCell className="text-right">{classGroup.summary.pessoasAuxiliadas}</TableCell>
+                                    </TableRow>
+                                    <TableRow>
+                                      <TableCell className="font-medium">Pessoas Trazidas à Igreja</TableCell>
+                                      <TableCell className="text-right">{classGroup.summary.pessoasTrazidasIgreja}</TableCell>
+                                    </TableRow>
+                                  </TableBody>
+                                </Table>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        /* Regular Date View */
+                        <div className="rounded border overflow-hidden">
+                          <Table>
+                            <TableHeader>
+                              <TableRow>
+                                <TableHead>Atividade Missionária</TableHead>
+                                <TableHead className="text-right">Quantidade</TableHead>
+                                <TableHead className="text-right">Ações</TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {missionaryActivities.map((activity) => {
+                                const activityKey = `activity-${activity.id}`;
+                                return (
+                                  <React.Fragment key={activityKey}>
+                                    {/* Literaturas Distribuídas */}
+                                    <TableRow key={`${activity.id}-literaturas`}>
                                       <TableCell className="font-medium">
                                         Literaturas Distribuídas
                                       </TableCell>
                                       <TableCell className="text-right">
-                                        {activity.literaturasDistribuidas}
+                                        {activity.literaturasDistribuidas ?? 0}
                                       </TableCell>
                                       <TableCell className="text-right">
                                         <Button
                                           variant="ghost"
                                           size="icon"
                                           className="h-8 w-8 text-blue-600"
-                                          onClick={() =>
-                                            handleEditActivity(
-                                              activity,
-                                              "literaturasDistribuidas",
-                                            )
-                                          }
+                                          onClick={() => handleEditActivity(activity, "literaturasDistribuidas")}
                                         >
                                           <Pencil className="h-4 w-4" />
                                         </Button>
                                       </TableCell>
                                     </TableRow>
-                                  )}
-                                  {activity.qtdContatosMissionarios !==
-                                    null && (
+                                    
+                                    {/* Contatos Missionários */}
                                     <TableRow key={`${activity.id}-contatos`}>
                                       <TableCell className="font-medium">
                                         Contatos Missionários
                                       </TableCell>
                                       <TableCell className="text-right">
-                                        {activity.qtdContatosMissionarios}
+                                        {activity.qtdContatosMissionarios ?? 0}
                                       </TableCell>
                                       <TableCell className="text-right">
                                         <Button
                                           variant="ghost"
                                           size="icon"
                                           className="h-8 w-8 text-blue-600"
-                                          onClick={() =>
-                                            handleEditActivity(
-                                              activity,
-                                              "qtdContatosMissionarios",
-                                            )
-                                          }
+                                          onClick={() => handleEditActivity(activity, "qtdContatosMissionarios")}
                                         >
                                           <Pencil className="h-4 w-4" />
                                         </Button>
                                       </TableCell>
                                     </TableRow>
-                                  )}
-                                  {(activity.estudosBiblicos !== null ||
-                                    activity.ministrados !== null) && (
+                                    
+                                    {/* Estudos Bíblicos */}
                                     <TableRow key={`${activity.id}-estudos`}>
                                       <TableCell className="font-medium">
                                         Estudos Bíblicos Ministrados
                                       </TableCell>
                                       <TableCell className="text-right">
-                                        {(activity.estudosBiblicos || 0) +
-                                          (activity.ministrados || 0)}
+                                        {(activity.estudosBiblicos ?? 0) + (activity.ministrados ?? 0)}
                                       </TableCell>
                                       <TableCell className="text-right">
                                         <Button
                                           variant="ghost"
                                           size="icon"
                                           className="h-8 w-8 text-blue-600"
-                                          onClick={() =>
-                                            handleEditActivity(
-                                              activity,
-                                              "estudosBiblicos",
-                                            )
-                                          }
+                                          onClick={() => handleEditActivity(activity, "estudosBiblicos")}
                                         >
                                           <Pencil className="h-4 w-4" />
                                         </Button>
                                       </TableCell>
                                     </TableRow>
-                                  )}
-                                  {activity.visitasMissionarias !== null && (
+                                    
+                                    {/* Visitas Missionárias */}
                                     <TableRow key={`${activity.id}-visitas`}>
                                       <TableCell className="font-medium">
                                         Visitas Missionárias
                                       </TableCell>
                                       <TableCell className="text-right">
-                                        {activity.visitasMissionarias}
+                                        {activity.visitasMissionarias ?? 0}
                                       </TableCell>
                                       <TableCell className="text-right">
                                         <Button
                                           variant="ghost"
                                           size="icon"
                                           className="h-8 w-8 text-blue-600"
-                                          onClick={() =>
-                                            handleEditActivity(
-                                              activity,
-                                              "visitasMissionarias",
-                                            )
-                                          }
+                                          onClick={() => handleEditActivity(activity, "visitasMissionarias")}
                                         >
                                           <Pencil className="h-4 w-4" />
                                         </Button>
                                       </TableCell>
                                     </TableRow>
-                                  )}
-                                  {activity.pessoasAuxiliadas !== null && (
+                                    
+                                    {/* Pessoas Auxiliadas */}
                                     <TableRow key={`${activity.id}-auxiliadas`}>
                                       <TableCell className="font-medium">
                                         Pessoas Auxiliadas
                                       </TableCell>
                                       <TableCell className="text-right">
-                                        {activity.pessoasAuxiliadas}
+                                        {activity.pessoasAuxiliadas ?? 0}
                                       </TableCell>
                                       <TableCell className="text-right">
                                         <Button
                                           variant="ghost"
                                           size="icon"
                                           className="h-8 w-8 text-blue-600"
-                                          onClick={() =>
-                                            handleEditActivity(
-                                              activity,
-                                              "pessoasAuxiliadas",
-                                            )
-                                          }
+                                          onClick={() => handleEditActivity(activity, "pessoasAuxiliadas")}
                                         >
                                           <Pencil className="h-4 w-4" />
                                         </Button>
                                       </TableCell>
                                     </TableRow>
-                                  )}
-                                  {activity.pessoasTrazidasIgreja !== null && (
+                                    
+                                    {/* Pessoas Trazidas à Igreja */}
                                     <TableRow key={`${activity.id}-trazidas`}>
                                       <TableCell className="font-medium">
                                         Pessoas Trazidas à Igreja
                                       </TableCell>
                                       <TableCell className="text-right">
-                                        {activity.pessoasTrazidasIgreja}
+                                        {activity.pessoasTrazidasIgreja ?? 0}
                                       </TableCell>
                                       <TableCell className="text-right">
                                         <Button
                                           variant="ghost"
                                           size="icon"
                                           className="h-8 w-8 text-blue-600"
-                                          onClick={() =>
-                                            handleEditActivity(
-                                              activity,
-                                              "pessoasTrazidasIgreja",
-                                            )
-                                          }
+                                          onClick={() => handleEditActivity(activity, "pessoasTrazidasIgreja")}
                                         >
                                           <Pencil className="h-4 w-4" />
                                         </Button>
                                       </TableCell>
                                     </TableRow>
-                                  )}
-                                </React.Fragment>
-                              );
-                            })}
-                        </TableBody>
-                      </Table>
-                    </div>
+                                  </React.Fragment>
+                                );
+                              })}
+                            </TableBody>
+                          </Table>
+                        </div>
+                      )
+                    )
                   )}
                 </CardContent>
               </Card>
