@@ -231,10 +231,15 @@ const TeacherRecords: React.FC = () => {
   // Usando a função utilitária para corrigir o problema do fuso horário
   // adjustDateToBRT importado de @/lib/date-utils
 
-  // Extrair datas únicas dos registros de presença usando recordDate
-  const uniqueDatesArray = teacherAttendanceRecords.map((record) =>
-    extractDateFromRecord(record.recordDate, record.date)
-  );
+  // Extrair datas únicas por classe
+  // 1. Para os registros de frequência, vamos filtrar apenas datas que pertencem à classe selecionada
+  const uniqueDatesArray = teacherAttendanceRecords
+    .filter(record => {
+      // Incluir apenas registros de frequência da classe selecionada
+      return selectedClassId ? record.classId === selectedClassId : true;
+    })
+    .map((record) => extractDateFromRecord(record.recordDate, record.date));
+    
   const uniqueDatesSet = new Set(uniqueDatesArray);
   const uniqueDates = Array.from(uniqueDatesSet).sort().reverse(); // Mais recentes primeiro
 
@@ -256,21 +261,23 @@ const TeacherRecords: React.FC = () => {
     },
   );
 
-  // Extrair datas únicas das atividades usando recordDate ao invés de date
-  const uniqueActivityDatesArray = teacherMissionaryActivities.map((activity) => {
-    // Usar a função auxiliar para extrair a data do recordDate de forma segura
-    return extractDateFromRecord(activity.recordDate, activity.date);
-  });
+  // 2. Para as atividades missionárias, vamos filtrar apenas datas que pertencem à classe selecionada
+  const uniqueActivityDatesArray = teacherMissionaryActivities
+    .filter(activity => {
+      // Incluir apenas atividades da classe selecionada
+      return selectedClassId ? activity.classId === selectedClassId : true;
+    })
+    .map((activity) => extractDateFromRecord(activity.recordDate, activity.date));
+    
   const uniqueActivityDatesSet = new Set(uniqueActivityDatesArray);
   const uniqueActivityDates = Array.from(uniqueActivityDatesSet)
     .sort()
     .reverse(); // Mais recentes primeiro
 
   // Combinar todas as datas únicas para o dropdown
-  // Mas apenas para a classe selecionada (se houver uma)
   const todayDate = getCurrentDateBRT();
   
-  // Mostrar apenas datas da classe selecionada (já foram filtradas no teacherAttendanceRecords e teacherMissionaryActivities)
+  // Unir as datas filtradas de frequência e atividades
   const allUniqueDatesArray = [...uniqueDatesArray, ...uniqueActivityDatesArray];
   
   // Remover duplicatas e ordenar (mais recentes primeiro)
