@@ -300,63 +300,7 @@ const TeacherRecords: React.FC = () => {
       })
     : [];
   
-  // Função para agrupar atividades por classe
-  const getActivitiesByClass = () => {
-    if (missionaryActivities.length === 0) return [];
-    
-    // Agrupar atividades por classId
-    const groupedByClass: Record<number, {
-      classId: number,
-      className: string,
-      activities: MissionaryActivityWithClass[],
-      summary: {
-        literaturasDistribuidas: number,
-        qtdContatosMissionarios: number,
-        estudosBiblicos: number,
-        ministrados: number,
-        visitasMissionarias: number,
-        pessoasAuxiliadas: number,
-        pessoasTrazidasIgreja: number
-      }
-    }> = {};
-    
-    // Inicializar grupos
-    missionaryActivities.forEach(activity => {
-      if (!groupedByClass[activity.classId]) {
-        groupedByClass[activity.classId] = {
-          classId: activity.classId,
-          className: activity.className,
-          activities: [],
-          summary: {
-            literaturasDistribuidas: 0,
-            qtdContatosMissionarios: 0,
-            estudosBiblicos: 0,
-            ministrados: 0,
-            visitasMissionarias: 0,
-            pessoasAuxiliadas: 0,
-            pessoasTrazidasIgreja: 0
-          }
-        };
-      }
-      
-      groupedByClass[activity.classId].activities.push(activity);
-      
-      // Calcular somatórios
-      const summary = groupedByClass[activity.classId].summary;
-      summary.literaturasDistribuidas += activity.literaturasDistribuidas ?? 0;
-      summary.qtdContatosMissionarios += activity.qtdContatosMissionarios ?? 0;
-      summary.estudosBiblicos += activity.estudosBiblicos ?? 0;
-      summary.ministrados += activity.ministrados ?? 0;
-      summary.visitasMissionarias += activity.visitasMissionarias ?? 0;
-      summary.pessoasAuxiliadas += activity.pessoasAuxiliadas ?? 0;
-      summary.pessoasTrazidasIgreja += activity.pessoasTrazidasIgreja ?? 0;
-    });
-    
-    return Object.values(groupedByClass);
-  };
-  
-  // Obter atividades agrupadas por classe
-  const activitiesByClass = getActivitiesByClass();
+  // Não precisamos mais agrupar atividades por classe/trimestre
 
   // Função para formatar data usando nosso utilitário centralizado
   const formatDate = (dateStr: string) => {
@@ -603,8 +547,8 @@ const TeacherRecords: React.FC = () => {
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  {/* Loading State */}
                   {activitiesLoading || isLoadingClasses ? (
+                    // Loading State
                     <div className="space-y-3">
                       {Array(3)
                         .fill(0)
@@ -619,230 +563,168 @@ const TeacherRecords: React.FC = () => {
                           </div>
                         ))}
                     </div>
-                  ) : (
-                    /* No Activities */
-                    missionaryActivities.length === 0 ? (
-                      <div className="text-center py-10 text-gray-500">
-                        <div className="mb-3 flex justify-center">
-                          <div className="h-12 w-12 rounded-full bg-gray-100 flex items-center justify-center">
-                            <FileText className="h-6 w-6 text-gray-400" />
-                          </div>
+                  ) : missionaryActivities.length === 0 ? (
+                    // No Activities
+                    <div className="text-center py-10 text-gray-500">
+                      <div className="mb-3 flex justify-center">
+                        <div className="h-12 w-12 rounded-full bg-gray-100 flex items-center justify-center">
+                          <FileText className="h-6 w-6 text-gray-400" />
                         </div>
-                        <h3 className="font-medium mb-1">
-                          Nenhum registro encontrado
-                        </h3>
-                        <p className="text-sm">
-                          {uniqueActivityDates.length === 0
-                            ? "Você não tem registros de atividades missionárias" 
-                            : selectedDate 
-                              ? "Não há registros de atividades para a data selecionada"
-                              : selectedTrimester
-                                ? `Não há registros de atividades para o ${selectedTrimester}º trimestre`
-                                : "Selecione uma data ou trimestre para visualizar registros"
-                          }
-                        </p>
                       </div>
-                    ) : (
-                      /* Selected Trimester View - Using Accordion */
-                      selectedTrimester ? (
-                        <div className="space-y-6">
-                          <Accordion type="single" collapsible className="w-full">
-                            {activitiesByClass.map((classGroup) => (
-                              <AccordionItem key={`class-${classGroup.classId}`} value={`class-${classGroup.classId}`}>
-                                <AccordionTrigger className="hover:bg-muted/50 px-4">
-                                  <div className="flex w-full justify-between items-center">
-                                    <span className="font-semibold">{classGroup.className}</span>
-                                    <span className="text-sm text-muted-foreground ml-2">
-                                      {selectedTrimester}º Trimestre
-                                    </span>
-                                  </div>
-                                </AccordionTrigger>
-                                <AccordionContent>
-                                  <div className="rounded border overflow-hidden mx-4 my-2">
-                                    <Table>
-                                      <TableHeader>
-                                        <TableRow>
-                                          <TableHead>Atividade Missionária</TableHead>
-                                          <TableHead className="text-right">Total no Trimestre</TableHead>
-                                        </TableRow>
-                                      </TableHeader>
-                                      <TableBody>
-                                        <TableRow>
-                                          <TableCell className="font-medium">Literaturas Distribuídas</TableCell>
-                                          <TableCell className="text-right">{classGroup.summary.literaturasDistribuidas}</TableCell>
-                                        </TableRow>
-                                        <TableRow>
-                                          <TableCell className="font-medium">Contatos Missionários</TableCell>
-                                          <TableCell className="text-right">{classGroup.summary.qtdContatosMissionarios}</TableCell>
-                                        </TableRow>
-                                        <TableRow>
-                                          <TableCell className="font-medium">Estudos Bíblicos Ministrados</TableCell>
-                                          <TableCell className="text-right">{classGroup.summary.estudosBiblicos + classGroup.summary.ministrados}</TableCell>
-                                        </TableRow>
-                                        <TableRow>
-                                          <TableCell className="font-medium">Visitas Missionárias</TableCell>
-                                          <TableCell className="text-right">{classGroup.summary.visitasMissionarias}</TableCell>
-                                        </TableRow>
-                                        <TableRow>
-                                          <TableCell className="font-medium">Pessoas Auxiliadas</TableCell>
-                                          <TableCell className="text-right">{classGroup.summary.pessoasAuxiliadas}</TableCell>
-                                        </TableRow>
-                                        <TableRow>
-                                          <TableCell className="font-medium">Pessoas Trazidas à Igreja</TableCell>
-                                          <TableCell className="text-right">{classGroup.summary.pessoasTrazidasIgreja}</TableCell>
-                                        </TableRow>
-                                      </TableBody>
-                                    </Table>
-                                  </div>
-                                </AccordionContent>
-                              </AccordionItem>
-                            ))}
-                          </Accordion>
-                        </div>
-                      ) : (
-                        /* Regular Date View */
-                        <div className="rounded border overflow-hidden">
-                          <Table>
-                            <TableHeader>
-                              <TableRow>
-                                <TableHead>Atividade Missionária</TableHead>
-                                <TableHead className="text-right">Quantidade</TableHead>
-                                <TableHead className="text-right">Ações</TableHead>
-                              </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                              {missionaryActivities.map((activity) => {
-                                // Sempre exibir todas as atividades, mesmo com valor 0 ou null
-                                const activityKey = `activity-${activity.id}`;
-                                return (
-                                  <React.Fragment key={activityKey}>
-                                    {/* Literaturas Distribuídas */}
-                                    <TableRow key={`${activity.id}-literaturas`}>
-                                      <TableCell className="font-medium">
-                                        Literaturas Distribuídas
-                                      </TableCell>
-                                      <TableCell className="text-right">
-                                        {activity.literaturasDistribuidas ?? 0}
-                                      </TableCell>
-                                      <TableCell className="text-right">
-                                        <Button
-                                          variant="ghost"
-                                          size="icon"
-                                          className="h-8 w-8 text-blue-600"
-                                          onClick={() => handleEditActivity(activity, "literaturasDistribuidas")}
-                                        >
-                                          <Pencil className="h-4 w-4" />
-                                        </Button>
-                                      </TableCell>
-                                    </TableRow>
-                                    
-                                    {/* Contatos Missionários */}
-                                    <TableRow key={`${activity.id}-contatos`}>
-                                      <TableCell className="font-medium">
-                                        Contatos Missionários
-                                      </TableCell>
-                                      <TableCell className="text-right">
-                                        {activity.qtdContatosMissionarios ?? 0}
-                                      </TableCell>
-                                      <TableCell className="text-right">
-                                        <Button
-                                          variant="ghost"
-                                          size="icon"
-                                          className="h-8 w-8 text-blue-600"
-                                          onClick={() => handleEditActivity(activity, "qtdContatosMissionarios")}
-                                        >
-                                          <Pencil className="h-4 w-4" />
-                                        </Button>
-                                      </TableCell>
-                                    </TableRow>
-                                    
-                                    {/* Estudos Bíblicos */}
-                                    <TableRow key={`${activity.id}-estudos`}>
-                                      <TableCell className="font-medium">
-                                        Estudos Bíblicos Ministrados
-                                      </TableCell>
-                                      <TableCell className="text-right">
-                                        {(activity.estudosBiblicos ?? 0) + (activity.ministrados ?? 0)}
-                                      </TableCell>
-                                      <TableCell className="text-right">
-                                        <Button
-                                          variant="ghost"
-                                          size="icon"
-                                          className="h-8 w-8 text-blue-600"
-                                          onClick={() => handleEditActivity(activity, "estudosBiblicos")}
-                                        >
-                                          <Pencil className="h-4 w-4" />
-                                        </Button>
-                                      </TableCell>
-                                    </TableRow>
-                                    
-                                    {/* Visitas Missionárias */}
-                                    <TableRow key={`${activity.id}-visitas`}>
-                                      <TableCell className="font-medium">
-                                        Visitas Missionárias
-                                      </TableCell>
-                                      <TableCell className="text-right">
-                                        {activity.visitasMissionarias ?? 0}
-                                      </TableCell>
-                                      <TableCell className="text-right">
-                                        <Button
-                                          variant="ghost"
-                                          size="icon"
-                                          className="h-8 w-8 text-blue-600"
-                                          onClick={() => handleEditActivity(activity, "visitasMissionarias")}
-                                        >
-                                          <Pencil className="h-4 w-4" />
-                                        </Button>
-                                      </TableCell>
-                                    </TableRow>
-                                    
-                                    {/* Pessoas Auxiliadas */}
-                                    <TableRow key={`${activity.id}-auxiliadas`}>
-                                      <TableCell className="font-medium">
-                                        Pessoas Auxiliadas
-                                      </TableCell>
-                                      <TableCell className="text-right">
-                                        {activity.pessoasAuxiliadas ?? 0}
-                                      </TableCell>
-                                      <TableCell className="text-right">
-                                        <Button
-                                          variant="ghost"
-                                          size="icon"
-                                          className="h-8 w-8 text-blue-600"
-                                          onClick={() => handleEditActivity(activity, "pessoasAuxiliadas")}
-                                        >
-                                          <Pencil className="h-4 w-4" />
-                                        </Button>
-                                      </TableCell>
-                                    </TableRow>
-                                    
-                                    {/* Pessoas Trazidas à Igreja */}
-                                    <TableRow key={`${activity.id}-trazidas`}>
-                                      <TableCell className="font-medium">
-                                        Pessoas Trazidas à Igreja
-                                      </TableCell>
-                                      <TableCell className="text-right">
-                                        {activity.pessoasTrazidasIgreja ?? 0}
-                                      </TableCell>
-                                      <TableCell className="text-right">
-                                        <Button
-                                          variant="ghost"
-                                          size="icon"
-                                          className="h-8 w-8 text-blue-600"
-                                          onClick={() => handleEditActivity(activity, "pessoasTrazidasIgreja")}
-                                        >
-                                          <Pencil className="h-4 w-4" />
-                                        </Button>
-                                      </TableCell>
-                                    </TableRow>
-                                  </React.Fragment>
-                                );
-                              })}
-                            </TableBody>
-                          </Table>
-                        </div>
-                      )
-                    )
+                      <h3 className="font-medium mb-1">
+                        Nenhum registro encontrado
+                      </h3>
+                      <p className="text-sm">
+                        {uniqueActivityDates.length === 0
+                          ? "Você não tem registros de atividades missionárias" 
+                          : selectedDate 
+                            ? "Não há registros de atividades para a data selecionada"
+                            : "Selecione uma data para visualizar registros"
+                        }
+                      </p>
+                    </div>
+                  ) : (
+                    // Activities Table
+                    <div className="rounded border overflow-hidden">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Atividade Missionária</TableHead>
+                            <TableHead className="text-right">Quantidade</TableHead>
+                            <TableHead className="text-right">Ações</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {missionaryActivities.map((activity) => {
+                            // Sempre exibir todas as atividades, mesmo com valor 0 ou null
+                            const activityKey = `activity-${activity.id}`;
+                            return (
+                              <React.Fragment key={activityKey}>
+                                {/* Literaturas Distribuídas */}
+                                <TableRow key={`${activity.id}-literaturas`}>
+                                  <TableCell className="font-medium">
+                                    Literaturas Distribuídas
+                                  </TableCell>
+                                  <TableCell className="text-right">
+                                    {activity.literaturasDistribuidas ?? 0}
+                                  </TableCell>
+                                  <TableCell className="text-right">
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-8 w-8 text-blue-600"
+                                      onClick={() => handleEditActivity(activity, "literaturasDistribuidas")}
+                                    >
+                                      <Pencil className="h-4 w-4" />
+                                    </Button>
+                                  </TableCell>
+                                </TableRow>
+                                
+                                {/* Contatos Missionários */}
+                                <TableRow key={`${activity.id}-contatos`}>
+                                  <TableCell className="font-medium">
+                                    Contatos Missionários
+                                  </TableCell>
+                                  <TableCell className="text-right">
+                                    {activity.qtdContatosMissionarios ?? 0}
+                                  </TableCell>
+                                  <TableCell className="text-right">
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-8 w-8 text-blue-600"
+                                      onClick={() => handleEditActivity(activity, "qtdContatosMissionarios")}
+                                    >
+                                      <Pencil className="h-4 w-4" />
+                                    </Button>
+                                  </TableCell>
+                                </TableRow>
+                                
+                                {/* Estudos Bíblicos */}
+                                <TableRow key={`${activity.id}-estudos`}>
+                                  <TableCell className="font-medium">
+                                    Estudos Bíblicos Ministrados
+                                  </TableCell>
+                                  <TableCell className="text-right">
+                                    {(activity.estudosBiblicos ?? 0) + (activity.ministrados ?? 0)}
+                                  </TableCell>
+                                  <TableCell className="text-right">
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-8 w-8 text-blue-600"
+                                      onClick={() => handleEditActivity(activity, "estudosBiblicos")}
+                                    >
+                                      <Pencil className="h-4 w-4" />
+                                    </Button>
+                                  </TableCell>
+                                </TableRow>
+                                
+                                {/* Visitas Missionárias */}
+                                <TableRow key={`${activity.id}-visitas`}>
+                                  <TableCell className="font-medium">
+                                    Visitas Missionárias
+                                  </TableCell>
+                                  <TableCell className="text-right">
+                                    {activity.visitasMissionarias ?? 0}
+                                  </TableCell>
+                                  <TableCell className="text-right">
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-8 w-8 text-blue-600"
+                                      onClick={() => handleEditActivity(activity, "visitasMissionarias")}
+                                    >
+                                      <Pencil className="h-4 w-4" />
+                                    </Button>
+                                  </TableCell>
+                                </TableRow>
+                                
+                                {/* Pessoas Auxiliadas */}
+                                <TableRow key={`${activity.id}-auxiliadas`}>
+                                  <TableCell className="font-medium">
+                                    Pessoas Auxiliadas
+                                  </TableCell>
+                                  <TableCell className="text-right">
+                                    {activity.pessoasAuxiliadas ?? 0}
+                                  </TableCell>
+                                  <TableCell className="text-right">
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-8 w-8 text-blue-600"
+                                      onClick={() => handleEditActivity(activity, "pessoasAuxiliadas")}
+                                    >
+                                      <Pencil className="h-4 w-4" />
+                                    </Button>
+                                  </TableCell>
+                                </TableRow>
+                                
+                                {/* Pessoas Trazidas à Igreja */}
+                                <TableRow key={`${activity.id}-trazidas`}>
+                                  <TableCell className="font-medium">
+                                    Pessoas Trazidas à Igreja
+                                  </TableCell>
+                                  <TableCell className="text-right">
+                                    {activity.pessoasTrazidasIgreja ?? 0}
+                                  </TableCell>
+                                  <TableCell className="text-right">
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-8 w-8 text-blue-600"
+                                      onClick={() => handleEditActivity(activity, "pessoasTrazidasIgreja")}
+                                    >
+                                      <Pencil className="h-4 w-4" />
+                                    </Button>
+                                  </TableCell>
+                                </TableRow>
+                              </React.Fragment>
+                            );
+                          })}
+                        </TableBody>
+                      </Table>
+                    </div>
                   )}
                 </CardContent>
               </Card>
