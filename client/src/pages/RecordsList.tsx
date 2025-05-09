@@ -25,7 +25,21 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
 import { format, startOfMonth, endOfMonth, parse, subMonths } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Calendar, BarChart3, ClipboardList, ChevronLeft, ChevronRight, Filter, Edit, Pencil } from 'lucide-react';
+import { 
+  Calendar, 
+  CalendarRange,
+  ChartBar,
+  BarChart3, 
+  ClipboardList, 
+  ChevronLeft, 
+  ChevronRight, 
+  Filter, 
+  Edit, 
+  Pencil, 
+  X, 
+  Users2, 
+  Search 
+} from 'lucide-react';
 import { Class, AttendanceRecord, MissionaryActivity, missionaryActivityDefinitions } from '@shared/schema';
 import { Button } from '@/components/ui/button';
 import {
@@ -158,10 +172,10 @@ const RecordsList: React.FC = () => {
     queryKey: ['/api/classes'],
   });
   
-  // Carregar todos os registros de presença
+  // Carregar todos os registros de presença - sempre habilitado para visualização em grid
   const { data: allAttendanceRecords = [], isLoading: isLoadingAllAttendance } = useQuery<AttendanceRecordWithStudent[]>({
     queryKey: ['/api/attendance'],
-    enabled: !!selectedClassId,
+    enabled: true, // Habilitado mesmo sem classe selecionada, para suportar a visualização em grid
   });
   
   // Filtrar registros por classe e período (mês ou trimestre)
@@ -366,6 +380,202 @@ const RecordsList: React.FC = () => {
   
   const getAbsentStudentsCount = (records: AttendanceRecordWithStudent[]) => {
     return records.filter(record => !record.present).length;
+  };
+  
+  // Função para gerar dados da grid de presença por trimestre
+  const getAttendanceGridData = () => {
+    if (!classes || !selectedTrimester || isLoadingAllAttendance) return null;
+    
+    const { start, end } = getTrimesterDateRange(selectedTrimester);
+    
+    // Criamos um mapa para armazenar os totais por classe
+    const classTotals = new Map<number, { 
+      id: number,
+      className: string, 
+      presentCount: number, 
+      absentCount: number,
+      totalCount: number
+    }>();
+    
+    // Inicializamos o mapa com todas as classes
+    classes.forEach(classItem => {
+      classTotals.set(classItem.id, {
+        id: classItem.id,
+        className: classItem.name,
+        presentCount: 0,
+        absentCount: 0,
+        totalCount: 0
+      });
+    });
+    
+    // Processamos todos os registros de presença no período do trimestre
+    allAttendanceRecords.forEach(record => {
+      const recordDate = new Date(record.date);
+      
+      // Verificamos se o registro está dentro do período do trimestre
+      if (recordDate >= start && recordDate <= end) {
+        // Obtenha o ID da classe do registro
+        let classId = record.classId;
+        
+        // Se o registro não tem classId, mas tem className, encontre o ID correspondente
+        if (!classId && record.className && classes) {
+          const matchingClass = classes.find(c => c.name === record.className);
+          if (matchingClass) {
+            classId = matchingClass.id;
+          }
+        }
+        
+        // Se temos um classId válido, atualizamos os totais
+        if (classId && classTotals.has(classId)) {
+          const classSummary = classTotals.get(classId)!;
+          
+          if (record.present) {
+            classSummary.presentCount += 1;
+          } else {
+            classSummary.absentCount += 1;
+          }
+          classSummary.totalCount += 1;
+        }
+      }
+    });
+    
+    // Convertemos o mapa para um array e filtramos classes sem registros
+    const gridData = Array.from(classTotals.values())
+      .filter(summary => summary.totalCount > 0);
+    
+    // Calculamos o total geral para todas as classes
+    const totalSummary = {
+      id: -1,
+      className: 'Total Geral',
+      presentCount: gridData.reduce((sum, item) => sum + item.presentCount, 0),
+      absentCount: gridData.reduce((sum, item) => sum + item.absentCount, 0),
+      totalCount: gridData.reduce((sum, item) => sum + item.totalCount, 0)
+    };
+    
+    return {
+      classes: gridData,
+      totals: totalSummary
+    };
+  };
+  
+  // Obter dados para visualização em grid
+  const attendanceGridData = getAttendanceGridData();
+  
+  // Renderizar a grid de presença por trimestre
+  const renderAttendanceGrid = () => {
+    if (!selectedTrimester || !attendanceGridData) {
+      return (
+        <div className="text-center py-8">
+          <ChartBar className="h-12 w-12 mx-auto mb-4 text-gray-400" />
+          <p className="text-gray-500">Selecione um trimestre para visualizar o resumo por classe</p>
+        </div>
+      );
+    }
+    
+    if (attendanceGridData.classes.length === 0) {
+      return (
+        <div className="text-center py-8">
+          <ChartBar className="h-12 w-12 mx-auto mb-4 text-gray-400" />
+          <p className="text-gray-500">Não há registros de presença para o trimestre selecionado</p>
+        </div>
+      );
+    }
+    
+    return (
+      <div className="space-y-6">
+        <Card>
+          <CardHeader className="pb-2">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center">
+                <CalendarRange className="h-5 w-5 mr-2 text-primary-500" />
+                <CardTitle>Resumo de Presença - {selectedTrimester}º Trimestre {new Date().getFullYear()}</CardTitle>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Classe</TableHead>
+                  <TableHead className="text-center">Presentes</TableHead>
+                  <TableHead className="text-center">Ausentes</TableHead>
+                  <TableHead className="text-center">Total</TableHead>
+                  <TableHead className="text-center">Taxa de Presença</TableHead>
+                  <TableHead></TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {attendanceGridData.classes.map((classData) => {
+                  const presenceRate = classData.totalCount > 0 
+                    ? Math.round((classData.presentCount / classData.totalCount) * 100)
+                    : 0;
+                    
+                  return (
+                    <TableRow key={classData.id}>
+                      <TableCell className="font-medium">{classData.className}</TableCell>
+                      <TableCell className="text-center text-green-600 font-medium">{classData.presentCount}</TableCell>
+                      <TableCell className="text-center text-red-600 font-medium">{classData.absentCount}</TableCell>
+                      <TableCell className="text-center font-medium">{classData.totalCount}</TableCell>
+                      <TableCell className="text-center">
+                        <div className="flex items-center">
+                          <div className="w-full bg-gray-200 rounded-full h-2 mr-2">
+                            <div 
+                              className="bg-primary h-2 rounded-full" 
+                              style={{ width: `${presenceRate}%` }}
+                            />
+                          </div>
+                          <span className="text-sm font-medium">{presenceRate}%</span>
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => setSelectedClassId(classData.id.toString())}
+                        >
+                          <Search className="h-3.5 w-3.5 mr-1" />
+                          <span className="text-xs">Detalhes</span>
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+                
+                {/* Linha com totais gerais */}
+                <TableRow className="bg-muted/50 font-bold">
+                  <TableCell className="font-bold">{attendanceGridData.totals.className}</TableCell>
+                  <TableCell className="text-center text-green-600 font-bold">{attendanceGridData.totals.presentCount}</TableCell>
+                  <TableCell className="text-center text-red-600 font-bold">{attendanceGridData.totals.absentCount}</TableCell>
+                  <TableCell className="text-center font-bold">{attendanceGridData.totals.totalCount}</TableCell>
+                  <TableCell className="text-center">
+                    <div className="flex items-center">
+                      <div className="w-full bg-gray-200 rounded-full h-2.5 mr-2">
+                        <div 
+                          className="bg-primary h-2.5 rounded-full" 
+                          style={{ 
+                            width: `${attendanceGridData.totals.totalCount > 0 
+                              ? Math.round((attendanceGridData.totals.presentCount / attendanceGridData.totals.totalCount) * 100) 
+                              : 0}%` 
+                          }}
+                        />
+                      </div>
+                      <span className="text-sm font-bold">
+                        {attendanceGridData.totals.totalCount > 0 
+                          ? Math.round((attendanceGridData.totals.presentCount / attendanceGridData.totals.totalCount) * 100) 
+                          : 0}%
+                      </span>
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    {/* Célula vazia para manter o alinhamento */}
+                  </TableCell>
+                </TableRow>
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      </div>
+    );
   };
   
   // Render attendance records
