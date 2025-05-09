@@ -723,11 +723,10 @@ const AdminHome = () => {
   
   // Função para gerar dados de presença agrupados por classe para visualização em grid
   const getAttendanceGridData = () => {
-    if (!classes || !selectedTrimester || !attendanceRecords) return null;
+    if (!selectedTrimester || !attendanceRecords) return null;
     
-    // Criamos um mapa para armazenar os totais por classe
-    const classTotals = new Map<number, { 
-      id: number,
+    // Usamos um mapa com nome da classe como chave em vez de ID para evitar problemas de tipo
+    const classTotals = new Map<string, { 
       className: string, 
       presentCount: number, 
       absentCount: number,
@@ -736,12 +735,10 @@ const AdminHome = () => {
     
     // Se temos uma classe específica selecionada, apenas inicializamos ela
     if (selectedClassForReports) {
-      const classId = selectedClassForReports;
-      const classItem = classes.find(c => c.id === classId);
+      const classItem = classes.find(c => c.id === selectedClassForReports);
       
       if (classItem) {
-        classTotals.set(classItem.id, {
-          id: classItem.id,
+        classTotals.set(classItem.name, {
           className: classItem.name,
           presentCount: 0,
           absentCount: 0,
@@ -749,10 +746,9 @@ const AdminHome = () => {
         });
       }
     } else {
-      // Caso contrário, inicializamos todas as classes
+      // Caso contrário, inicializamos todas as classes conhecidas
       classes.forEach(classItem => {
-        classTotals.set(classItem.id, {
-          id: classItem.id,
+        classTotals.set(classItem.name, {
           className: classItem.name,
           presentCount: 0,
           absentCount: 0,
@@ -765,30 +761,28 @@ const AdminHome = () => {
     attendanceRecords
       .filter(record => isDateInTrimester(record.date, selectedTrimester))
       .forEach(record => {
-        // Obtenha o ID da classe do registro
-        let classId: number | undefined;
+        const className = record.className;
         
-        if (record.classId) {
-          classId = record.classId;
+        // Se ainda não temos esta classe no mapa (provavelmente porque ela foi adicionada após inicialização),
+        // criamos uma entrada para ela agora
+        if (!classTotals.has(className)) {
+          classTotals.set(className, {
+            className,
+            presentCount: 0,
+            absentCount: 0,
+            totalCount: 0
+          });
+        }
+        
+        // Atualizamos os totais para esta classe
+        const classSummary = classTotals.get(className)!;
+        
+        if (record.present) {
+          classSummary.presentCount += 1;
         } else {
-          // Tenta encontrar o ID da classe pelo nome
-          const classItem = classes.find(c => c.name === record.className);
-          if (classItem) {
-            classId = classItem.id;
-          }
+          classSummary.absentCount += 1;
         }
-        
-        // Se temos um classId válido, atualizamos os totais
-        if (classId && classTotals.has(classId)) {
-          const classSummary = classTotals.get(classId)!;
-          
-          if (record.present) {
-            classSummary.presentCount += 1;
-          } else {
-            classSummary.absentCount += 1;
-          }
-          classSummary.totalCount += 1;
-        }
+        classSummary.totalCount += 1;
       });
     
     // Convertemos o mapa para um array e filtramos classes sem registros
@@ -797,7 +791,6 @@ const AdminHome = () => {
     
     // Calculamos o total geral para todas as classes
     const totalSummary = {
-      id: -1,
       className: 'Total Geral',
       presentCount: gridData.reduce((sum, item) => sum + item.presentCount, 0),
       absentCount: gridData.reduce((sum, item) => sum + item.absentCount, 0),
@@ -1631,8 +1624,8 @@ const AdminHome = () => {
                                 </TableRow>
                               </TableHeader>
                               <TableBody>
-                                {gridData.classes.map((classData) => (
-                                  <TableRow key={classData.id}>
+                                {gridData.classes.map((classData, index) => (
+                                  <TableRow key={`class-${index}-${classData.className}`}>
                                     <TableCell className="font-medium">{classData.className}</TableCell>
                                     <TableCell className="text-center text-green-600 font-medium">{classData.presentCount}</TableCell>
                                     <TableCell className="text-center text-red-600 font-medium">{classData.absentCount}</TableCell>
