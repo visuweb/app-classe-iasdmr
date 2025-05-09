@@ -720,6 +720,95 @@ const AdminHome = () => {
         return false;
     }
   };
+  
+  // Função para gerar dados de presença agrupados por classe para visualização em grid
+  const getAttendanceGridData = () => {
+    if (!classes || !selectedTrimester || !attendanceRecords) return null;
+    
+    // Criamos um mapa para armazenar os totais por classe
+    const classTotals = new Map<number, { 
+      id: number,
+      className: string, 
+      presentCount: number, 
+      absentCount: number,
+      totalCount: number
+    }>();
+    
+    // Se temos uma classe específica selecionada, apenas inicializamos ela
+    if (selectedClassForReports) {
+      const classId = selectedClassForReports;
+      const classItem = classes.find(c => c.id === classId);
+      
+      if (classItem) {
+        classTotals.set(classItem.id, {
+          id: classItem.id,
+          className: classItem.name,
+          presentCount: 0,
+          absentCount: 0,
+          totalCount: 0
+        });
+      }
+    } else {
+      // Caso contrário, inicializamos todas as classes
+      classes.forEach(classItem => {
+        classTotals.set(classItem.id, {
+          id: classItem.id,
+          className: classItem.name,
+          presentCount: 0,
+          absentCount: 0,
+          totalCount: 0
+        });
+      });
+    }
+    
+    // Processamos todos os registros de presença no período do trimestre
+    attendanceRecords
+      .filter(record => isDateInTrimester(record.date, selectedTrimester))
+      .forEach(record => {
+        // Obtenha o ID da classe do registro
+        let classId: number | undefined;
+        
+        if (record.classId) {
+          classId = record.classId;
+        } else {
+          // Tenta encontrar o ID da classe pelo nome
+          const classItem = classes.find(c => c.name === record.className);
+          if (classItem) {
+            classId = classItem.id;
+          }
+        }
+        
+        // Se temos um classId válido, atualizamos os totais
+        if (classId && classTotals.has(classId)) {
+          const classSummary = classTotals.get(classId)!;
+          
+          if (record.present) {
+            classSummary.presentCount += 1;
+          } else {
+            classSummary.absentCount += 1;
+          }
+          classSummary.totalCount += 1;
+        }
+      });
+    
+    // Convertemos o mapa para um array e filtramos classes sem registros
+    const gridData = Array.from(classTotals.values())
+      .filter(summary => summary.totalCount > 0);
+    
+    // Calculamos o total geral para todas as classes
+    const totalSummary = {
+      id: -1,
+      className: 'Total Geral',
+      presentCount: gridData.reduce((sum, item) => sum + item.presentCount, 0),
+      absentCount: gridData.reduce((sum, item) => sum + item.absentCount, 0),
+      totalCount: gridData.reduce((sum, item) => sum + item.totalCount, 0)
+    };
+    
+    return {
+      classes: gridData,
+      totals: totalSummary
+    };
+  };
 
   // Handle trimester selection for reports
   const handleTrimesterSelection = (trimester: string | null) => {
@@ -1518,7 +1607,51 @@ const AdminHome = () => {
                       <div className="text-center py-4">Carregando registros de frequência...</div>
                     ) : attendanceRecords.length === 0 ? (
                       <div className="text-center py-4">Nenhum registro de frequência encontrado.</div>
+                    ) : selectedTrimester ? (
+                      // Visualização em grid quando um trimestre está selecionado
+                      (() => {
+                        const gridData = getAttendanceGridData();
+                        
+                        if (!gridData || gridData.classes.length === 0) {
+                          return (
+                            <div className="text-center py-4">
+                              Nenhum registro de frequência encontrado para o trimestre selecionado.
+                            </div>
+                          );
+                        }
+                        
+                        return (
+                          <ScrollArea className="h-[400px]">
+                            <Table>
+                              <TableHeader>
+                                <TableRow>
+                                  <TableHead>Classe</TableHead>
+                                  <TableHead className="text-center">Quantidade Presença</TableHead>
+                                  <TableHead className="text-center">Quantidade Ausência</TableHead>
+                                </TableRow>
+                              </TableHeader>
+                              <TableBody>
+                                {gridData.classes.map((classData) => (
+                                  <TableRow key={classData.id}>
+                                    <TableCell className="font-medium">{classData.className}</TableCell>
+                                    <TableCell className="text-center text-green-600 font-medium">{classData.presentCount}</TableCell>
+                                    <TableCell className="text-center text-red-600 font-medium">{classData.absentCount}</TableCell>
+                                  </TableRow>
+                                ))}
+                                
+                                {/* Linha com totais gerais */}
+                                <TableRow className="bg-muted/50 font-bold">
+                                  <TableCell className="font-bold">{gridData.totals.className}</TableCell>
+                                  <TableCell className="text-center text-green-600 font-bold">{gridData.totals.presentCount}</TableCell>
+                                  <TableCell className="text-center text-red-600 font-bold">{gridData.totals.absentCount}</TableCell>
+                                </TableRow>
+                              </TableBody>
+                            </Table>
+                          </ScrollArea>
+                        );
+                      })()
                     ) : (
+                      // Visualização detalhada quando nenhum trimestre está selecionado
                       <ScrollArea className="h-[400px]">
                         <Table>
                           <TableHeader>
@@ -1530,26 +1663,22 @@ const AdminHome = () => {
                             </TableRow>
                           </TableHeader>
                           <TableBody>
-                            {attendanceRecords
-                              .filter(record => !selectedTrimester || isDateInTrimester(record.date, selectedTrimester))
-                              .map((record) => {                                
-                              return (
-                                <TableRow key={record.id}>
-                                  <TableCell>{formatBrazilianDate(record.date)}</TableCell>
-                                  <TableCell>{record.studentName}</TableCell>
-                                  <TableCell>
-                                    {record.className || 'N/A'}
-                                  </TableCell>
-                                  <TableCell>
-                                    {record.present ? (
-                                      <span className="text-green-600 font-medium">Presente</span>
-                                    ) : (
-                                      <span className="text-red-600 font-medium">Ausente</span>
-                                    )}
-                                  </TableCell>
-                                </TableRow>
-                              );
-                            })}
+                            {attendanceRecords.map((record) => (
+                              <TableRow key={record.id}>
+                                <TableCell>{formatBrazilianDate(record.date)}</TableCell>
+                                <TableCell>{record.studentName}</TableCell>
+                                <TableCell>
+                                  {record.className || 'N/A'}
+                                </TableCell>
+                                <TableCell>
+                                  {record.present ? (
+                                    <span className="text-green-600 font-medium">Presente</span>
+                                  ) : (
+                                    <span className="text-red-600 font-medium">Ausente</span>
+                                  )}
+                                </TableCell>
+                              </TableRow>
+                            ))}
                           </TableBody>
                         </Table>
                       </ScrollArea>
