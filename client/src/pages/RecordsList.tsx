@@ -23,6 +23,13 @@ import {
 } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
+import { Badge } from "@/components/ui/badge";
 import { format, startOfMonth, endOfMonth, parse, subMonths, addMonths, isWithinInterval, getYear, setMonth, setDate } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { 
