@@ -154,7 +154,10 @@ const AdminHome = () => {
   // Extrair datas únicas quando os dados de frequência mudarem
   useEffect(() => {
     if (attendanceRecords && attendanceRecords.length > 0) {
-      const uniqueDates = [...new Set(attendanceRecords.map((record) => record.date))].sort().reverse();
+      // Criar um conjunto de datas únicas e convertê-lo em array
+      const dateSet = new Set<string>();
+      attendanceRecords.forEach(record => dateSet.add(record.date));
+      const uniqueDates = Array.from(dateSet).sort().reverse();
       setAvailableDates(uniqueDates);
     }
   }, [attendanceRecords]);
@@ -193,11 +196,17 @@ const AdminHome = () => {
   // Atualizamos as datas disponíveis a partir das atividades missionárias
   useEffect(() => {
     if (missionaryActivities && missionaryActivities.length > 0) {
-      // Extrair datas únicas das atividades missionárias
-      const missionaryDates = [...new Set(missionaryActivities.map((activity) => activity.date))];
+      // Extrair datas únicas das atividades missionárias usando array e filtro
+      const missionaryDates = missionaryActivities
+        .map(activity => activity.date)
+        .filter((date, index, self) => self.indexOf(date) === index);
       
-      // Combinar com datas já extraídas dos registros de frequência
-      const allDates = [...new Set([...availableDates, ...missionaryDates])].sort().reverse();
+      // Combinar com datas já extraídas dos registros de frequência usando arrays 
+      // Combinar os arrays e remover duplicatas
+      const allDates = [...availableDates, ...missionaryDates]
+        .filter((date, index, self) => self.indexOf(date) === index)
+        .sort()
+        .reverse();
       setAvailableDates(allDates);
     }
   }, [missionaryActivities, availableDates]);
