@@ -363,17 +363,10 @@ const TeacherRecords: React.FC = () => {
     return formatBrazilianDate(dateStr, "dd/MM/yyyy");
   };
 
-  // Formatar data selecionada para exibição usando nosso utilitário que ajusta para o fuso horário
+  // Formatar data selecionada para exibição
   const formattedSelectedDate = selectedDate
     ? formatBrazilianDateExtended(selectedDate)
-    : selectedTrimester
-    ? `${selectedTrimester}º Trimestre (${
-        selectedTrimester === "1" ? "Janeiro-Março" :
-        selectedTrimester === "2" ? "Abril-Junho" :
-        selectedTrimester === "3" ? "Julho-Setembro" :
-        "Outubro-Dezembro"
-      })`
-    : "Selecione uma data ou trimestre";
+    : "Selecione uma data";
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-50">
@@ -393,7 +386,7 @@ const TeacherRecords: React.FC = () => {
               className={`${isMobile ? "text-xl" : "text-2xl"} font-bold flex items-center`}
             >
               <FileText className="h-6 w-6 mr-2 text-primary-500" />
-              Registros
+              Registros {selectedClass && ` → ${selectedClass.name}`}
             </h1>
             <div className="text-sm text-gray-500">
               Visualize os registros de presença e atividades
@@ -401,16 +394,15 @@ const TeacherRecords: React.FC = () => {
           </div>
         </div>
 
-        {/* Filtros por Data e Trimestre */}
-        <div className="flex flex-col md:flex-row justify-between items-start gap-4 mb-6">
-          {/* Filtro por Data */}
+        {/* Filtro por Data */}
+        <div className="flex justify-between items-start gap-4 mb-6">
           <div className="flex items-center">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
                   variant="outline"
                   className="min-w-[220px] flex justify-between items-center text-left"
-                  disabled={allUniqueDates.length === 0 || selectedTrimester !== null}
+                  disabled={allUniqueDates.length === 0}
                 >
                   <div className="flex items-center truncate">
                     <Calendar className="h-4 w-4 mr-2 flex-shrink-0" />
@@ -435,11 +427,7 @@ const TeacherRecords: React.FC = () => {
                   allUniqueDates.map((date) => (
                     <DropdownMenuItem
                       key={date}
-                      onClick={() => {
-                        setSelectedDate(date);
-                        // Limpar o filtro de trimestre quando selecionar uma data específica
-                        setSelectedTrimester(null);
-                      }}
+                      onClick={() => setSelectedDate(date)}
                       className="flex justify-between items-center"
                     >
                       {formatBrazilianDate(date)}
@@ -453,56 +441,26 @@ const TeacherRecords: React.FC = () => {
             </DropdownMenu>
           </div>
           
-          {/* Filtro por Trimestre */}
-          <div className="flex flex-col">
-            <label htmlFor="trimesterFilter" className="text-sm font-medium mb-1">
-              Filtrar por Trimestre
-            </label>
-            <select
-              id="trimesterFilter"
-              className="w-full min-w-[250px] p-2 border rounded"
-              value={selectedTrimester || ''}
-              disabled={selectedDate !== null}
-              onChange={(e) => {
-                const value = e.target.value || null;
-                setSelectedTrimester(value);
-                // Limpar o filtro de data quando selecionar um trimestre
-                if (value) {
-                  setSelectedDate(null);
-                }
-              }}
-            >
-              <option value="">Todos os Trimestres</option>
-              <option value="1">1º Trimestre (Janeiro - Março)</option>
-              <option value="2">2º Trimestre (Abril - Junho)</option>
-              <option value="3">3º Trimestre (Julho - Setembro)</option>
-              <option value="4">4º Trimestre (Outubro - Dezembro)</option>
-            </select>
-          </div>
-          
-          {/* Botão para limpar filtros */}
-          <div className="flex items-end">
+          {allUniqueDates.length > 0 && selectedDate && (
             <Button 
               variant="outline" 
-              className="px-4"
-              onClick={() => {
-                setSelectedDate(null);
-                setSelectedTrimester(null);
-              }}
+              size="sm"
+              className="px-3"
+              onClick={() => setSelectedDate(null)}
             >
-              Limpar Filtros
+              <X className="h-3.5 w-3.5 mr-1.5" />
+              Limpar filtro
             </Button>
-          </div>
+          )}
         </div>
 
         {/* Conteúdo principal */}
         <div className="max-w-5xl mx-auto">
-          <Tabs defaultValue={selectedTrimester ? "activities" : "attendance"}>
+          <Tabs defaultValue="attendance">
             <TabsList className="mb-4">
               <TabsTrigger 
                 value="attendance" 
                 className="flex items-center"
-                disabled={selectedTrimester !== null}
               >
                 <Users className="h-4 w-4 mr-2" />
                 Frequência
@@ -579,9 +537,7 @@ const TeacherRecords: React.FC = () => {
                           ? "Você não tem registros de frequência"
                           : selectedDate 
                             ? "Não há registros de frequência para a data selecionada"
-                            : selectedTrimester
-                              ? `Não há registros de frequência para o ${selectedTrimester}º trimestre`
-                              : "Selecione uma data ou trimestre para visualizar registros"
+                            : "Selecione uma data para visualizar registros"
                         }
                       </p>
                     </div>
