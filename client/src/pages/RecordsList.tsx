@@ -232,32 +232,42 @@ const RecordsList: React.FC = () => {
   // Indicador de carregamento para registros combinados
   const isLoadingAttendance = isLoadingAllAttendance;
   
-  // Carregar atividades missionárias
+  // Carregar atividades missionárias - sempre habilitado para exibir todas as classes quando necessário
   const { data: allMissionaryActivities = [], isLoading: isLoadingAllActivities } = useQuery<MissionaryActivityWithClass[]>({
     queryKey: ['/api/missionary-activities'],
-    enabled: !!selectedClassId,
+    enabled: true, // Sempre habilitado para suportar visualizações por trimestre
   });
   
   // Filtrar atividades por classe e período (mês ou trimestre)
-  const missionaryActivities = selectedClassId
-    ? allMissionaryActivities.filter((activity) => {
-        const classId = parseInt(selectedClassId, 10);
-        const activityDate = new Date(activity.date);
-        
-        // Se um trimestre foi selecionado, usamos sua faixa de datas
-        if (selectedTrimester) {
-          const { start, end } = getTrimesterDateRange(selectedTrimester);
-          return activity.classId === classId && 
-                 activityDate >= start && 
-                 activityDate <= end;
-        }
-        
-        // Caso contrário, filtramos pelo mês selecionado
+  const missionaryActivities = allMissionaryActivities.filter((activity) => {
+    const activityDate = new Date(activity.date);
+    
+    // Se tem uma classe selecionada, filtramos por ela
+    if (selectedClassId) {
+      const classId = parseInt(selectedClassId, 10);
+      
+      // Se um trimestre foi selecionado, usamos sua faixa de datas
+      if (selectedTrimester) {
+        const { start, end } = getTrimesterDateRange(selectedTrimester);
         return activity.classId === classId && 
-               activityDate >= startOfSelectedMonth && 
-               activityDate <= endOfSelectedMonth;
-      })
-    : [];
+               activityDate >= start && 
+               activityDate <= end;
+      }
+      
+      // Caso contrário, filtramos pelo mês selecionado
+      return activity.classId === classId && 
+             activityDate >= startOfSelectedMonth && 
+             activityDate <= endOfSelectedMonth;
+    } 
+    // Se não tem classe selecionada mas tem trimestre, filtramos só pela data
+    else if (selectedTrimester) {
+      const { start, end } = getTrimesterDateRange(selectedTrimester);
+      return activityDate >= start && activityDate <= end;
+    }
+    
+    // Se não tem nem classe nem trimestre, filtramos pelo mês selecionado
+    return activityDate >= startOfSelectedMonth && activityDate <= endOfSelectedMonth;
+  });
   
   // Indicador de carregamento para atividades combinadas
   const isLoadingActivities = isLoadingAllActivities;
