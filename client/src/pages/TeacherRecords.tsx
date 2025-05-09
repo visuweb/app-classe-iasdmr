@@ -261,20 +261,30 @@ const TeacherRecords: React.FC = () => {
     }
   }, [allUniqueDates, selectedDate]);
 
-  // Filtrar registros pela data selecionada usando recordDate
+  // Filtrar registros pela data selecionada ou trimestre
   const attendanceRecords = selectedDate
     ? teacherAttendanceRecords.filter((record) => {
         const recordDateStr = extractDateFromRecord(record.recordDate, record.date);
         return recordDateStr === selectedDate;
       })
+    : selectedTrimester
+    ? teacherAttendanceRecords.filter((record) => {
+        const recordDateStr = extractDateFromRecord(record.recordDate, record.date);
+        return isDateInTrimester(recordDateStr, selectedTrimester);
+      })
     : [];
 
-  // Filtrar atividades pela data selecionada usando recordDate ao invés de date
+  // Filtrar atividades pela data selecionada ou trimestre
   const missionaryActivities = selectedDate
     ? teacherMissionaryActivities.filter((activity) => {
         // Usar a função auxiliar para extrair a data do recordDate de forma segura
         const recordDateStr = extractDateFromRecord(activity.recordDate, activity.date);
         return recordDateStr === selectedDate;
+      })
+    : selectedTrimester
+    ? teacherMissionaryActivities.filter((activity) => {
+        const recordDateStr = extractDateFromRecord(activity.recordDate, activity.date);
+        return isDateInTrimester(recordDateStr, selectedTrimester);
       })
     : [];
     
@@ -288,7 +298,14 @@ const TeacherRecords: React.FC = () => {
   // Formatar data selecionada para exibição usando nosso utilitário que ajusta para o fuso horário
   const formattedSelectedDate = selectedDate
     ? formatBrazilianDateExtended(selectedDate)
-    : "Selecione uma data";
+    : selectedTrimester
+    ? `${selectedTrimester}º Trimestre (${
+        selectedTrimester === "1" ? "Janeiro-Março" :
+        selectedTrimester === "2" ? "Abril-Junho" :
+        selectedTrimester === "3" ? "Julho-Setembro" :
+        "Outubro-Dezembro"
+      })`
+    : "Selecione uma data ou trimestre";
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-50">
@@ -316,8 +333,9 @@ const TeacherRecords: React.FC = () => {
           </div>
         </div>
 
-        {/* Filtro por Data */}
-        <div className="flex justify-between items-center mb-6">
+        {/* Filtros por Data e Trimestre */}
+        <div className="flex flex-col md:flex-row justify-between items-start gap-4 mb-6">
+          {/* Filtro por Data */}
           <div className="flex items-center">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -345,7 +363,11 @@ const TeacherRecords: React.FC = () => {
                   allUniqueDates.map((date) => (
                     <DropdownMenuItem
                       key={date}
-                      onClick={() => setSelectedDate(date)}
+                      onClick={() => {
+                        setSelectedDate(date);
+                        // Limpar o filtro de trimestre quando selecionar uma data específica
+                        setSelectedTrimester(null);
+                      }}
                       className="flex justify-between items-center"
                     >
                       {formatBrazilianDate(date)}
@@ -357,6 +379,32 @@ const TeacherRecords: React.FC = () => {
                 )}
               </DropdownMenuContent>
             </DropdownMenu>
+          </div>
+          
+          {/* Filtro por Trimestre */}
+          <div className="flex flex-col">
+            <label htmlFor="trimesterFilter" className="text-sm font-medium mb-1">
+              Filtrar por Trimestre
+            </label>
+            <select
+              id="trimesterFilter"
+              className="w-full min-w-[250px] p-2 border rounded"
+              value={selectedTrimester || ''}
+              onChange={(e) => {
+                const value = e.target.value || null;
+                setSelectedTrimester(value);
+                // Limpar o filtro de data quando selecionar um trimestre
+                if (value) {
+                  setSelectedDate(null);
+                }
+              }}
+            >
+              <option value="">Todos os Trimestres</option>
+              <option value="1">1º Trimestre (Janeiro - Março)</option>
+              <option value="2">2º Trimestre (Abril - Junho)</option>
+              <option value="3">3º Trimestre (Julho - Setembro)</option>
+              <option value="4">4º Trimestre (Outubro - Dezembro)</option>
+            </select>
           </div>
         </div>
 

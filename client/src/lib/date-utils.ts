@@ -2,6 +2,40 @@ import { addDays, format, parse, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
 /**
+ * Verifica se uma data está dentro de um trimestre específico
+ * 
+ * @param dateStr String de data no formato ISO ou 'yyyy-MM-dd'
+ * @param trimester Número do trimestre (1, 2, 3 ou 4)
+ * @returns Boolean indicando se a data está no trimestre especificado
+ */
+export function isDateInTrimester(dateStr: string | null | undefined, trimester: string): boolean {
+  if (!dateStr) return false;
+  
+  try {
+    // Primeiro ajusta para o fuso horário correto
+    const correctedDateStr = adjustDateToBRT(dateStr);
+    const date = parseISO(correctedDateStr);
+    const month = date.getMonth() + 1; // Os meses em JS são 0-indexed
+    
+    switch (trimester) {
+      case "1": // 1º Trimestre (Janeiro-Março)
+        return month >= 1 && month <= 3;
+      case "2": // 2º Trimestre (Abril-Junho)
+        return month >= 4 && month <= 6;
+      case "3": // 3º Trimestre (Julho-Setembro)
+        return month >= 7 && month <= 9;
+      case "4": // 4º Trimestre (Outubro-Dezembro)
+        return month >= 10 && month <= 12;
+      default:
+        return false;
+    }
+  } catch (error) {
+    console.error('Erro ao verificar trimestre:', error);
+    return false;
+  }
+}
+
+/**
  * Função utilitária para processar corretamente datas vindas do banco de dados.
  * Ajusta a data para garantir que ela seja exibida corretamente no fuso horário de Brasília (UTC-3).
  * 
