@@ -327,7 +327,7 @@ const ClassList: React.FC = () => {
                 variant="outline" 
                 size="sm" 
                 className="flex items-center"
-                onClick={() => setLocation('/teacher-records')}
+                onClick={() => setLocation(`/teacher-records/${classObj.id}`)}
               >
                 <FileText className="h-4 w-4 mr-2" />
                 {isMobile ? "Registros" : "Ver Registros"}

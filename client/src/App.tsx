@@ -90,7 +90,7 @@ function Router() {
           <Route path="/" component={UserRoleRedirect} />
           <TeacherProtectedRoute path="/classes" component={ClassList} />
           <TeacherProtectedRoute path="/classes/:id" component={ClassDetails} />
-          <TeacherProtectedRoute path="/teacher-records" component={TeacherRecords} />
+          <TeacherProtectedRoute path="/teacher-records/:classId?" component={TeacherRecords} />
           <AdminProtectedRoute path="/records" component={RecordsList} />
           <TeacherProtectedRoute path="/wizard" component={Wizard} />
           <AdminProtectedRoute path="/admin" component={AdminHome} />

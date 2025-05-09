@@ -270,11 +270,10 @@ const TeacherRecords: React.FC = () => {
   // Mas apenas para a classe selecionada (se houver uma)
   const todayDate = getCurrentDateBRT();
   
-  // As datas devem ser apenas da classe selecionada, se houver uma
-  const allUniqueDatesArray = selectedClassId 
-    ? [...uniqueDatesArray, ...uniqueActivityDatesArray]  // Já estão filtradas por selectedClassId
-    : [...uniqueDatesArray, ...uniqueActivityDatesArray]; // Todas as classes do professor
-    
+  // Mostrar apenas datas da classe selecionada (já foram filtradas no teacherAttendanceRecords e teacherMissionaryActivities)
+  const allUniqueDatesArray = [...uniqueDatesArray, ...uniqueActivityDatesArray];
+  
+  // Remover duplicatas e ordenar (mais recentes primeiro)
   const allUniqueDatesSet = new Set(allUniqueDatesArray);
   const allUniqueDates = Array.from(allUniqueDatesSet).sort().reverse();
   
