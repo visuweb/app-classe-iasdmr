@@ -119,7 +119,7 @@ const AdminHome = () => {
     data: attendanceRecords = [],
     isLoading: attendanceLoading,
   } = useQuery<(AttendanceRecord & { studentName: string, className: string })[]>({
-    queryKey: ['/api/attendance', selectedClassForReports, selectedDateForReports],
+    queryKey: ['/api/attendance', selectedClassForReports, selectedDateForReports, selectedTrimester],
     queryFn: async () => {
       let url = '/api/attendance';
       const params = new URLSearchParams();
@@ -132,21 +132,33 @@ const AdminHome = () => {
         params.append('date', selectedDateForReports);
       }
       
+      // Se tiver um trimestre selecionado, poderia adicionar parâmetros de consulta
+      // para a API filtrar por intervalo de datas, mas isso exigiria mudanças no backend
+      // Por enquanto, o filtro de trimestre é aplicado apenas localmente
+      
       if (params.toString()) {
         url += `?${params.toString()}`;
       }
       
       const res = await apiRequest('GET', url);
       return res.json();
-    },
+    }
   });
+  
+  // Extrair datas únicas quando os dados de frequência mudarem
+  useEffect(() => {
+    if (attendanceRecords && attendanceRecords.length > 0) {
+      const uniqueDates = [...new Set(attendanceRecords.map((record) => record.date))].sort().reverse();
+      setAvailableDates(uniqueDates);
+    }
+  }, [attendanceRecords]);
   
   // Fetch missionary activities
   const {
     data: missionaryActivities = [],
     isLoading: activitiesLoading,
   } = useQuery<(MissionaryActivity & { className: string })[]>({
-    queryKey: ['/api/missionary-activities', selectedClassForReports, selectedDateForReports],
+    queryKey: ['/api/missionary-activities', selectedClassForReports, selectedDateForReports, selectedTrimester],
     queryFn: async () => {
       let url = '/api/missionary-activities';
       const params = new URLSearchParams();
@@ -159,14 +171,30 @@ const AdminHome = () => {
         params.append('date', selectedDateForReports);
       }
       
+      // Se tiver um trimestre selecionado, poderia adicionar parâmetros de consulta
+      // para a API filtrar por intervalo de datas, mas isso exigiria mudanças no backend
+      // Por enquanto, o filtro de trimestre é aplicado apenas localmente
+      
       if (params.toString()) {
         url += `?${params.toString()}`;
       }
       
       const res = await apiRequest('GET', url);
       return res.json();
-    },
+    }
   });
+  
+  // Atualizamos as datas disponíveis a partir das atividades missionárias
+  useEffect(() => {
+    if (missionaryActivities && missionaryActivities.length > 0) {
+      // Extrair datas únicas das atividades missionárias
+      const missionaryDates = [...new Set(missionaryActivities.map((activity) => activity.date))];
+      
+      // Combinar com datas já extraídas dos registros de frequência
+      const allDates = [...new Set([...availableDates, ...missionaryDates])].sort().reverse();
+      setAvailableDates(allDates);
+    }
+  }, [missionaryActivities, availableDates]);
 
   // Fetch classes
   const { 
