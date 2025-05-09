@@ -625,6 +625,32 @@ const AdminHome = () => {
     }
   };
   
+  // Função para verificar se uma data está dentro de um trimestre
+  const isDateInTrimester = (dateStr: string, trimester: string): boolean => {
+    if (!dateStr || !trimester) return false;
+    
+    const date = new Date(dateStr);
+    const month = date.getMonth(); // 0-indexed (0 = Janeiro, 11 = Dezembro)
+    const currentYear = new Date().getFullYear();
+    
+    // Verifica se o ano da data corresponde ao ano atual
+    if (date.getFullYear() !== currentYear) return false;
+    
+    // Verifica se o mês está dentro do trimestre
+    switch (trimester) {
+      case "1": // 1º Trimestre (Jan-Mar)
+        return month >= 0 && month <= 2;
+      case "2": // 2º Trimestre (Abr-Jun)
+        return month >= 3 && month <= 5;
+      case "3": // 3º Trimestre (Jul-Set)
+        return month >= 6 && month <= 8;
+      case "4": // 4º Trimestre (Out-Dez)
+        return month >= 9 && month <= 11;
+      default:
+        return false;
+    }
+  };
+
   // Handle trimester selection for reports
   const handleTrimesterSelection = (trimester: string | null) => {
     setSelectedTrimester(trimester);
@@ -662,11 +688,12 @@ const AdminHome = () => {
       const startDate = format(setDate(setMonth(startOfYear(new Date(currentYear, 0)), startMonth), 1), 'yyyy-MM-dd');
       const endDate = format(endOfMonth(new Date(currentYear, endMonth)), 'yyyy-MM-dd');
       
-      // Aqui você poderia chamar uma API para filtrar por intervalo de datas
-      // Por enquanto, apenas registramos no console o intervalo selecionado
       console.log(`Filtrando por trimestre ${trimester}: ${startDate} até ${endDate}`);
       
-      // Nesse ponto poderia atualizar a query para usar o intervalo de datas
+      // Como não temos filtro de trimestre no backend, invalidamos as queries para forçar a atualização
+      // dos dados. O filtro será aplicado localmente no frontend.
+      queryClient.invalidateQueries({ queryKey: ['/api/attendance'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/missionary-activities'] });
     } else {
       // Se nenhum trimestre foi selecionado, limpa o filtro
       queryClient.invalidateQueries({ queryKey: ['/api/attendance'] });
@@ -1397,14 +1424,22 @@ const AdminHome = () => {
                   {/* Attendance Records Tab */}
                   <TabsContent value="attendance" className="mt-4">
                     <div className="pb-4">
-                      <h3 className="text-lg font-medium">Registros de Frequência ({attendanceRecords.length})</h3>
-                      <p className="text-sm text-muted-foreground">
-                        {selectedClassForReports
-                          ? `Classe: ${classes.find(c => c.id === selectedClassForReports)?.name || ''}`
-                          : 'Todas as Classes'}
-                        {selectedDateForReports && ` | Data: ${formatBrazilianDate(selectedDateForReports)}`}
-                        {selectedTrimester && ` | Trimestre: ${selectedTrimester}º Trimestre`}
-                      </p>
+                      <h3 className="text-lg font-medium">
+                        Registros de Frequência ({
+                          selectedTrimester
+                            ? attendanceRecords.filter(record => isDateInTrimester(record.date, selectedTrimester)).length
+                            : attendanceRecords.length
+                        })
+                      </h3>
+                      <div className="text-sm text-muted-foreground flex flex-wrap gap-2">
+                        <span>
+                          {selectedClassForReports
+                            ? `Classe: ${classes.find(c => c.id === selectedClassForReports)?.name || ''}`
+                            : 'Todas as Classes'}
+                        </span>
+                        {selectedDateForReports && <span>| Data: {formatBrazilianDate(selectedDateForReports)}</span>}
+                        {selectedTrimester && <span>| Trimestre: {selectedTrimester}º Trimestre</span>}
+                      </div>
                     </div>
                     
                     {attendanceLoading ? (
@@ -1423,7 +1458,9 @@ const AdminHome = () => {
                             </TableRow>
                           </TableHeader>
                           <TableBody>
-                            {attendanceRecords.map((record) => {                                
+                            {attendanceRecords
+                              .filter(record => !selectedTrimester || isDateInTrimester(record.date, selectedTrimester))
+                              .map((record) => {                                
                               return (
                                 <TableRow key={record.id}>
                                   <TableCell>{formatBrazilianDate(record.date)}</TableCell>
@@ -1450,14 +1487,22 @@ const AdminHome = () => {
                   {/* Missionary Activities Tab */}
                   <TabsContent value="activities" className="mt-4">
                     <div className="pb-4">
-                      <h3 className="text-lg font-medium">Atividades Missionárias ({missionaryActivities.length})</h3>
-                      <p className="text-sm text-muted-foreground">
-                        {selectedClassForReports
-                          ? `Classe: ${classes.find(c => c.id === selectedClassForReports)?.name || ''}`
-                          : 'Todas as Classes'}
-                        {selectedDateForReports && ` | Data: ${formatBrazilianDate(selectedDateForReports)}`}
-                        {selectedTrimester && ` | Trimestre: ${selectedTrimester}º Trimestre`}
-                      </p>
+                      <h3 className="text-lg font-medium">
+                        Atividades Missionárias ({
+                          selectedTrimester
+                            ? missionaryActivities.filter(activity => isDateInTrimester(activity.date, selectedTrimester)).length
+                            : missionaryActivities.length
+                        })
+                      </h3>
+                      <div className="text-sm text-muted-foreground flex flex-wrap gap-2">
+                        <span>
+                          {selectedClassForReports
+                            ? `Classe: ${classes.find(c => c.id === selectedClassForReports)?.name || ''}`
+                            : 'Todas as Classes'}
+                        </span>
+                        {selectedDateForReports && <span>| Data: {formatBrazilianDate(selectedDateForReports)}</span>}
+                        {selectedTrimester && <span>| Trimestre: {selectedTrimester}º Trimestre</span>}
+                      </div>
                     </div>
                     
                     {activitiesLoading ? (
@@ -1476,7 +1521,9 @@ const AdminHome = () => {
                             </TableRow>
                           </TableHeader>
                           <TableBody>
-                            {missionaryActivities.flatMap((activity) => {
+                            {missionaryActivities
+                              .filter(activity => !selectedTrimester || isDateInTrimester(activity.date, selectedTrimester))
+                              .flatMap((activity) => {
                               const activityEntries = [];
                               
                               if (activity.qtdContatosMissionarios) {

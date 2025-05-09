@@ -68,6 +68,9 @@ const TeacherRecords: React.FC = () => {
 
   // Estado para a data selecionada - inicializado como null (sem data selecionada por padrão)
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  
+  // Estado para o trimestre selecionado
+  const [selectedTrimester, setSelectedTrimester] = useState<string | null>(null);
 
   // Estados para os modais de edição
   const [isEditAttendanceOpen, setIsEditAttendanceOpen] = useState(false);
