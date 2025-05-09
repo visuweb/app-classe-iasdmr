@@ -124,24 +124,16 @@ export function formatBrazilianDateExtended(dateStr: string | null | undefined):
  * @returns String de data no formato 'yyyy-MM-dd'
  */
 export function getCurrentDateBRT(): string {
-  // Abordagem mais robusta usando bibliotecas de fuso horário
-  // Obter a data atual em UTC
+  // Abordagem simplificada para garantir a data atual correta
+  // Pegar a data atual usando new Date() já considerará o fuso horário do navegador
   const now = new Date();
   
-  // Criar uma string de data com o timezone explícito de Brasília (UTC-3)
-  // Primeiro, pegamos ano, mês e dia
-  const year = now.getUTCFullYear();
-  const month = now.getUTCMonth();
-  const day = now.getUTCDate();
+  // Formatar a data no formato yyyy-MM-dd
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0'); // Mês começa em 0
+  const day = String(now.getDate()).padStart(2, '0');
   
-  // Construir uma nova data usando componentes UTC, mas interpretando-os como hora local
-  // (que é o que o banco de dados espera)
-  const brazilDate = new Date(Date.UTC(year, month, day));
-  
-  // Devido ao comportamento do banco de dados PostgreSQL com timezones,
-  // precisamos usar a data UTC diretamente, pois o servidor já vai aplicar
-  // a conversão ao armazenar. Isso evita o problema de dupla conversão.
-  return format(brazilDate, 'yyyy-MM-dd');
+  return `${year}-${month}-${day}`;
 }
 
 /**
