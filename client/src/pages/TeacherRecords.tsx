@@ -212,7 +212,7 @@ const TeacherRecords: React.FC = () => {
       queryKey: ["/api/attendance", selectedClassId ? { classId: selectedClassId } : null],
       queryFn: async ({ queryKey }) => {
         const [endpoint, params] = queryKey;
-        if (params && 'classId' in params) {
+        if (params && params !== null && typeof params === 'object' && 'classId' in params) {
           const response = await apiRequest('GET', `${endpoint}?classId=${params.classId}`);
           return response.json();
         }
@@ -259,7 +259,7 @@ const TeacherRecords: React.FC = () => {
       queryKey: ["/api/missionary-activities", selectedClassId ? { classId: selectedClassId } : null],
       queryFn: async ({ queryKey }) => {
         const [endpoint, params] = queryKey;
-        if (params && 'classId' in params) {
+        if (params && params !== null && typeof params === 'object' && 'classId' in params) {
           const response = await apiRequest('GET', `${endpoint}?classId=${params.classId}`);
           return response.json();
         }
