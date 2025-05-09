@@ -735,6 +735,7 @@ const TeacherRecords: React.FC = () => {
                             </TableHeader>
                             <TableBody>
                               {missionaryActivities.map((activity) => {
+                                // Sempre exibir todas as atividades, mesmo com valor 0 ou null
                                 const activityKey = `activity-${activity.id}`;
                                 return (
                                   <React.Fragment key={activityKey}>
