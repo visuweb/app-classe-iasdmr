@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { useLocation } from "wouter";
+import { useLocation, useRoute } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { adjustDateToBRT, formatBrazilianDate, formatBrazilianDateExtended, getCurrentDateBRT, extractDateFromRecord, isDateInTrimester } from "@/lib/date-utils";
+import { adjustDateToBRT, formatBrazilianDate, formatBrazilianDateExtended, getCurrentDateBRT, extractDateFromRecord } from "@/lib/date-utils";
 import { AttendanceRecord, MissionaryActivity, Class } from "@shared/schema";
 import {
   Calendar,
@@ -68,6 +68,7 @@ type MissionaryActivityWithClass = MissionaryActivity & { className: string };
 
 const TeacherRecords: React.FC = () => {
   const [, navigate] = useLocation();
+  const [match, params] = useRoute("/teacher-records/:classId?");
   const { teacher } = useAuth();
   const isMobile = useIsMobile();
   const { toast } = useToast();
@@ -75,8 +76,10 @@ const TeacherRecords: React.FC = () => {
   // Estado para a data selecionada - inicializado como null (sem data selecionada por padrão)
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   
-  // Estado para o trimestre selecionado
-  const [selectedTrimester, setSelectedTrimester] = useState<string | null>(null);
+  // Classe selecionada
+  const [selectedClassId, setSelectedClassId] = useState<number | null>(
+    params?.classId ? parseInt(params.classId, 10) : null
+  );
 
   // Estados para os modais de edição
   const [isEditAttendanceOpen, setIsEditAttendanceOpen] = useState(false);
@@ -205,9 +208,17 @@ const TeacherRecords: React.FC = () => {
       queryKey: ["/api/attendance"],
     });
 
-  // Filtrar registros apenas das classes do professor
+  // Encontrar a classe selecionada
+  const selectedClass = teacherClasses.find(cls => cls.id === selectedClassId);
+  
+  // Filtrar registros apenas das classes do professor e apenas da classe selecionada se houver uma
   const teacherAttendanceRecords = allAttendanceRecords.filter((record) => {
     if (record.classId) {
+      // Se temos uma classe selecionada, filtrar apenas para aquela classe
+      if (selectedClassId) {
+        return record.classId === selectedClassId;
+      }
+      // Caso contrário, mostrar todas as classes do professor
       return teacherClassIds.includes(record.classId);
     }
     return true; // Se não tivermos classId, assumimos que o professor tem acesso
@@ -229,9 +240,14 @@ const TeacherRecords: React.FC = () => {
       queryKey: ["/api/missionary-activities"]
     });
 
-  // Filtrar atividades apenas das classes do professor
+  // Filtrar atividades apenas das classes do professor e apenas da classe selecionada se houver uma
   const teacherMissionaryActivities = allMissionaryActivities.filter(
     (activity) => {
+      // Se temos uma classe selecionada, filtrar apenas para aquela classe
+      if (selectedClassId) {
+        return activity.classId === selectedClassId;
+      }
+      // Caso contrário, mostrar todas as classes do professor
       return teacherClassIds.includes(activity.classId);
     },
   );
@@ -257,7 +273,7 @@ const TeacherRecords: React.FC = () => {
   const allUniqueDates = Array.from(allUniqueDatesSet).sort().reverse();
   
   // Log das datas únicas para debug
-  console.log("Datas com registros:", allUniqueDates);
+  console.log("Datas com registros da classe:", allUniqueDates);
   
   // Selecionar a data mais recente como padrão (se houver registros)
   useEffect(() => {
@@ -267,36 +283,26 @@ const TeacherRecords: React.FC = () => {
     }
   }, [allUniqueDates, selectedDate]);
 
-  // Filtrar registros pela data selecionada ou trimestre
+  // Filtrar registros pela data selecionada
   const attendanceRecords = selectedDate
     ? teacherAttendanceRecords.filter((record) => {
         const recordDateStr = extractDateFromRecord(record.recordDate, record.date);
         return recordDateStr === selectedDate;
       })
-    : selectedTrimester
-    ? teacherAttendanceRecords.filter((record) => {
-        const recordDateStr = extractDateFromRecord(record.recordDate, record.date);
-        return isDateInTrimester(recordDateStr, selectedTrimester);
-      })
     : [];
 
-  // Filtrar atividades pela data selecionada ou trimestre
+  // Filtrar atividades pela data selecionada
   const missionaryActivities = selectedDate
     ? teacherMissionaryActivities.filter((activity) => {
         // Usar a função auxiliar para extrair a data do recordDate de forma segura
         const recordDateStr = extractDateFromRecord(activity.recordDate, activity.date);
         return recordDateStr === selectedDate;
       })
-    : selectedTrimester
-    ? teacherMissionaryActivities.filter((activity) => {
-        const recordDateStr = extractDateFromRecord(activity.recordDate, activity.date);
-        return isDateInTrimester(recordDateStr, selectedTrimester);
-      })
     : [];
   
-  // Função para agrupar atividades por classe quando o trimestre está selecionado
+  // Função para agrupar atividades por classe
   const getActivitiesByClass = () => {
-    if (!selectedTrimester || missionaryActivities.length === 0) return [];
+    if (missionaryActivities.length === 0) return [];
     
     // Agrupar atividades por classId
     const groupedByClass: Record<number, {
