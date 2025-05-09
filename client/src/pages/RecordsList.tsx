@@ -61,7 +61,11 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
 
-type AttendanceRecordWithStudent = AttendanceRecord & { studentName: string };
+type AttendanceRecordWithStudent = AttendanceRecord & { 
+  studentName: string; 
+  classId?: number;
+  className?: string;
+};
 type MissionaryActivityWithClass = MissionaryActivity & { className: string };
 
 // Esquema de validação para edição de presença
@@ -85,6 +89,8 @@ const RecordsList: React.FC = () => {
   // Estado para filtro de data
   const [selectedMonth, setSelectedMonth] = useState<Date>(new Date());
   const [datePickerOpen, setDatePickerOpen] = useState(false);
+  // Estado para trimestre selecionado
+  const [selectedTrimester, setSelectedTrimester] = useState<string | null>(null);
   
   // Estados para os modais de edição
   const [attendanceEditDialogOpen, setAttendanceEditDialogOpen] = useState(false);
@@ -94,9 +100,42 @@ const RecordsList: React.FC = () => {
   const [selectedActivityField, setSelectedActivityField] = useState<string>('');
   const [selectedActivityLabel, setSelectedActivityLabel] = useState<string>('');
   
-  // Calcular o início e fim do mês selecionado
+  // Calcular o início e fim do mês selecionado ou do trimestre
   const startOfSelectedMonth = startOfMonth(selectedMonth);
   const endOfSelectedMonth = endOfMonth(selectedMonth);
+  
+  // Função para calcular o intervalo de datas do trimestre
+  const getTrimesterDateRange = (trimester: string) => {
+    const currentYear = new Date().getFullYear();
+    
+    switch (trimester) {
+      case '1':
+        return {
+          start: new Date(currentYear, 0, 1), // 1º de janeiro
+          end: new Date(currentYear, 2, 31) // 31 de março
+        };
+      case '2':
+        return {
+          start: new Date(currentYear, 3, 1), // 1º de abril
+          end: new Date(currentYear, 5, 30) // 30 de junho
+        };
+      case '3':
+        return {
+          start: new Date(currentYear, 6, 1), // 1º de julho
+          end: new Date(currentYear, 8, 30) // 30 de setembro
+        };
+      case '4':
+        return {
+          start: new Date(currentYear, 9, 1), // 1º de outubro
+          end: new Date(currentYear, 11, 31) // 31 de dezembro
+        };
+      default:
+        return {
+          start: startOfSelectedMonth,
+          end: endOfSelectedMonth
+        };
+    }
+  };
   
   // Formatar datas para exibição
   const formattedMonth = format(selectedMonth, 'MMMM yyyy', { locale: ptBR });
@@ -125,17 +164,24 @@ const RecordsList: React.FC = () => {
     enabled: !!selectedClassId,
   });
   
-  // Filtrar registros por classe e mês
+  // Filtrar registros por classe e período (mês ou trimestre)
   const attendanceRecords = selectedClassId
     ? allAttendanceRecords.filter((record) => {
         // Converter para número para comparação
         const studentClassId = parseInt(selectedClassId, 10);
         const recordDate = new Date(record.date);
         
-        // Verificar se o record pertence à classe selecionada
-        // Como o record não tem classId diretamente, precisamos verificar nos estudantes
-        // ou confiar que a API já filtrou corretamente
-        return recordDate >= startOfSelectedMonth && 
+        // Se um trimestre foi selecionado, usamos sua faixa de datas
+        if (selectedTrimester) {
+          const { start, end } = getTrimesterDateRange(selectedTrimester);
+          return record.classId === studentClassId && 
+                 recordDate >= start && 
+                 recordDate <= end;
+        }
+        
+        // Caso contrário, filtramos pelo mês selecionado
+        return record.classId === studentClassId && 
+               recordDate >= startOfSelectedMonth && 
                recordDate <= endOfSelectedMonth;
       })
     : [];
@@ -149,12 +195,21 @@ const RecordsList: React.FC = () => {
     enabled: !!selectedClassId,
   });
   
-  // Filtrar atividades por classe e mês
+  // Filtrar atividades por classe e período (mês ou trimestre)
   const missionaryActivities = selectedClassId
     ? allMissionaryActivities.filter((activity) => {
         const classId = parseInt(selectedClassId, 10);
         const activityDate = new Date(activity.date);
         
+        // Se um trimestre foi selecionado, usamos sua faixa de datas
+        if (selectedTrimester) {
+          const { start, end } = getTrimesterDateRange(selectedTrimester);
+          return activity.classId === classId && 
+                 activityDate >= start && 
+                 activityDate <= end;
+        }
+        
+        // Caso contrário, filtramos pelo mês selecionado
         return activity.classId === classId && 
                activityDate >= startOfSelectedMonth && 
                activityDate <= endOfSelectedMonth;
