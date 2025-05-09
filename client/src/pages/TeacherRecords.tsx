@@ -5,7 +5,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { adjustDateToBRT, formatBrazilianDate, formatBrazilianDateExtended, getCurrentDateBRT, extractDateFromRecord } from "@/lib/date-utils";
+import { adjustDateToBRT, formatBrazilianDate, formatBrazilianDateExtended, getCurrentDateBRT, extractDateFromRecord, isDateInTrimester } from "@/lib/date-utils";
 import { AttendanceRecord, MissionaryActivity, Class } from "@shared/schema";
 import {
   Calendar,
@@ -486,7 +486,12 @@ const TeacherRecords: React.FC = () => {
                       <p className="text-sm">
                         {uniqueDates.length === 0
                           ? "Você não tem registros de frequência"
-                          : "Não há registros de frequência para a data selecionada"}
+                          : selectedDate 
+                            ? "Não há registros de frequência para a data selecionada"
+                            : selectedTrimester
+                              ? `Não há registros de frequência para o ${selectedTrimester}º trimestre`
+                              : "Selecione uma data ou trimestre para visualizar registros"
+                        }
                       </p>
                     </div>
                   ) : (
@@ -580,8 +585,13 @@ const TeacherRecords: React.FC = () => {
                       </h3>
                       <p className="text-sm">
                         {uniqueActivityDates.length === 0
-                          ? "Você não tem registros de atividades missionárias"
-                          : "Não há registros de atividades para a data selecionada"}
+                          ? "Você não tem registros de atividades missionárias" 
+                          : selectedDate 
+                            ? "Não há registros de atividades para a data selecionada"
+                            : selectedTrimester
+                              ? `Não há registros de atividades para o ${selectedTrimester}º trimestre`
+                              : "Selecione uma data ou trimestre para visualizar registros"
+                        }
                       </p>
                     </div>
                   ) : (
