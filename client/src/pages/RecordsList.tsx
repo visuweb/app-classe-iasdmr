@@ -38,7 +38,8 @@ import {
   Pencil, 
   X, 
   Users2, 
-  Search 
+  Search,
+  School
 } from 'lucide-react';
 import { Class, AttendanceRecord, MissionaryActivity, missionaryActivityDefinitions } from '@shared/schema';
 import { Button } from '@/components/ui/button';
@@ -407,16 +408,32 @@ const RecordsList: React.FC = () => {
       totalCount: number
     }>();
     
-    // Inicializamos o mapa com todas as classes
-    classes.forEach(classItem => {
-      classTotals.set(classItem.id, {
-        id: classItem.id,
-        className: classItem.name,
-        presentCount: 0,
-        absentCount: 0,
-        totalCount: 0
+    // Se temos uma classe específica selecionada, apenas inicializamos ela
+    if (selectedClassId) {
+      const classId = parseInt(selectedClassId, 10);
+      const classItem = classes.find(c => c.id === classId);
+      
+      if (classItem) {
+        classTotals.set(classItem.id, {
+          id: classItem.id,
+          className: classItem.name,
+          presentCount: 0,
+          absentCount: 0,
+          totalCount: 0
+        });
+      }
+    } else {
+      // Caso contrário, inicializamos todas as classes
+      classes.forEach(classItem => {
+        classTotals.set(classItem.id, {
+          id: classItem.id,
+          className: classItem.name,
+          presentCount: 0,
+          absentCount: 0,
+          totalCount: 0
+        });
       });
-    });
+    }
     
     // Processamos todos os registros de presença no período do trimestre
     allAttendanceRecords.forEach(record => {
@@ -1076,8 +1093,8 @@ const RecordsList: React.FC = () => {
         </Tabs>
       )}
       
-      {/* Mostrar grid se não houver classe selecionada mas tiver trimestre selecionado */}
-      {!selectedClassId && selectedTrimester && (
+      {/* Mostrar grid quando o filtro de trimestre estiver selecionado (independente da classe) */}
+      {selectedTrimester && (
         <div>
           {renderAttendanceGrid()}
         </div>
