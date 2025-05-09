@@ -1488,11 +1488,7 @@ const AdminHome = () => {
                   <TabsContent value="activities" className="mt-4">
                     <div className="pb-4">
                       <h3 className="text-lg font-medium">
-                        Atividades Missionárias ({
-                          selectedTrimester
-                            ? missionaryActivities.filter(activity => isDateInTrimester(activity.date, selectedTrimester)).length
-                            : missionaryActivities.length
-                        })
+                        Atividades Missionárias
                       </h3>
                       <div className="text-sm text-muted-foreground flex flex-wrap gap-2">
                         <span>
