@@ -53,6 +53,12 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 
 type AttendanceRecordWithStudent = AttendanceRecord & {
   studentName: string;
@@ -675,52 +681,61 @@ const TeacherRecords: React.FC = () => {
                         </p>
                       </div>
                     ) : (
-                      /* Selected Trimester View */
+                      /* Selected Trimester View - Using Accordion */
                       selectedTrimester ? (
                         <div className="space-y-6">
-                          {activitiesByClass.map((classGroup) => (
-                            <div key={`class-${classGroup.classId}`} className="mt-4">
-                              <h3 className="text-lg font-semibold mb-3 text-primary-700 border-b pb-2">
-                                {classGroup.className} ({selectedTrimester}º Trimestre)
-                              </h3>
-                              <div className="rounded border overflow-hidden">
-                                <Table>
-                                  <TableHeader>
-                                    <TableRow>
-                                      <TableHead>Atividade Missionária</TableHead>
-                                      <TableHead className="text-right">Total no Trimestre</TableHead>
-                                    </TableRow>
-                                  </TableHeader>
-                                  <TableBody>
-                                    <TableRow>
-                                      <TableCell className="font-medium">Literaturas Distribuídas</TableCell>
-                                      <TableCell className="text-right">{classGroup.summary.literaturasDistribuidas}</TableCell>
-                                    </TableRow>
-                                    <TableRow>
-                                      <TableCell className="font-medium">Contatos Missionários</TableCell>
-                                      <TableCell className="text-right">{classGroup.summary.qtdContatosMissionarios}</TableCell>
-                                    </TableRow>
-                                    <TableRow>
-                                      <TableCell className="font-medium">Estudos Bíblicos Ministrados</TableCell>
-                                      <TableCell className="text-right">{classGroup.summary.estudosBiblicos + classGroup.summary.ministrados}</TableCell>
-                                    </TableRow>
-                                    <TableRow>
-                                      <TableCell className="font-medium">Visitas Missionárias</TableCell>
-                                      <TableCell className="text-right">{classGroup.summary.visitasMissionarias}</TableCell>
-                                    </TableRow>
-                                    <TableRow>
-                                      <TableCell className="font-medium">Pessoas Auxiliadas</TableCell>
-                                      <TableCell className="text-right">{classGroup.summary.pessoasAuxiliadas}</TableCell>
-                                    </TableRow>
-                                    <TableRow>
-                                      <TableCell className="font-medium">Pessoas Trazidas à Igreja</TableCell>
-                                      <TableCell className="text-right">{classGroup.summary.pessoasTrazidasIgreja}</TableCell>
-                                    </TableRow>
-                                  </TableBody>
-                                </Table>
-                              </div>
-                            </div>
-                          ))}
+                          <Accordion type="single" collapsible className="w-full">
+                            {activitiesByClass.map((classGroup) => (
+                              <AccordionItem key={`class-${classGroup.classId}`} value={`class-${classGroup.classId}`}>
+                                <AccordionTrigger className="hover:bg-muted/50 px-4">
+                                  <div className="flex w-full justify-between items-center">
+                                    <span className="font-semibold">{classGroup.className}</span>
+                                    <span className="text-sm text-muted-foreground ml-2">
+                                      {selectedTrimester}º Trimestre
+                                    </span>
+                                  </div>
+                                </AccordionTrigger>
+                                <AccordionContent>
+                                  <div className="rounded border overflow-hidden mx-4 my-2">
+                                    <Table>
+                                      <TableHeader>
+                                        <TableRow>
+                                          <TableHead>Atividade Missionária</TableHead>
+                                          <TableHead className="text-right">Total no Trimestre</TableHead>
+                                        </TableRow>
+                                      </TableHeader>
+                                      <TableBody>
+                                        <TableRow>
+                                          <TableCell className="font-medium">Literaturas Distribuídas</TableCell>
+                                          <TableCell className="text-right">{classGroup.summary.literaturasDistribuidas}</TableCell>
+                                        </TableRow>
+                                        <TableRow>
+                                          <TableCell className="font-medium">Contatos Missionários</TableCell>
+                                          <TableCell className="text-right">{classGroup.summary.qtdContatosMissionarios}</TableCell>
+                                        </TableRow>
+                                        <TableRow>
+                                          <TableCell className="font-medium">Estudos Bíblicos Ministrados</TableCell>
+                                          <TableCell className="text-right">{classGroup.summary.estudosBiblicos + classGroup.summary.ministrados}</TableCell>
+                                        </TableRow>
+                                        <TableRow>
+                                          <TableCell className="font-medium">Visitas Missionárias</TableCell>
+                                          <TableCell className="text-right">{classGroup.summary.visitasMissionarias}</TableCell>
+                                        </TableRow>
+                                        <TableRow>
+                                          <TableCell className="font-medium">Pessoas Auxiliadas</TableCell>
+                                          <TableCell className="text-right">{classGroup.summary.pessoasAuxiliadas}</TableCell>
+                                        </TableRow>
+                                        <TableRow>
+                                          <TableCell className="font-medium">Pessoas Trazidas à Igreja</TableCell>
+                                          <TableCell className="text-right">{classGroup.summary.pessoasTrazidasIgreja}</TableCell>
+                                        </TableRow>
+                                      </TableBody>
+                                    </Table>
+                                  </div>
+                                </AccordionContent>
+                              </AccordionItem>
+                            ))}
+                          </Accordion>
                         </div>
                       ) : (
                         /* Regular Date View */
