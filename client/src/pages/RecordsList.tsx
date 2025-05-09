@@ -1077,34 +1077,53 @@ const RecordsList: React.FC = () => {
         )}
       </div>
       
-      {selectedClassId && (
-        <Tabs defaultValue="attendance">
-          <TabsList className="grid w-full grid-cols-2 mb-6">
-            <TabsTrigger value="attendance" className="flex items-center">
-              <ClipboardList className="h-4 w-4 mr-2" />
-              Registro de Presença
-            </TabsTrigger>
-            <TabsTrigger value="activities" className="flex items-center">
-              <BarChart3 className="h-4 w-4 mr-2" />
-              Atividades Missionárias
-            </TabsTrigger>
-          </TabsList>
-          
-          <TabsContent value="attendance" className="space-y-4">
-            {renderAttendanceRecords()}
-          </TabsContent>
-          
-          <TabsContent value="activities" className="space-y-4">
-            {renderMissionaryActivities()}
-          </TabsContent>
-        </Tabs>
-      )}
-      
       {/* Mostrar grid quando o filtro de trimestre estiver selecionado (independente da classe) */}
-      {selectedTrimester && (
+      {selectedTrimester ? (
         <div>
-          {renderAttendanceGrid()}
+          <Tabs defaultValue="attendance">
+            <TabsList className="grid w-full grid-cols-2 mb-6">
+              <TabsTrigger value="attendance" className="flex items-center">
+                <ClipboardList className="h-4 w-4 mr-2" />
+                Registro de Presença
+              </TabsTrigger>
+              <TabsTrigger value="activities" className="flex items-center">
+                <BarChart3 className="h-4 w-4 mr-2" />
+                Atividades Missionárias
+              </TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="attendance" className="space-y-4">
+              {renderAttendanceGrid()}
+            </TabsContent>
+            
+            <TabsContent value="activities" className="space-y-4">
+              {renderMissionaryActivities()}
+            </TabsContent>
+          </Tabs>
         </div>
+      ) : (
+        selectedClassId && (
+          <Tabs defaultValue="attendance">
+            <TabsList className="grid w-full grid-cols-2 mb-6">
+              <TabsTrigger value="attendance" className="flex items-center">
+                <ClipboardList className="h-4 w-4 mr-2" />
+                Registro de Presença
+              </TabsTrigger>
+              <TabsTrigger value="activities" className="flex items-center">
+                <BarChart3 className="h-4 w-4 mr-2" />
+                Atividades Missionárias
+              </TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="attendance" className="space-y-4">
+              {renderAttendanceRecords()}
+            </TabsContent>
+            
+            <TabsContent value="activities" className="space-y-4">
+              {renderMissionaryActivities()}
+            </TabsContent>
+          </Tabs>
+        )
       )}
       
       {/* Mensagem quando não há classe ou trimestre selecionado */}
