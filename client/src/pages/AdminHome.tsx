@@ -1522,94 +1522,77 @@ const AdminHome = () => {
                               .flatMap((activity) => {
                               const activityEntries = [];
                               
-                              if (activity.qtdContatosMissionarios) {
-                                activityEntries.push(
-                                  <TableRow key={`${activity.id}-contatos`}>
-                                    <TableCell>{formatBrazilianDate(activity.date)}</TableCell>
-                                    <TableCell>{activity.className}</TableCell>
-                                    <TableCell>Contatos Missionários</TableCell>
-                                    <TableCell>{activity.qtdContatosMissionarios}</TableCell>
-                                  </TableRow>
-                                );
-                              }
+                              // Sempre mostrar contatos missionários, mesmo com valor 0 ou null
+                              activityEntries.push(
+                                <TableRow key={`${activity.id}-contatos`}>
+                                  <TableCell>{formatBrazilianDate(activity.date)}</TableCell>
+                                  <TableCell>{activity.className}</TableCell>
+                                  <TableCell>Contatos Missionários</TableCell>
+                                  <TableCell>{activity.qtdContatosMissionarios ?? 0}</TableCell>
+                                </TableRow>
+                              );
                               
-                              if (activity.literaturasDistribuidas) {
-                                activityEntries.push(
-                                  <TableRow key={`${activity.id}-literaturas`}>
-                                    <TableCell>{formatBrazilianDate(activity.date)}</TableCell>
-                                    <TableCell>{activity.className}</TableCell>
-                                    <TableCell>Literaturas Distribuídas</TableCell>
-                                    <TableCell>{activity.literaturasDistribuidas}</TableCell>
-                                  </TableRow>
-                                );
-                              }
+                              // Sempre mostrar literaturas distribuídas, mesmo com valor 0 ou null
+                              activityEntries.push(
+                                <TableRow key={`${activity.id}-literaturas`}>
+                                  <TableCell>{formatBrazilianDate(activity.date)}</TableCell>
+                                  <TableCell>{activity.className}</TableCell>
+                                  <TableCell>Literaturas Distribuídas</TableCell>
+                                  <TableCell>{activity.literaturasDistribuidas ?? 0}</TableCell>
+                                </TableRow>
+                              );
                               
-                              if (activity.visitasMissionarias) {
-                                activityEntries.push(
-                                  <TableRow key={`${activity.id}-visitas`}>
-                                    <TableCell>{formatBrazilianDate(activity.date)}</TableCell>
-                                    <TableCell>{activity.className}</TableCell>
-                                    <TableCell>Visitas Missionárias</TableCell>
-                                    <TableCell>{activity.visitasMissionarias}</TableCell>
-                                  </TableRow>
-                                );
-                              }
+                              // Sempre mostrar visitas missionárias, mesmo com valor 0 ou null
+                              activityEntries.push(
+                                <TableRow key={`${activity.id}-visitas`}>
+                                  <TableCell>{formatBrazilianDate(activity.date)}</TableCell>
+                                  <TableCell>{activity.className}</TableCell>
+                                  <TableCell>Visitas Missionárias</TableCell>
+                                  <TableCell>{activity.visitasMissionarias ?? 0}</TableCell>
+                                </TableRow>
+                              );
                               
-                              if (activity.estudosBiblicos) {
-                                activityEntries.push(
-                                  <TableRow key={`${activity.id}-estudos`}>
-                                    <TableCell>{formatBrazilianDate(activity.date)}</TableCell>
-                                    <TableCell>{activity.className}</TableCell>
-                                    <TableCell>Estudos Bíblicos</TableCell>
-                                    <TableCell>{activity.estudosBiblicos}</TableCell>
-                                  </TableRow>
-                                );
-                              }
+                              // Sempre mostrar estudos bíblicos, mesmo com valor 0 ou null
+                              activityEntries.push(
+                                <TableRow key={`${activity.id}-estudos`}>
+                                  <TableCell>{formatBrazilianDate(activity.date)}</TableCell>
+                                  <TableCell>{activity.className}</TableCell>
+                                  <TableCell>Estudos Bíblicos</TableCell>
+                                  <TableCell>{activity.estudosBiblicos ?? 0}</TableCell>
+                                </TableRow>
+                              );
                               
-                              if (activity.ministrados) {
-                                activityEntries.push(
-                                  <TableRow key={`${activity.id}-ministrados`}>
-                                    <TableCell>{formatBrazilianDate(activity.date)}</TableCell>
-                                    <TableCell>{activity.className}</TableCell>
-                                    <TableCell>Ministrados</TableCell>
-                                    <TableCell>{activity.ministrados}</TableCell>
-                                  </TableRow>
-                                );
-                              }
+                              // Sempre mostrar ministrados, mesmo com valor 0 ou null
+                              activityEntries.push(
+                                <TableRow key={`${activity.id}-ministrados`}>
+                                  <TableCell>{formatBrazilianDate(activity.date)}</TableCell>
+                                  <TableCell>{activity.className}</TableCell>
+                                  <TableCell>Ministrados</TableCell>
+                                  <TableCell>{activity.ministrados ?? 0}</TableCell>
+                                </TableRow>
+                              );
                               
-                              if (activity.pessoasAuxiliadas) {
-                                activityEntries.push(
-                                  <TableRow key={`${activity.id}-auxiliadas`}>
-                                    <TableCell>{formatBrazilianDate(activity.date)}</TableCell>
-                                    <TableCell>{activity.className}</TableCell>
-                                    <TableCell>Pessoas Auxiliadas</TableCell>
-                                    <TableCell>{activity.pessoasAuxiliadas}</TableCell>
-                                  </TableRow>
-                                );
-                              }
+                              // Sempre mostrar pessoas auxiliadas, mesmo com valor 0 ou null
+                              activityEntries.push(
+                                <TableRow key={`${activity.id}-auxiliadas`}>
+                                  <TableCell>{formatBrazilianDate(activity.date)}</TableCell>
+                                  <TableCell>{activity.className}</TableCell>
+                                  <TableCell>Pessoas Auxiliadas</TableCell>
+                                  <TableCell>{activity.pessoasAuxiliadas ?? 0}</TableCell>
+                                </TableRow>
+                              );
                               
-                              if (activity.pessoasTrazidasIgreja) {
-                                activityEntries.push(
-                                  <TableRow key={`${activity.id}-trazidas`}>
-                                    <TableCell>{formatBrazilianDate(activity.date)}</TableCell>
-                                    <TableCell>{activity.className}</TableCell>
-                                    <TableCell>Pessoas Trazidas à Igreja</TableCell>
-                                    <TableCell>{activity.pessoasTrazidasIgreja}</TableCell>
-                                  </TableRow>
-                                );
-                              }
+                              // Sempre mostrar pessoas trazidas à igreja, mesmo com valor 0 ou null
+                              activityEntries.push(
+                                <TableRow key={`${activity.id}-trazidas`}>
+                                  <TableCell>{formatBrazilianDate(activity.date)}</TableCell>
+                                  <TableCell>{activity.className}</TableCell>
+                                  <TableCell>Pessoas Trazidas à Igreja</TableCell>
+                                  <TableCell>{activity.pessoasTrazidasIgreja ?? 0}</TableCell>
+                                </TableRow>
+                              );
                               
-                              // Se não houver nenhuma atividade específica, mostre uma linha genérica
-                              if (activityEntries.length === 0) {
-                                activityEntries.push(
-                                  <TableRow key={activity.id}>
-                                    <TableCell>{formatBrazilianDate(activity.date)}</TableCell>
-                                    <TableCell>{activity.className}</TableCell>
-                                    <TableCell>Sem atividades registradas</TableCell>
-                                    <TableCell>0</TableCell>
-                                  </TableRow>
-                                );
-                              }
+                              // Não precisamos mais deste bloco, pois sempre mostramos todas as atividades
                               
                               return activityEntries;
                             })}
