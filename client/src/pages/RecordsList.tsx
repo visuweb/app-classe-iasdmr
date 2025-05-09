@@ -23,7 +23,7 @@ import {
 } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
-import { format, startOfMonth, endOfMonth, parse, subMonths } from 'date-fns';
+import { format, startOfMonth, endOfMonth, parse, subMonths, addMonths, isWithinInterval, getYear, setMonth, setDate } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { 
   Calendar, 
@@ -820,7 +820,13 @@ const RecordsList: React.FC = () => {
       <div className="flex flex-col sm:flex-row justify-between mb-6 gap-4">
         <Select 
           value={selectedClassId} 
-          onValueChange={setSelectedClassId}
+          onValueChange={(value) => {
+            setSelectedClassId(value);
+            // Se uma classe específica for selecionada, resetamos o trimestre
+            if (value && selectedTrimester) {
+              setSelectedTrimester(null);
+            }
+          }}
           disabled={isLoadingClasses}
         >
           <SelectTrigger className="w-full sm:w-[300px]">
@@ -830,52 +836,91 @@ const RecordsList: React.FC = () => {
             {isLoadingClasses ? (
               <SelectItem value="loading">Carregando classes...</SelectItem>
             ) : classes && classes.length > 0 ? (
-              classes.map((classObj) => (
-                <SelectItem key={classObj.id} value={classObj.id.toString()}>
-                  {classObj.name}
-                </SelectItem>
-              ))
+              <>
+                <SelectItem value="">Todas as classes</SelectItem>
+                {classes.map((classObj) => (
+                  <SelectItem key={classObj.id} value={classObj.id.toString()}>
+                    {classObj.name}
+                  </SelectItem>
+                ))}
+              </>
             ) : (
               <SelectItem value="empty">Nenhuma classe encontrada</SelectItem>
             )}
           </SelectContent>
         </Select>
         
-        {/* Filtro de data por mês */}
-        <div className="flex items-center">
-          <Button variant="outline" size="sm" onClick={goToPreviousMonth}>
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
-          
-          <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
-            <PopoverTrigger asChild>
-              <Button
-                variant="outline"
-                className="mx-2 min-w-[150px]"
-              >
-                <Calendar className="h-4 w-4 mr-2" />
-                {formattedMonth}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0" align="start">
-              <CalendarComponent
-                mode="single"
-                selected={selectedMonth}
-                onSelect={(date) => {
-                  if (date) {
-                    setSelectedMonth(date);
-                    setDatePickerOpen(false);
-                  }
-                }}
-                initialFocus
-              />
-            </PopoverContent>
-          </Popover>
-          
-          <Button variant="outline" size="sm" onClick={goToNextMonth}>
-            <ChevronRight className="h-4 w-4" />
-          </Button>
-        </div>
+        {/* Filtro por trimestre */}
+        <Select
+          value={selectedTrimester || ""}
+          onValueChange={(value) => {
+            setSelectedTrimester(value || null);
+          }}
+        >
+          <SelectTrigger className="w-full sm:w-[300px]">
+            <SelectValue placeholder="Filtrar por trimestre" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="">Sem filtro de trimestre</SelectItem>
+            <SelectItem value="1">1º Trimestre (Jan-Mar)</SelectItem>
+            <SelectItem value="2">2º Trimestre (Abr-Jun)</SelectItem>
+            <SelectItem value="3">3º Trimestre (Jul-Set)</SelectItem>
+            <SelectItem value="4">4º Trimestre (Out-Dez)</SelectItem>
+          </SelectContent>
+        </Select>
+        
+        {/* Filtro de data por mês - visível quando não há trimestre selecionado */}
+        {!selectedTrimester && (
+          <div className="flex items-center">
+            <Button variant="outline" size="sm" onClick={goToPreviousMonth}>
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            
+            <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className="mx-2 min-w-[150px]"
+                >
+                  <Calendar className="h-4 w-4 mr-2" />
+                  {formattedMonth}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <CalendarComponent
+                  mode="single"
+                  selected={selectedMonth}
+                  onSelect={(date: Date | undefined) => {
+                    if (date) {
+                      setSelectedMonth(date);
+                      setDatePickerOpen(false);
+                    }
+                  }}
+                  initialFocus
+                />
+              </PopoverContent>
+            </Popover>
+            
+            <Button variant="outline" size="sm" onClick={goToNextMonth}>
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+        )}
+        
+        {/* Mostrar trimestre selecionado */}
+        {selectedTrimester && (
+          <div className="flex items-center">
+            <Button 
+              variant="outline" 
+              className="flex items-center"
+              onClick={() => setSelectedTrimester(null)}
+            >
+              <CalendarRange className="h-4 w-4 mr-2" />
+              <span>{`${selectedTrimester}º Trimestre ${new Date().getFullYear()}`}</span>
+              <X className="h-4 w-4 ml-2" />
+            </Button>
+          </div>
+        )}
       </div>
       
       {selectedClassId && (
@@ -901,10 +946,18 @@ const RecordsList: React.FC = () => {
         </Tabs>
       )}
       
-      {!selectedClassId && (
+      {/* Mostrar grid se não houver classe selecionada mas tiver trimestre selecionado */}
+      {!selectedClassId && selectedTrimester && (
+        <div>
+          {renderAttendanceGrid()}
+        </div>
+      )}
+      
+      {/* Mensagem quando não há classe ou trimestre selecionado */}
+      {!selectedClassId && !selectedTrimester && (
         <div className="text-center py-16">
           <ClipboardList className="h-16 w-16 mx-auto mb-4 text-gray-400" />
-          <p className="text-gray-500 text-lg mb-2">Selecione uma classe para visualizar os registros</p>
+          <p className="text-gray-500 text-lg mb-2">Selecione uma classe ou um trimestre para visualizar os registros</p>
           <p className="text-gray-400 text-sm">Os dados serão exibidos após a seleção</p>
         </div>
       )}
