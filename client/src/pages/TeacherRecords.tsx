@@ -76,10 +76,14 @@ const TeacherRecords: React.FC = () => {
   // Estado para a data selecionada - inicializado como null (sem data selecionada por padrão)
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   
-  // Classe selecionada
-  const [selectedClassId, setSelectedClassId] = useState<number | null>(
-    params?.classId ? parseInt(params.classId, 10) : null
-  );
+  // Classe selecionada - garantir que o ID da classe seja um número válido
+  const [selectedClassId, setSelectedClassId] = useState<number | null>(() => {
+    if (params?.classId) {
+      const parsedId = parseInt(params.classId, 10);
+      return isNaN(parsedId) ? null : parsedId;
+    }
+    return null;
+  });
 
   // Estados para os modais de edição
   const [isEditAttendanceOpen, setIsEditAttendanceOpen] = useState(false);
@@ -263,17 +267,23 @@ const TeacherRecords: React.FC = () => {
     .reverse(); // Mais recentes primeiro
 
   // Combinar todas as datas únicas para o dropdown
-  // Usar apenas as datas que realmente têm registros
+  // Mas apenas para a classe selecionada (se houver uma)
   const todayDate = getCurrentDateBRT();
-  const allUniqueDatesArray = [
-    ...uniqueDatesArray,
-    ...uniqueActivityDatesArray,
-  ];
+  
+  // As datas devem ser apenas da classe selecionada, se houver uma
+  const allUniqueDatesArray = selectedClassId 
+    ? [...uniqueDatesArray, ...uniqueActivityDatesArray]  // Já estão filtradas por selectedClassId
+    : [...uniqueDatesArray, ...uniqueActivityDatesArray]; // Todas as classes do professor
+    
   const allUniqueDatesSet = new Set(allUniqueDatesArray);
   const allUniqueDates = Array.from(allUniqueDatesSet).sort().reverse();
   
-  // Log das datas únicas para debug
-  console.log("Datas com registros da classe:", allUniqueDates);
+  // Logs detalhados para debug
+  console.log("selectedClassId:", selectedClassId);
+  console.log("teacherClassIds:", teacherClassIds);
+  console.log("uniqueDatesArray:", uniqueDatesArray);
+  console.log("uniqueActivityDatesArray:", uniqueActivityDatesArray);
+  console.log("allUniqueDates:", allUniqueDates);
   
   // Selecionar a data mais recente como padrão (se houver registros)
   useEffect(() => {
@@ -385,7 +395,8 @@ const TeacherRecords: React.FC = () => {
             </DropdownMenu>
           </div>
           
-          {allUniqueDates.length > 0 && selectedDate && (
+          {/* Botão "Limpar filtro" apenas quando não houver uma classe específica selecionada */}
+          {!selectedClassId && allUniqueDates.length > 0 && selectedDate && (
             <Button 
               variant="outline" 
               size="sm"
