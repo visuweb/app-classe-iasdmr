@@ -50,6 +50,7 @@ import {
 import { Class, insertClassSchema, insertStudentSchema } from '@shared/schema';
 import Header from '@/components/Header';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { getCurrentDateBRT } from '@/lib/date-utils';
 
 // Form schemas with validation
 const classFormSchema = insertClassSchema.extend({
@@ -191,17 +192,21 @@ const ClassList: React.FC = () => {
   // Função para verificar se a classe já tem registro para o dia atual - versão melhorada que verifica a data atual precisamente
   const checkTodayRecords = async (classId: number) => {
     try {
-      console.log(`Verificando registros para classe ${classId} apenas para hoje`);
+      // Obter a data atual no formato yyyy-mm-dd usando nossa função utilitária
+      const todayFormatted = getCurrentDateBRT();
       
-      // Obter a data no formato yyyy-mm-dd para verificação precisa
-      const today = new Date();
-      const todayFormatted = today.toISOString().split('T')[0]; // yyyy-mm-dd
+      console.log(`Verificando registros para classe ${classId} na data ${todayFormatted}`);
       
       // Consultar registros especificamente para a classe e data atual
       const response = await apiRequest(
         'GET', 
         `/api/check-today-records/${classId}?date=${todayFormatted}`
       );
+      
+      if (!response.ok) {
+        throw new Error(`Erro ao verificar registros: ${response.status}`);
+      }
+      
       const data = await response.json();
       
       // Verificar especificamente se há registros para hoje
@@ -211,7 +216,7 @@ const ClassList: React.FC = () => {
       
       return hasRecordsToday;
     } catch (error) {
-      console.error('Erro ao verificar registros recentes:', error);
+      console.error('Erro ao verificar registros:', error);
       return false;
     }
   };
