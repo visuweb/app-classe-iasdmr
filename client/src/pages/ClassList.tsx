@@ -188,25 +188,28 @@ const ClassList: React.FC = () => {
     });
   };
 
-  // Função para verificar se a classe já tem registro para o dia atual - versão robusta com datas recentes
+  // Função para verificar se a classe já tem registro para o dia atual - versão melhorada que verifica a data atual precisamente
   const checkTodayRecords = async (classId: number) => {
     try {
-      console.log(`Verificando registros recentes para classe ${classId}`);
+      console.log(`Verificando registros para classe ${classId} apenas para hoje`);
       
-      // Usar a nova rota que considera tanto hoje quanto ontem (por causa de diferenças de fuso horário)
+      // Obter a data no formato yyyy-mm-dd para verificação precisa
+      const today = new Date();
+      const todayFormatted = today.toISOString().split('T')[0]; // yyyy-mm-dd
+      
+      // Consultar registros especificamente para a classe e data atual
       const response = await apiRequest(
         'GET', 
-        `/api/class-has-recent-records/${classId}`
+        `/api/check-today-records/${classId}?date=${todayFormatted}`
       );
       const data = await response.json();
       
-      if (data.hasRecords) {
-        console.log(`Encontrados registros recentes para classe ${classId}. Datas:`, data.datesFound);
-      } else {
-        console.log(`Nenhum registro recente encontrado para classe ${classId}`);
-      }
+      // Verificar especificamente se há registros para hoje
+      const hasRecordsToday = data.hasRecords || false;
       
-      return data.hasRecords || false;
+      console.log(`Registros para classe ${classId} hoje (${todayFormatted}): ${hasRecordsToday ? 'Sim' : 'Não'}`);
+      
+      return hasRecordsToday;
     } catch (error) {
       console.error('Erro ao verificar registros recentes:', error);
       return false;

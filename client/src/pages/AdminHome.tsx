@@ -1677,23 +1677,13 @@ const AdminHome = () => {
                                 </TableRow>
                               );
                               
-                              // Sempre mostrar estudos bíblicos, mesmo com valor 0 ou null
+                              // Combinar "Estudos Bíblicos" e "Ministrados" em uma única linha
                               activityEntries.push(
-                                <TableRow key={`${activity.id}-estudos`}>
+                                <TableRow key={`${activity.id}-estudos-ministrados`}>
                                   <TableCell>{formatBrazilianDate(activity.date)}</TableCell>
                                   <TableCell>{activity.className}</TableCell>
-                                  <TableCell>Estudos Bíblicos</TableCell>
-                                  <TableCell>{activity.estudosBiblicos ?? 0}</TableCell>
-                                </TableRow>
-                              );
-                              
-                              // Sempre mostrar ministrados, mesmo com valor 0 ou null
-                              activityEntries.push(
-                                <TableRow key={`${activity.id}-ministrados`}>
-                                  <TableCell>{formatBrazilianDate(activity.date)}</TableCell>
-                                  <TableCell>{activity.className}</TableCell>
-                                  <TableCell>Ministrados</TableCell>
-                                  <TableCell>{activity.ministrados ?? 0}</TableCell>
+                                  <TableCell>Estudos Bíblicos Ministrados</TableCell>
+                                  <TableCell>{(activity.estudosBiblicos ?? 0) + (activity.ministrados ?? 0)}</TableCell>
                                 </TableRow>
                               );
                               
