@@ -507,36 +507,18 @@ const RecordsList: React.FC = () => {
               <TableHeader>
                 <TableRow>
                   <TableHead>Classe</TableHead>
-                  <TableHead className="text-center">Presentes</TableHead>
-                  <TableHead className="text-center">Ausentes</TableHead>
-                  <TableHead className="text-center">Total</TableHead>
-                  <TableHead className="text-center">Taxa de Presença</TableHead>
+                  <TableHead className="text-center">Quantidade Presença</TableHead>
+                  <TableHead className="text-center">Quantidade Ausência</TableHead>
                   <TableHead></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {attendanceGridData.classes.map((classData) => {
-                  const presenceRate = classData.totalCount > 0 
-                    ? Math.round((classData.presentCount / classData.totalCount) * 100)
-                    : 0;
-                    
+                {attendanceGridData.classes.map((classData) => {                    
                   return (
                     <TableRow key={classData.id}>
                       <TableCell className="font-medium">{classData.className}</TableCell>
                       <TableCell className="text-center text-green-600 font-medium">{classData.presentCount}</TableCell>
                       <TableCell className="text-center text-red-600 font-medium">{classData.absentCount}</TableCell>
-                      <TableCell className="text-center font-medium">{classData.totalCount}</TableCell>
-                      <TableCell className="text-center">
-                        <div className="flex items-center">
-                          <div className="w-full bg-gray-200 rounded-full h-2 mr-2">
-                            <div 
-                              className="bg-primary h-2 rounded-full" 
-                              style={{ width: `${presenceRate}%` }}
-                            />
-                          </div>
-                          <span className="text-sm font-medium">{presenceRate}%</span>
-                        </div>
-                      </TableCell>
                       <TableCell className="text-right">
                         <Button 
                           variant="outline" 
@@ -556,26 +538,6 @@ const RecordsList: React.FC = () => {
                   <TableCell className="font-bold">{attendanceGridData.totals.className}</TableCell>
                   <TableCell className="text-center text-green-600 font-bold">{attendanceGridData.totals.presentCount}</TableCell>
                   <TableCell className="text-center text-red-600 font-bold">{attendanceGridData.totals.absentCount}</TableCell>
-                  <TableCell className="text-center font-bold">{attendanceGridData.totals.totalCount}</TableCell>
-                  <TableCell className="text-center">
-                    <div className="flex items-center">
-                      <div className="w-full bg-gray-200 rounded-full h-2.5 mr-2">
-                        <div 
-                          className="bg-primary h-2.5 rounded-full" 
-                          style={{ 
-                            width: `${attendanceGridData.totals.totalCount > 0 
-                              ? Math.round((attendanceGridData.totals.presentCount / attendanceGridData.totals.totalCount) * 100) 
-                              : 0}%` 
-                          }}
-                        />
-                      </div>
-                      <span className="text-sm font-bold">
-                        {attendanceGridData.totals.totalCount > 0 
-                          ? Math.round((attendanceGridData.totals.presentCount / attendanceGridData.totals.totalCount) * 100) 
-                          : 0}%
-                      </span>
-                    </div>
-                  </TableCell>
                   <TableCell className="text-right">
                     {/* Célula vazia para manter o alinhamento */}
                   </TableCell>
@@ -698,11 +660,169 @@ const RecordsList: React.FC = () => {
       return (
         <div className="text-center py-8">
           <BarChart3 className="h-12 w-12 mx-auto mb-4 text-gray-400" />
-          <p className="text-gray-500">Não há registros de atividades missionárias para esta classe.</p>
+          <p className="text-gray-500">Não há registros de atividades missionárias para este período.</p>
         </div>
       );
     }
     
+    // Se não tem uma classe específica selecionada, vamos agrupar por classe
+    if (!selectedClassId) {
+      // Agrupar por classe
+      const activitiesByClass = missionaryActivities.reduce((acc, activity) => {
+        const classId = activity.classId;
+        const className = activity.className || classes?.find(c => c.id === classId)?.name || 'Classe sem nome';
+        
+        if (!acc[className]) {
+          acc[className] = [];
+        }
+        
+        acc[className].push(activity);
+        return acc;
+      }, {} as Record<string, MissionaryActivityWithClass[]>);
+      
+      // Renderizar acordeão por classe
+      return (
+        <div className="space-y-4">
+          {Object.entries(activitiesByClass).map(([className, activities]) => (
+            <Accordion type="single" collapsible key={className}>
+              <AccordionItem value="items">
+                <AccordionTrigger className="text-left">
+                  <div className="flex items-center">
+                    <School className="h-4 w-4 mr-2 text-primary-500" />
+                    <span className="font-medium">{className}</span>
+                    <Badge variant="outline" className="ml-2">{activities.length} registro(s)</Badge>
+                  </div>
+                </AccordionTrigger>
+                <AccordionContent>
+                  <div className="space-y-4 pt-2">
+                    {activities.map((activity) => (
+                      <Card key={activity.id} className="mb-4">
+                        <CardHeader className="pb-2">
+                          <div className="flex items-center">
+                            <Calendar className="h-4 w-4 mr-2 text-primary-500" />
+                            <CardTitle className="text-base">{formatDate(activity.date.toString())}</CardTitle>
+                          </div>
+                        </CardHeader>
+                        <CardContent>
+                          <Table>
+                            <TableHeader>
+                              <TableRow>
+                                <TableHead>Atividade</TableHead>
+                                <TableHead className="text-center">Quantidade</TableHead>
+                                <TableHead className="text-right">Ações</TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              <TableRow>
+                                <TableCell>Contatos Missionários</TableCell>
+                                <TableCell className="text-center">{activity.qtdContatosMissionarios}</TableCell>
+                                <TableCell className="text-right">
+                                  <Button 
+                                    variant="ghost" 
+                                    size="sm"
+                                    onClick={() => handleEditMissionaryActivity(activity, 'qtdContatosMissionarios', 'Contatos Missionários')}
+                                    className="h-8 px-2"
+                                  >
+                                    <Pencil className="h-3.5 w-3.5 mr-1" />
+                                    <span className="text-xs">Editar</span>
+                                  </Button>
+                                </TableCell>
+                              </TableRow>
+                              
+                              <TableRow>
+                                <TableCell>Literaturas Distribuídas</TableCell>
+                                <TableCell className="text-center">{activity.literaturasDistribuidas}</TableCell>
+                                <TableCell className="text-right">
+                                  <Button 
+                                    variant="ghost" 
+                                    size="sm"
+                                    onClick={() => handleEditMissionaryActivity(activity, 'literaturasDistribuidas', 'Literaturas Distribuídas')}
+                                    className="h-8 px-2"
+                                  >
+                                    <Pencil className="h-3.5 w-3.5 mr-1" />
+                                    <span className="text-xs">Editar</span>
+                                  </Button>
+                                </TableCell>
+                              </TableRow>
+                              
+                              <TableRow>
+                                <TableCell>Visitas Missionárias</TableCell>
+                                <TableCell className="text-center">{activity.visitasMissionarias}</TableCell>
+                                <TableCell className="text-right">
+                                  <Button 
+                                    variant="ghost" 
+                                    size="sm"
+                                    onClick={() => handleEditMissionaryActivity(activity, 'visitasMissionarias', 'Visitas Missionárias')}
+                                    className="h-8 px-2"
+                                  >
+                                    <Pencil className="h-3.5 w-3.5 mr-1" />
+                                    <span className="text-xs">Editar</span>
+                                  </Button>
+                                </TableCell>
+                              </TableRow>
+                              
+                              <TableRow>
+                                <TableCell>Estudos Bíblicos Ministrados</TableCell>
+                                <TableCell className="text-center">{(activity.estudosBiblicos || 0) + (activity.ministrados || 0)}</TableCell>
+                                <TableCell className="text-right">
+                                  <Button 
+                                    variant="ghost" 
+                                    size="sm"
+                                    onClick={() => handleEditMissionaryActivity(activity, 'estudosBiblicos', 'Estudos Bíblicos Ministrados')}
+                                    className="h-8 px-2"
+                                  >
+                                    <Pencil className="h-3.5 w-3.5 mr-1" />
+                                    <span className="text-xs">Editar</span>
+                                  </Button>
+                                </TableCell>
+                              </TableRow>
+                              
+                              <TableRow>
+                                <TableCell>Pessoas Auxiliadas</TableCell>
+                                <TableCell className="text-center">{activity.pessoasAuxiliadas}</TableCell>
+                                <TableCell className="text-right">
+                                  <Button 
+                                    variant="ghost" 
+                                    size="sm"
+                                    onClick={() => handleEditMissionaryActivity(activity, 'pessoasAuxiliadas', 'Pessoas Auxiliadas')}
+                                    className="h-8 px-2"
+                                  >
+                                    <Pencil className="h-3.5 w-3.5 mr-1" />
+                                    <span className="text-xs">Editar</span>
+                                  </Button>
+                                </TableCell>
+                              </TableRow>
+                              
+                              <TableRow>
+                                <TableCell>Pessoas Trazidas à Igreja</TableCell>
+                                <TableCell className="text-center">{activity.pessoasTrazidasIgreja}</TableCell>
+                                <TableCell className="text-right">
+                                  <Button 
+                                    variant="ghost" 
+                                    size="sm"
+                                    onClick={() => handleEditMissionaryActivity(activity, 'pessoasTrazidasIgreja', 'Pessoas Trazidas à Igreja')}
+                                    className="h-8 px-2"
+                                  >
+                                    <Pencil className="h-3.5 w-3.5 mr-1" />
+                                    <span className="text-xs">Editar</span>
+                                  </Button>
+                                </TableCell>
+                              </TableRow>
+                            </TableBody>
+                          </Table>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                </AccordionContent>
+              </AccordionItem>
+            </Accordion>
+          ))}
+        </div>
+      );
+    }
+    
+    // Caso tenha classe específica selecionada, mostra apenas os registros daquela classe
     return missionaryActivities.map((activity) => (
       <Card key={activity.id} className="mb-4">
         <CardHeader className="pb-2">
