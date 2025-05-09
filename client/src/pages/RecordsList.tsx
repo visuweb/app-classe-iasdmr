@@ -23,23 +23,9 @@ import {
 } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
-import { format, startOfMonth, endOfMonth, parse, subMonths, addMonths, isWithinInterval, getYear, setMonth, setDate } from 'date-fns';
+import { format, startOfMonth, endOfMonth, parse, subMonths } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { 
-  Calendar, 
-  CalendarRange,
-  ChartBar,
-  BarChart3, 
-  ClipboardList, 
-  ChevronLeft, 
-  ChevronRight, 
-  Filter, 
-  Edit, 
-  Pencil, 
-  X, 
-  Users2, 
-  Search 
-} from 'lucide-react';
+import { Calendar, BarChart3, ClipboardList, ChevronLeft, ChevronRight, Filter, Edit, Pencil } from 'lucide-react';
 import { Class, AttendanceRecord, MissionaryActivity, missionaryActivityDefinitions } from '@shared/schema';
 import { Button } from '@/components/ui/button';
 import {
@@ -172,10 +158,10 @@ const RecordsList: React.FC = () => {
     queryKey: ['/api/classes'],
   });
   
-  // Carregar todos os registros de presença - sempre habilitado para visualização em grid
+  // Carregar todos os registros de presença
   const { data: allAttendanceRecords = [], isLoading: isLoadingAllAttendance } = useQuery<AttendanceRecordWithStudent[]>({
     queryKey: ['/api/attendance'],
-    enabled: true, // Habilitado mesmo sem classe selecionada, para suportar a visualização em grid
+    enabled: !!selectedClassId,
   });
   
   // Filtrar registros por classe e período (mês ou trimestre)
@@ -188,44 +174,15 @@ const RecordsList: React.FC = () => {
         // Se um trimestre foi selecionado, usamos sua faixa de datas
         if (selectedTrimester) {
           const { start, end } = getTrimesterDateRange(selectedTrimester);
-          
-          // Verificamos pela data (mesmo quando não filtramos por classe específica)
-          if (recordDate >= start && recordDate <= end) {
-            // Se tiver classe específica selecionada, filtramos por ela também
-            if (studentClassId) {
-              // Primeiro verificamos se record.classId existe
-              if (record.classId) {
-                return record.classId === studentClassId;
-              }
-              
-              // Caso contrário, tentamos obter a classId a partir do studentId
-              // Assumindo que classes estão disponíveis
-              if (classes && classes.length > 0) {
-                const student = record.studentId;
-                const studentClass = classes.find(c => c.id === studentClassId);
-                return !!studentClass;
-              }
-            }
-            
-            // Se não tiver classe específica ou não conseguimos verificar, retornamos true
-            return true;
-          }
-          
-          return false;
+          return record.classId === studentClassId && 
+                 recordDate >= start && 
+                 recordDate <= end;
         }
         
         // Caso contrário, filtramos pelo mês selecionado
-        if (recordDate >= startOfSelectedMonth && recordDate <= endOfSelectedMonth) {
-          // Se tiver classe específica, filtramos
-          if (studentClassId && record.classId) {
-            return record.classId === studentClassId;
-          }
-          
-          // Se não tiver classe específica, retornamos true
-          return !studentClassId;
-        }
-        
-        return false;
+        return record.classId === studentClassId && 
+               recordDate >= startOfSelectedMonth && 
+               recordDate <= endOfSelectedMonth;
       })
     : [];
   
@@ -380,202 +337,6 @@ const RecordsList: React.FC = () => {
   
   const getAbsentStudentsCount = (records: AttendanceRecordWithStudent[]) => {
     return records.filter(record => !record.present).length;
-  };
-  
-  // Função para gerar dados da grid de presença por trimestre
-  const getAttendanceGridData = () => {
-    if (!classes || !selectedTrimester || isLoadingAllAttendance) return null;
-    
-    const { start, end } = getTrimesterDateRange(selectedTrimester);
-    
-    // Criamos um mapa para armazenar os totais por classe
-    const classTotals = new Map<number, { 
-      id: number,
-      className: string, 
-      presentCount: number, 
-      absentCount: number,
-      totalCount: number
-    }>();
-    
-    // Inicializamos o mapa com todas as classes
-    classes.forEach(classItem => {
-      classTotals.set(classItem.id, {
-        id: classItem.id,
-        className: classItem.name,
-        presentCount: 0,
-        absentCount: 0,
-        totalCount: 0
-      });
-    });
-    
-    // Processamos todos os registros de presença no período do trimestre
-    allAttendanceRecords.forEach(record => {
-      const recordDate = new Date(record.date);
-      
-      // Verificamos se o registro está dentro do período do trimestre
-      if (recordDate >= start && recordDate <= end) {
-        // Obtenha o ID da classe do registro
-        let classId = record.classId;
-        
-        // Se o registro não tem classId, mas tem className, encontre o ID correspondente
-        if (!classId && record.className && classes) {
-          const matchingClass = classes.find(c => c.name === record.className);
-          if (matchingClass) {
-            classId = matchingClass.id;
-          }
-        }
-        
-        // Se temos um classId válido, atualizamos os totais
-        if (classId && classTotals.has(classId)) {
-          const classSummary = classTotals.get(classId)!;
-          
-          if (record.present) {
-            classSummary.presentCount += 1;
-          } else {
-            classSummary.absentCount += 1;
-          }
-          classSummary.totalCount += 1;
-        }
-      }
-    });
-    
-    // Convertemos o mapa para um array e filtramos classes sem registros
-    const gridData = Array.from(classTotals.values())
-      .filter(summary => summary.totalCount > 0);
-    
-    // Calculamos o total geral para todas as classes
-    const totalSummary = {
-      id: -1,
-      className: 'Total Geral',
-      presentCount: gridData.reduce((sum, item) => sum + item.presentCount, 0),
-      absentCount: gridData.reduce((sum, item) => sum + item.absentCount, 0),
-      totalCount: gridData.reduce((sum, item) => sum + item.totalCount, 0)
-    };
-    
-    return {
-      classes: gridData,
-      totals: totalSummary
-    };
-  };
-  
-  // Obter dados para visualização em grid
-  const attendanceGridData = getAttendanceGridData();
-  
-  // Renderizar a grid de presença por trimestre
-  const renderAttendanceGrid = () => {
-    if (!selectedTrimester || !attendanceGridData) {
-      return (
-        <div className="text-center py-8">
-          <ChartBar className="h-12 w-12 mx-auto mb-4 text-gray-400" />
-          <p className="text-gray-500">Selecione um trimestre para visualizar o resumo por classe</p>
-        </div>
-      );
-    }
-    
-    if (attendanceGridData.classes.length === 0) {
-      return (
-        <div className="text-center py-8">
-          <ChartBar className="h-12 w-12 mx-auto mb-4 text-gray-400" />
-          <p className="text-gray-500">Não há registros de presença para o trimestre selecionado</p>
-        </div>
-      );
-    }
-    
-    return (
-      <div className="space-y-6">
-        <Card>
-          <CardHeader className="pb-2">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center">
-                <CalendarRange className="h-5 w-5 mr-2 text-primary-500" />
-                <CardTitle>Resumo de Presença - {selectedTrimester}º Trimestre {new Date().getFullYear()}</CardTitle>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Classe</TableHead>
-                  <TableHead className="text-center">Presentes</TableHead>
-                  <TableHead className="text-center">Ausentes</TableHead>
-                  <TableHead className="text-center">Total</TableHead>
-                  <TableHead className="text-center">Taxa de Presença</TableHead>
-                  <TableHead></TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {attendanceGridData.classes.map((classData) => {
-                  const presenceRate = classData.totalCount > 0 
-                    ? Math.round((classData.presentCount / classData.totalCount) * 100)
-                    : 0;
-                    
-                  return (
-                    <TableRow key={classData.id}>
-                      <TableCell className="font-medium">{classData.className}</TableCell>
-                      <TableCell className="text-center text-green-600 font-medium">{classData.presentCount}</TableCell>
-                      <TableCell className="text-center text-red-600 font-medium">{classData.absentCount}</TableCell>
-                      <TableCell className="text-center font-medium">{classData.totalCount}</TableCell>
-                      <TableCell className="text-center">
-                        <div className="flex items-center">
-                          <div className="w-full bg-gray-200 rounded-full h-2 mr-2">
-                            <div 
-                              className="bg-primary h-2 rounded-full" 
-                              style={{ width: `${presenceRate}%` }}
-                            />
-                          </div>
-                          <span className="text-sm font-medium">{presenceRate}%</span>
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          onClick={() => setSelectedClassId(classData.id.toString())}
-                        >
-                          <Search className="h-3.5 w-3.5 mr-1" />
-                          <span className="text-xs">Detalhes</span>
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-                
-                {/* Linha com totais gerais */}
-                <TableRow className="bg-muted/50 font-bold">
-                  <TableCell className="font-bold">{attendanceGridData.totals.className}</TableCell>
-                  <TableCell className="text-center text-green-600 font-bold">{attendanceGridData.totals.presentCount}</TableCell>
-                  <TableCell className="text-center text-red-600 font-bold">{attendanceGridData.totals.absentCount}</TableCell>
-                  <TableCell className="text-center font-bold">{attendanceGridData.totals.totalCount}</TableCell>
-                  <TableCell className="text-center">
-                    <div className="flex items-center">
-                      <div className="w-full bg-gray-200 rounded-full h-2.5 mr-2">
-                        <div 
-                          className="bg-primary h-2.5 rounded-full" 
-                          style={{ 
-                            width: `${attendanceGridData.totals.totalCount > 0 
-                              ? Math.round((attendanceGridData.totals.presentCount / attendanceGridData.totals.totalCount) * 100) 
-                              : 0}%` 
-                          }}
-                        />
-                      </div>
-                      <span className="text-sm font-bold">
-                        {attendanceGridData.totals.totalCount > 0 
-                          ? Math.round((attendanceGridData.totals.presentCount / attendanceGridData.totals.totalCount) * 100) 
-                          : 0}%
-                      </span>
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    {/* Célula vazia para manter o alinhamento */}
-                  </TableCell>
-                </TableRow>
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-      </div>
-    );
   };
   
   // Render attendance records
@@ -820,13 +581,7 @@ const RecordsList: React.FC = () => {
       <div className="flex flex-col sm:flex-row justify-between mb-6 gap-4">
         <Select 
           value={selectedClassId} 
-          onValueChange={(value) => {
-            setSelectedClassId(value);
-            // Se uma classe específica for selecionada, resetamos o trimestre
-            if (value && selectedTrimester) {
-              setSelectedTrimester(null);
-            }
-          }}
+          onValueChange={setSelectedClassId}
           disabled={isLoadingClasses}
         >
           <SelectTrigger className="w-full sm:w-[300px]">
@@ -836,91 +591,52 @@ const RecordsList: React.FC = () => {
             {isLoadingClasses ? (
               <SelectItem value="loading">Carregando classes...</SelectItem>
             ) : classes && classes.length > 0 ? (
-              <>
-                <SelectItem value="">Todas as classes</SelectItem>
-                {classes.map((classObj) => (
-                  <SelectItem key={classObj.id} value={classObj.id.toString()}>
-                    {classObj.name}
-                  </SelectItem>
-                ))}
-              </>
+              classes.map((classObj) => (
+                <SelectItem key={classObj.id} value={classObj.id.toString()}>
+                  {classObj.name}
+                </SelectItem>
+              ))
             ) : (
               <SelectItem value="empty">Nenhuma classe encontrada</SelectItem>
             )}
           </SelectContent>
         </Select>
         
-        {/* Filtro por trimestre */}
-        <Select
-          value={selectedTrimester || ""}
-          onValueChange={(value) => {
-            setSelectedTrimester(value || null);
-          }}
-        >
-          <SelectTrigger className="w-full sm:w-[300px]">
-            <SelectValue placeholder="Filtrar por trimestre" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="">Sem filtro de trimestre</SelectItem>
-            <SelectItem value="1">1º Trimestre (Jan-Mar)</SelectItem>
-            <SelectItem value="2">2º Trimestre (Abr-Jun)</SelectItem>
-            <SelectItem value="3">3º Trimestre (Jul-Set)</SelectItem>
-            <SelectItem value="4">4º Trimestre (Out-Dez)</SelectItem>
-          </SelectContent>
-        </Select>
-        
-        {/* Filtro de data por mês - visível quando não há trimestre selecionado */}
-        {!selectedTrimester && (
-          <div className="flex items-center">
-            <Button variant="outline" size="sm" onClick={goToPreviousMonth}>
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            
-            <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  className="mx-2 min-w-[150px]"
-                >
-                  <Calendar className="h-4 w-4 mr-2" />
-                  {formattedMonth}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <CalendarComponent
-                  mode="single"
-                  selected={selectedMonth}
-                  onSelect={(date: Date | undefined) => {
-                    if (date) {
-                      setSelectedMonth(date);
-                      setDatePickerOpen(false);
-                    }
-                  }}
-                  initialFocus
-                />
-              </PopoverContent>
-            </Popover>
-            
-            <Button variant="outline" size="sm" onClick={goToNextMonth}>
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-          </div>
-        )}
-        
-        {/* Mostrar trimestre selecionado */}
-        {selectedTrimester && (
-          <div className="flex items-center">
-            <Button 
-              variant="outline" 
-              className="flex items-center"
-              onClick={() => setSelectedTrimester(null)}
-            >
-              <CalendarRange className="h-4 w-4 mr-2" />
-              <span>{`${selectedTrimester}º Trimestre ${new Date().getFullYear()}`}</span>
-              <X className="h-4 w-4 ml-2" />
-            </Button>
-          </div>
-        )}
+        {/* Filtro de data por mês */}
+        <div className="flex items-center">
+          <Button variant="outline" size="sm" onClick={goToPreviousMonth}>
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+          
+          <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                className="mx-2 min-w-[150px]"
+              >
+                <Calendar className="h-4 w-4 mr-2" />
+                {formattedMonth}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <CalendarComponent
+                mode="single"
+                selected={selectedMonth}
+                onSelect={(date) => {
+                  if (date) {
+                    setSelectedMonth(date);
+                    setDatePickerOpen(false);
+                  }
+                }}
+                initialFocus
+              />
+            </PopoverContent>
+          </Popover>
+          
+          <Button variant="outline" size="sm" onClick={goToNextMonth}>
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
       
       {selectedClassId && (
@@ -946,18 +662,10 @@ const RecordsList: React.FC = () => {
         </Tabs>
       )}
       
-      {/* Mostrar grid se não houver classe selecionada mas tiver trimestre selecionado */}
-      {!selectedClassId && selectedTrimester && (
-        <div>
-          {renderAttendanceGrid()}
-        </div>
-      )}
-      
-      {/* Mensagem quando não há classe ou trimestre selecionado */}
-      {!selectedClassId && !selectedTrimester && (
+      {!selectedClassId && (
         <div className="text-center py-16">
           <ClipboardList className="h-16 w-16 mx-auto mb-4 text-gray-400" />
-          <p className="text-gray-500 text-lg mb-2">Selecione uma classe ou um trimestre para visualizar os registros</p>
+          <p className="text-gray-500 text-lg mb-2">Selecione uma classe para visualizar os registros</p>
           <p className="text-gray-400 text-sm">Os dados serão exibidos após a seleção</p>
         </div>
       )}
