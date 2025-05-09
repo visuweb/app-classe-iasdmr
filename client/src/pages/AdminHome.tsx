@@ -63,6 +63,12 @@ import { Teacher, Class, Student, AttendanceRecord, MissionaryActivity } from '@
 import { useToast } from '@/hooks/use-toast';
 import { useLocation } from 'wouter';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 
 const AdminHome = () => {
   const { teacher, logoutMutation } = useAuth();
@@ -195,6 +201,61 @@ const AdminHome = () => {
       setAvailableDates(allDates);
     }
   }, [missionaryActivities, availableDates]);
+  
+  // Função para agrupar atividades por classe quando o trimestre está selecionado
+  const getActivitiesByClass = () => {
+    if (!selectedTrimester || missionaryActivities.length === 0) return [];
+    
+    // Filtrar atividades do trimestre
+    const activitiesInTrimester = missionaryActivities.filter(activity => 
+      isDateInTrimester(activity.date, selectedTrimester)
+    );
+    
+    // Agrupar atividades por classId
+    const groupedActivities = new Map();
+    
+    // Percorrer todas as classes disponíveis para garantir que todas apareçam
+    classes.forEach(classItem => {
+      // Inicializar o grupo para esta classe
+      if (!groupedActivities.has(classItem.id)) {
+        groupedActivities.set(classItem.id, {
+          classId: classItem.id,
+          className: classItem.name,
+          activities: [],
+          summary: {
+            literaturasDistribuidas: 0,
+            qtdContatosMissionarios: 0, 
+            estudosBiblicos: 0,
+            ministrados: 0,
+            visitasMissionarias: 0,
+            pessoasAuxiliadas: 0,
+            pessoasTrazidasIgreja: 0
+          }
+        });
+      }
+    });
+    
+    // Adicionar atividades aos grupos
+    activitiesInTrimester.forEach(activity => {
+      const classGroup = groupedActivities.get(activity.classId);
+      if (classGroup) {
+        // Adicionar atividade ao grupo
+        classGroup.activities.push(activity);
+        
+        // Atualizar totais
+        classGroup.summary.literaturasDistribuidas += (activity.literaturasDistribuidas || 0);
+        classGroup.summary.qtdContatosMissionarios += (activity.qtdContatosMissionarios || 0);
+        classGroup.summary.estudosBiblicos += (activity.estudosBiblicos || 0);
+        classGroup.summary.ministrados += (activity.ministrados || 0);
+        classGroup.summary.visitasMissionarias += (activity.visitasMissionarias || 0);
+        classGroup.summary.pessoasAuxiliadas += (activity.pessoasAuxiliadas || 0);
+        classGroup.summary.pessoasTrazidasIgreja += (activity.pessoasTrazidasIgreja || 0);
+      }
+    });
+    
+    // Converter o Map em Array
+    return Array.from(groupedActivities.values());
+  };
 
   // Fetch classes
   const { 
@@ -1355,6 +1416,7 @@ const AdminHome = () => {
                         <Button 
                           variant="outline" 
                           className="w-full justify-between mt-1 bg-white text-left font-normal"
+                          disabled={selectedTrimester !== null}
                         >
                           {selectedDateForReports ? formatBrazilianDate(selectedDateForReports) : "Selecione uma data"}
                           <CalendarIcon className="h-4 w-4 opacity-50" />
@@ -1395,6 +1457,7 @@ const AdminHome = () => {
                       className="w-full p-2 border rounded mt-1"
                       value={selectedTrimester || ''}
                       onChange={(e) => handleTrimesterSelection(e.target.value || null)}
+                      disabled={selectedDateForReports !== null}
                     >
                       <option value="">Todos os Trimestres</option>
                       <option value="1">1º Trimestre (Janeiro - Março)</option>
@@ -1505,7 +1568,61 @@ const AdminHome = () => {
                       <div className="text-center py-4">Carregando registros de atividades...</div>
                     ) : missionaryActivities.length === 0 ? (
                       <div className="text-center py-4">Nenhum registro de atividade missionária encontrado.</div>
+                    ) : selectedTrimester ? (
+                      /* Visualização agrupada por classe com acordeão quando filtrado por trimestre */
+                      <ScrollArea className="h-[400px]">
+                        <Accordion type="single" collapsible className="w-full">
+                          {getActivitiesByClass().map((classGroup) => (
+                            <AccordionItem key={`class-${classGroup.classId}`} value={`class-${classGroup.classId}`}>
+                              <AccordionTrigger className="hover:bg-muted/50 px-4">
+                                <div className="flex w-full justify-between items-center">
+                                  <span className="font-semibold">{classGroup.className}</span>
+                                </div>
+                              </AccordionTrigger>
+                              <AccordionContent>
+                                <div className="rounded border overflow-hidden mx-4 my-2">
+                                  <Table>
+                                    <TableHeader>
+                                      <TableRow>
+                                        <TableHead>Atividade Missionária</TableHead>
+                                        <TableHead className="text-right">Total no Trimestre</TableHead>
+                                      </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                      <TableRow>
+                                        <TableCell className="font-medium">Literaturas Distribuídas</TableCell>
+                                        <TableCell className="text-right">{classGroup.summary.literaturasDistribuidas}</TableCell>
+                                      </TableRow>
+                                      <TableRow>
+                                        <TableCell className="font-medium">Contatos Missionários</TableCell>
+                                        <TableCell className="text-right">{classGroup.summary.qtdContatosMissionarios}</TableCell>
+                                      </TableRow>
+                                      <TableRow>
+                                        <TableCell className="font-medium">Estudos Bíblicos Ministrados</TableCell>
+                                        <TableCell className="text-right">{classGroup.summary.estudosBiblicos + classGroup.summary.ministrados}</TableCell>
+                                      </TableRow>
+                                      <TableRow>
+                                        <TableCell className="font-medium">Visitas Missionárias</TableCell>
+                                        <TableCell className="text-right">{classGroup.summary.visitasMissionarias}</TableCell>
+                                      </TableRow>
+                                      <TableRow>
+                                        <TableCell className="font-medium">Pessoas Auxiliadas</TableCell>
+                                        <TableCell className="text-right">{classGroup.summary.pessoasAuxiliadas}</TableCell>
+                                      </TableRow>
+                                      <TableRow>
+                                        <TableCell className="font-medium">Pessoas Trazidas à Igreja</TableCell>
+                                        <TableCell className="text-right">{classGroup.summary.pessoasTrazidasIgreja}</TableCell>
+                                      </TableRow>
+                                    </TableBody>
+                                  </Table>
+                                </div>
+                              </AccordionContent>
+                            </AccordionItem>
+                          ))}
+                        </Accordion>
+                      </ScrollArea>
                     ) : (
+                      /* Visualização normal quando não filtrado por trimestre */
                       <ScrollArea className="h-[400px]">
                         <Table>
                           <TableHeader>
@@ -1518,7 +1635,6 @@ const AdminHome = () => {
                           </TableHeader>
                           <TableBody>
                             {missionaryActivities
-                              .filter(activity => !selectedTrimester || isDateInTrimester(activity.date, selectedTrimester))
                               .flatMap((activity) => {
                               const activityEntries = [];
                               
@@ -1591,8 +1707,6 @@ const AdminHome = () => {
                                   <TableCell>{activity.pessoasTrazidasIgreja ?? 0}</TableCell>
                                 </TableRow>
                               );
-                              
-                              // Não precisamos mais deste bloco, pois sempre mostramos todas as atividades
                               
                               return activityEntries;
                             })}
