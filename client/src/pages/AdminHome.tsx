@@ -5,7 +5,20 @@ import { queryClient, apiRequest } from '@/lib/queryClient';
 import { Button } from '@/components/ui/button';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { formatBrazilianDate } from '@/lib/date-utils';
-import { LogOut, School, User, Book, BarChart, Plus, UserPlus, Calendar, Filter, Trash2, Check, Pencil, MinusCircle, Search } from 'lucide-react';
+import { startOfYear, setMonth, setDate, endOfMonth, format } from "date-fns";
+import { LogOut, School, User, Book, BarChart, Plus, UserPlus, Calendar, Filter, Trash2, Check, Pencil, MinusCircle, Search, CalendarIcon } from 'lucide-react';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+} from "@/components/ui/command";
 import {
   Card,
   CardContent,
@@ -70,6 +83,9 @@ const AdminHome = () => {
   });
   const [selectedClassForReports, setSelectedClassForReports] = useState<number | null>(null);
   const [selectedDateForReports, setSelectedDateForReports] = useState<string | null>(null);
+  const [availableDates, setAvailableDates] = useState<string[]>([]);
+  const [selectedTrimester, setSelectedTrimester] = useState<string | null>(null);
+  const [reportsTabActive, setReportsTabActive] = useState<string>("attendance");
   const [teacherToToggle, setTeacherToToggle] = useState<Teacher | null>(null);
   const [isToggleTeacherOpen, setIsToggleTeacherOpen] = useState(false);
   const [teacherToEdit, setTeacherToEdit] = useState<Teacher | null>(null);
@@ -575,6 +591,59 @@ const AdminHome = () => {
   // Handle date selection for reports
   const handleDateSelectionForReports = (date: string | null) => {
     setSelectedDateForReports(date);
+    // Ao selecionar uma data, limpa o filtro de trimestre
+    if (date) {
+      setSelectedTrimester(null);
+    }
+  };
+  
+  // Handle trimester selection for reports
+  const handleTrimesterSelection = (trimester: string | null) => {
+    setSelectedTrimester(trimester);
+    
+    // Ao selecionar um trimestre, limpa o filtro de data específica
+    if (trimester) {
+      setSelectedDateForReports(null);
+      
+      // Define as datas do trimestre selecionado
+      const currentYear = new Date().getFullYear();
+      let startMonth: number, endMonth: number;
+      
+      switch (trimester) {
+        case "1":
+          startMonth = 0; // Janeiro (0-indexed)
+          endMonth = 2;   // Março
+          break;
+        case "2":
+          startMonth = 3; // Abril
+          endMonth = 5;   // Junho
+          break;
+        case "3":
+          startMonth = 6; // Julho
+          endMonth = 8;   // Setembro
+          break;
+        case "4":
+          startMonth = 9; // Outubro
+          endMonth = 11;  // Dezembro
+          break;
+        default:
+          return;
+      }
+      
+      // Atualiza as consultas com o filtro de trimestre
+      const startDate = format(setDate(setMonth(startOfYear(new Date(currentYear, 0)), startMonth), 1), 'yyyy-MM-dd');
+      const endDate = format(endOfMonth(new Date(currentYear, endMonth)), 'yyyy-MM-dd');
+      
+      // Aqui você poderia chamar uma API para filtrar por intervalo de datas
+      // Por enquanto, apenas registramos no console o intervalo selecionado
+      console.log(`Filtrando por trimestre ${trimester}: ${startDate} até ${endDate}`);
+      
+      // Nesse ponto poderia atualizar a query para usar o intervalo de datas
+    } else {
+      // Se nenhum trimestre foi selecionado, limpa o filtro
+      queryClient.invalidateQueries({ queryKey: ['/api/attendance'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/missionary-activities'] });
+    }
   };
 
   // Handle create class
@@ -1204,10 +1273,10 @@ const AdminHome = () => {
             <Card>
               <CardHeader>
                 <CardTitle>Filtros</CardTitle>
-                <CardDescription>Selecione uma classe para filtrar os registros</CardDescription>
+                <CardDescription>Selecione filtros para os registros de presença e atividades</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
                     <Label htmlFor="classFilter">Filtrar por Classe</Label>
                     <select
@@ -1226,206 +1295,260 @@ const AdminHome = () => {
                   </div>
                   <div>
                     <Label htmlFor="dateFilter">Filtrar por Data</Label>
-                    <Input
-                      id="dateFilter"
-                      type="date"
-                      className="w-full mt-1"
-                      value={selectedDateForReports || ''}
-                      onChange={(e) => handleDateSelectionForReports(e.target.value || null)}
-                    />
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button 
+                          variant="outline" 
+                          className="w-full justify-between mt-1 bg-white text-left font-normal"
+                        >
+                          {selectedDateForReports ? formatBrazilianDate(selectedDateForReports) : "Selecione uma data"}
+                          <CalendarIcon className="h-4 w-4 opacity-50" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-52 p-0" align="start">
+                        <Command>
+                          <CommandInput placeholder="Buscar data..." />
+                          <CommandEmpty>Nenhuma data encontrada</CommandEmpty>
+                          <CommandGroup>
+                            <CommandItem 
+                              onSelect={() => handleDateSelectionForReports(null)}
+                              className="justify-between"
+                            >
+                              Todas as datas
+                              {!selectedDateForReports && <Check className="h-4 w-4" />}
+                            </CommandItem>
+                            {availableDates.map((date) => (
+                              <CommandItem 
+                                key={date} 
+                                value={date}
+                                onSelect={() => handleDateSelectionForReports(date)}
+                                className="justify-between"
+                              >
+                                {formatBrazilianDate(date)}
+                                {selectedDateForReports === date && <Check className="h-4 w-4" />}
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+                  <div>
+                    <Label htmlFor="trimesterFilter">Filtrar por Trimestre</Label>
+                    <select
+                      id="trimesterFilter"
+                      className="w-full p-2 border rounded mt-1"
+                      value={selectedTrimester || ''}
+                      onChange={(e) => handleTrimesterSelection(e.target.value || null)}
+                    >
+                      <option value="">Todos os Trimestres</option>
+                      <option value="1">1º Trimestre (Janeiro - Março)</option>
+                      <option value="2">2º Trimestre (Abril - Junho)</option>
+                      <option value="3">3º Trimestre (Julho - Setembro)</option>
+                      <option value="4">4º Trimestre (Outubro - Dezembro)</option>
+                    </select>
                   </div>
                 </div>
               </CardContent>
             </Card>
             
-            {/* Attendance Records */}
+            {/* Tabs for Reports */}
             <Card>
-              <CardHeader>
-                <CardTitle>Registros de Frequência ({attendanceRecords.length})</CardTitle>
-                <CardDescription>
-                  {selectedClassForReports
-                    ? `Classe: ${classes.find(c => c.id === selectedClassForReports)?.name || ''}`
-                    : 'Todas as Classes'}
-                  {selectedDateForReports && ` | Data: ${formatBrazilianDate(selectedDateForReports)}`}
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                {attendanceLoading ? (
-                  <div className="text-center py-4">Carregando registros de frequência...</div>
-                ) : attendanceRecords.length === 0 ? (
-                  <div className="text-center py-4">Nenhum registro de frequência encontrado.</div>
-                ) : (
-                  <ScrollArea className="h-[300px]">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Data</TableHead>
-                          <TableHead>Aluno</TableHead>
-                          <TableHead>Classe</TableHead>
-                          <TableHead>Presença</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {attendanceRecords.map((record) => {
-                          // Encontrar o aluno deste registro
-                          const student = record.studentId ? students.find(s => s.id === record.studentId) : null;
-                          
-                          // Encontrar a classe do aluno
-                          const studentClass = student && student.classId
-                            ? classes.find(c => c.id === student.classId)
-                            : null;
-                            
-                          return (
-                            <TableRow key={record.id}>
-                              <TableCell>{formatBrazilianDate(record.date)}</TableCell>
-                              <TableCell>{record.studentName}</TableCell>
-                              <TableCell>
-                                {record.className || 'N/A'}
-                              </TableCell>
-                              <TableCell>
-                                {record.present ? (
-                                  <span className="text-green-600 font-medium">Presente</span>
-                                ) : (
-                                  <span className="text-red-600 font-medium">Ausente</span>
-                                )}
-                              </TableCell>
+              <CardHeader className="pb-0">
+                <Tabs 
+                  defaultValue="attendance" 
+                  className="w-full" 
+                  value={reportsTabActive}
+                  onValueChange={(value) => setReportsTabActive(value)}
+                >
+                  <TabsList className="grid w-full grid-cols-2">
+                    <TabsTrigger value="attendance">Registros de Frequência</TabsTrigger>
+                    <TabsTrigger value="activities">Atividades Missionárias</TabsTrigger>
+                  </TabsList>
+                
+                  {/* Attendance Records Tab */}
+                  <TabsContent value="attendance" className="mt-4">
+                    <div className="pb-4">
+                      <h3 className="text-lg font-medium">Registros de Frequência ({attendanceRecords.length})</h3>
+                      <p className="text-sm text-muted-foreground">
+                        {selectedClassForReports
+                          ? `Classe: ${classes.find(c => c.id === selectedClassForReports)?.name || ''}`
+                          : 'Todas as Classes'}
+                        {selectedDateForReports && ` | Data: ${formatBrazilianDate(selectedDateForReports)}`}
+                        {selectedTrimester && ` | Trimestre: ${selectedTrimester}º Trimestre`}
+                      </p>
+                    </div>
+                    
+                    {attendanceLoading ? (
+                      <div className="text-center py-4">Carregando registros de frequência...</div>
+                    ) : attendanceRecords.length === 0 ? (
+                      <div className="text-center py-4">Nenhum registro de frequência encontrado.</div>
+                    ) : (
+                      <ScrollArea className="h-[400px]">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Data</TableHead>
+                              <TableHead>Aluno</TableHead>
+                              <TableHead>Classe</TableHead>
+                              <TableHead>Presença</TableHead>
                             </TableRow>
-                          );
-                        })}
-                      </TableBody>
-                    </Table>
-                  </ScrollArea>
-                )}
-              </CardContent>
-            </Card>
-            
-            {/* Missionary Activities */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Atividades Missionárias ({missionaryActivities.length})</CardTitle>
-                <CardDescription>
-                  {selectedClassForReports
-                    ? `Classe: ${classes.find(c => c.id === selectedClassForReports)?.name || ''}`
-                    : 'Todas as Classes'}
-                  {selectedDateForReports && ` | Data: ${formatBrazilianDate(selectedDateForReports)}`}
-                </CardDescription>
+                          </TableHeader>
+                          <TableBody>
+                            {attendanceRecords.map((record) => {                                
+                              return (
+                                <TableRow key={record.id}>
+                                  <TableCell>{formatBrazilianDate(record.date)}</TableCell>
+                                  <TableCell>{record.studentName}</TableCell>
+                                  <TableCell>
+                                    {record.className || 'N/A'}
+                                  </TableCell>
+                                  <TableCell>
+                                    {record.present ? (
+                                      <span className="text-green-600 font-medium">Presente</span>
+                                    ) : (
+                                      <span className="text-red-600 font-medium">Ausente</span>
+                                    )}
+                                  </TableCell>
+                                </TableRow>
+                              );
+                            })}
+                          </TableBody>
+                        </Table>
+                      </ScrollArea>
+                    )}
+                  </TabsContent>
+                  
+                  {/* Missionary Activities Tab */}
+                  <TabsContent value="activities" className="mt-4">
+                    <div className="pb-4">
+                      <h3 className="text-lg font-medium">Atividades Missionárias ({missionaryActivities.length})</h3>
+                      <p className="text-sm text-muted-foreground">
+                        {selectedClassForReports
+                          ? `Classe: ${classes.find(c => c.id === selectedClassForReports)?.name || ''}`
+                          : 'Todas as Classes'}
+                        {selectedDateForReports && ` | Data: ${formatBrazilianDate(selectedDateForReports)}`}
+                        {selectedTrimester && ` | Trimestre: ${selectedTrimester}º Trimestre`}
+                      </p>
+                    </div>
+                    
+                    {activitiesLoading ? (
+                      <div className="text-center py-4">Carregando registros de atividades...</div>
+                    ) : missionaryActivities.length === 0 ? (
+                      <div className="text-center py-4">Nenhum registro de atividade missionária encontrado.</div>
+                    ) : (
+                      <ScrollArea className="h-[400px]">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Data</TableHead>
+                              <TableHead>Classe</TableHead>
+                              <TableHead>Atividade</TableHead>
+                              <TableHead>Quantidade</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {missionaryActivities.flatMap((activity) => {
+                              const activityEntries = [];
+                              
+                              if (activity.qtdContatosMissionarios) {
+                                activityEntries.push(
+                                  <TableRow key={`${activity.id}-contatos`}>
+                                    <TableCell>{formatBrazilianDate(activity.date)}</TableCell>
+                                    <TableCell>{activity.className}</TableCell>
+                                    <TableCell>Contatos Missionários</TableCell>
+                                    <TableCell>{activity.qtdContatosMissionarios}</TableCell>
+                                  </TableRow>
+                                );
+                              }
+                              
+                              if (activity.literaturasDistribuidas) {
+                                activityEntries.push(
+                                  <TableRow key={`${activity.id}-literaturas`}>
+                                    <TableCell>{formatBrazilianDate(activity.date)}</TableCell>
+                                    <TableCell>{activity.className}</TableCell>
+                                    <TableCell>Literaturas Distribuídas</TableCell>
+                                    <TableCell>{activity.literaturasDistribuidas}</TableCell>
+                                  </TableRow>
+                                );
+                              }
+                              
+                              if (activity.visitasMissionarias) {
+                                activityEntries.push(
+                                  <TableRow key={`${activity.id}-visitas`}>
+                                    <TableCell>{formatBrazilianDate(activity.date)}</TableCell>
+                                    <TableCell>{activity.className}</TableCell>
+                                    <TableCell>Visitas Missionárias</TableCell>
+                                    <TableCell>{activity.visitasMissionarias}</TableCell>
+                                  </TableRow>
+                                );
+                              }
+                              
+                              if (activity.estudosBiblicos) {
+                                activityEntries.push(
+                                  <TableRow key={`${activity.id}-estudos`}>
+                                    <TableCell>{formatBrazilianDate(activity.date)}</TableCell>
+                                    <TableCell>{activity.className}</TableCell>
+                                    <TableCell>Estudos Bíblicos</TableCell>
+                                    <TableCell>{activity.estudosBiblicos}</TableCell>
+                                  </TableRow>
+                                );
+                              }
+                              
+                              if (activity.ministrados) {
+                                activityEntries.push(
+                                  <TableRow key={`${activity.id}-ministrados`}>
+                                    <TableCell>{formatBrazilianDate(activity.date)}</TableCell>
+                                    <TableCell>{activity.className}</TableCell>
+                                    <TableCell>Ministrados</TableCell>
+                                    <TableCell>{activity.ministrados}</TableCell>
+                                  </TableRow>
+                                );
+                              }
+                              
+                              if (activity.pessoasAuxiliadas) {
+                                activityEntries.push(
+                                  <TableRow key={`${activity.id}-auxiliadas`}>
+                                    <TableCell>{formatBrazilianDate(activity.date)}</TableCell>
+                                    <TableCell>{activity.className}</TableCell>
+                                    <TableCell>Pessoas Auxiliadas</TableCell>
+                                    <TableCell>{activity.pessoasAuxiliadas}</TableCell>
+                                  </TableRow>
+                                );
+                              }
+                              
+                              if (activity.pessoasTrazidasIgreja) {
+                                activityEntries.push(
+                                  <TableRow key={`${activity.id}-trazidas`}>
+                                    <TableCell>{formatBrazilianDate(activity.date)}</TableCell>
+                                    <TableCell>{activity.className}</TableCell>
+                                    <TableCell>Pessoas Trazidas à Igreja</TableCell>
+                                    <TableCell>{activity.pessoasTrazidasIgreja}</TableCell>
+                                  </TableRow>
+                                );
+                              }
+                              
+                              // Se não houver nenhuma atividade específica, mostre uma linha genérica
+                              if (activityEntries.length === 0) {
+                                activityEntries.push(
+                                  <TableRow key={activity.id}>
+                                    <TableCell>{formatBrazilianDate(activity.date)}</TableCell>
+                                    <TableCell>{activity.className}</TableCell>
+                                    <TableCell>Sem atividades registradas</TableCell>
+                                    <TableCell>0</TableCell>
+                                  </TableRow>
+                                );
+                              }
+                              
+                              return activityEntries;
+                            })}
+                          </TableBody>
+                        </Table>
+                      </ScrollArea>
+                    )}
+                  </TabsContent>
+                </Tabs>
               </CardHeader>
-              <CardContent>
-                {activitiesLoading ? (
-                  <div className="text-center py-4">Carregando registros de atividades...</div>
-                ) : missionaryActivities.length === 0 ? (
-                  <div className="text-center py-4">Nenhum registro de atividade missionária encontrado.</div>
-                ) : (
-                  <ScrollArea className="h-[300px]">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Data</TableHead>
-                          <TableHead>Classe</TableHead>
-                          <TableHead>Atividade</TableHead>
-                          <TableHead>Quantidade</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {missionaryActivities.flatMap((activity) => {
-                          const activityEntries = [];
-                          
-                          if (activity.qtdContatosMissionarios) {
-                            activityEntries.push(
-                              <TableRow key={`${activity.id}-contatos`}>
-                                <TableCell>{formatBrazilianDate(activity.date)}</TableCell>
-                                <TableCell>{activity.className}</TableCell>
-                                <TableCell>Contatos Missionários</TableCell>
-                                <TableCell>{activity.qtdContatosMissionarios}</TableCell>
-                              </TableRow>
-                            );
-                          }
-                          
-                          if (activity.literaturasDistribuidas) {
-                            activityEntries.push(
-                              <TableRow key={`${activity.id}-literaturas`}>
-                                <TableCell>{formatBrazilianDate(activity.date)}</TableCell>
-                                <TableCell>{activity.className}</TableCell>
-                                <TableCell>Literaturas Distribuídas</TableCell>
-                                <TableCell>{activity.literaturasDistribuidas}</TableCell>
-                              </TableRow>
-                            );
-                          }
-                          
-                          if (activity.visitasMissionarias) {
-                            activityEntries.push(
-                              <TableRow key={`${activity.id}-visitas`}>
-                                <TableCell>{formatBrazilianDate(activity.date)}</TableCell>
-                                <TableCell>{activity.className}</TableCell>
-                                <TableCell>Visitas Missionárias</TableCell>
-                                <TableCell>{activity.visitasMissionarias}</TableCell>
-                              </TableRow>
-                            );
-                          }
-                          
-                          if (activity.estudosBiblicos) {
-                            activityEntries.push(
-                              <TableRow key={`${activity.id}-estudos`}>
-                                <TableCell>{formatBrazilianDate(activity.date)}</TableCell>
-                                <TableCell>{activity.className}</TableCell>
-                                <TableCell>Estudos Bíblicos</TableCell>
-                                <TableCell>{activity.estudosBiblicos}</TableCell>
-                              </TableRow>
-                            );
-                          }
-                          
-                          if (activity.ministrados) {
-                            activityEntries.push(
-                              <TableRow key={`${activity.id}-ministrados`}>
-                                <TableCell>{formatBrazilianDate(activity.date)}</TableCell>
-                                <TableCell>{activity.className}</TableCell>
-                                <TableCell>Ministrados</TableCell>
-                                <TableCell>{activity.ministrados}</TableCell>
-                              </TableRow>
-                            );
-                          }
-                          
-                          if (activity.pessoasAuxiliadas) {
-                            activityEntries.push(
-                              <TableRow key={`${activity.id}-auxiliadas`}>
-                                <TableCell>{formatBrazilianDate(activity.date)}</TableCell>
-                                <TableCell>{activity.className}</TableCell>
-                                <TableCell>Pessoas Auxiliadas</TableCell>
-                                <TableCell>{activity.pessoasAuxiliadas}</TableCell>
-                              </TableRow>
-                            );
-                          }
-                          
-                          if (activity.pessoasTrazidasIgreja) {
-                            activityEntries.push(
-                              <TableRow key={`${activity.id}-trazidas`}>
-                                <TableCell>{formatBrazilianDate(activity.date)}</TableCell>
-                                <TableCell>{activity.className}</TableCell>
-                                <TableCell>Pessoas Trazidas à Igreja</TableCell>
-                                <TableCell>{activity.pessoasTrazidasIgreja}</TableCell>
-                              </TableRow>
-                            );
-                          }
-                          
-                          // Se não houver nenhuma atividade específica, mostre uma linha genérica
-                          if (activityEntries.length === 0) {
-                            activityEntries.push(
-                              <TableRow key={activity.id}>
-                                <TableCell>{formatBrazilianDate(activity.date)}</TableCell>
-                                <TableCell>{activity.className}</TableCell>
-                                <TableCell>Sem atividades registradas</TableCell>
-                                <TableCell>0</TableCell>
-                              </TableRow>
-                            );
-                          }
-                          
-                          return activityEntries;
-                        })}
-                      </TableBody>
-                    </Table>
-                  </ScrollArea>
-                )}
-              </CardContent>
             </Card>
           </TabsContent>
         </Tabs>
