@@ -206,10 +206,20 @@ const TeacherRecords: React.FC = () => {
   // IDs das classes do professor
   const teacherClassIds = teacherClasses.map((cls) => cls.id);
 
-  // Carregar registros de presença
+  // Carregar registros de presença - enviar classId como parâmetro de consulta
   const { data: allAttendanceRecords = [], isLoading: attendanceLoading } =
     useQuery<AttendanceRecordWithStudent[]>({
-      queryKey: ["/api/attendance"],
+      queryKey: ["/api/attendance", selectedClassId ? { classId: selectedClassId } : null],
+      queryFn: async ({ queryKey }) => {
+        const [endpoint, params] = queryKey;
+        if (params && 'classId' in params) {
+          const response = await apiRequest('GET', `${endpoint}?classId=${params.classId}`);
+          return response.json();
+        }
+        const response = await apiRequest('GET', endpoint as string);
+        return response.json();
+      },
+      enabled: !!selectedClassId, // Só carregar quando tiver uma classe selecionada
     });
 
   // Encontrar a classe selecionada
@@ -243,10 +253,20 @@ const TeacherRecords: React.FC = () => {
   const uniqueDatesSet = new Set(uniqueDatesArray);
   const uniqueDates = Array.from(uniqueDatesSet).sort().reverse(); // Mais recentes primeiro
 
-  // Carregar atividades missionárias
+  // Carregar atividades missionárias - enviar classId como parâmetro de consulta
   const { data: allMissionaryActivities = [], isLoading: activitiesLoading } =
     useQuery<MissionaryActivityWithClass[]>({
-      queryKey: ["/api/missionary-activities"]
+      queryKey: ["/api/missionary-activities", selectedClassId ? { classId: selectedClassId } : null],
+      queryFn: async ({ queryKey }) => {
+        const [endpoint, params] = queryKey;
+        if (params && 'classId' in params) {
+          const response = await apiRequest('GET', `${endpoint}?classId=${params.classId}`);
+          return response.json();
+        }
+        const response = await apiRequest('GET', endpoint as string);
+        return response.json();
+      },
+      enabled: !!selectedClassId, // Só carregar quando tiver uma classe selecionada
     });
 
   // Filtrar atividades apenas das classes do professor e apenas da classe selecionada se houver uma
