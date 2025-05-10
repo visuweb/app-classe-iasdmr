@@ -27,7 +27,7 @@ COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/.env ./.env
 
 # Expor a porta que a aplicação usa
-EXPOSE 5000
+EXPOSE 3000
 
 # Comando para rodar a aplicação
 CMD ["node", "dist/server/index.js"]

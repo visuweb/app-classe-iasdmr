@@ -87,15 +87,15 @@ app.use((req, res, next) => {
     serveStatic(app);
   }
 
-  // ALWAYS serve the app on port 5000
+  // Serve the app on port 3000 to evitar conflitos
   // this serves both the API and the client.
-  // It is the only port that is not firewalled.
-  const port = 5000;
+  // Change port if there's a conflict with other services
+  const port = process.env.PORT ? parseInt(process.env.PORT) : 3000;
   
   // Configuração de escuta do servidor com verificação de compatibilidade para Windows
   const serverOptions: any = {
     port,
-    host: "127.0.0.1"
+    host: "0.0.0.0"  // Bind to all interfaces instead of just localhost
   };
   
   // Adiciona reusePort apenas em sistemas que não sejam Windows
