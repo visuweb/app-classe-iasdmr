@@ -102,8 +102,6 @@ const ClassList: React.FC = () => {
     },
   });
 
-
-
   // Mutations
   const createClassMutation = useMutation({
     mutationFn: async (data: z.infer<typeof classFormSchema>) => {
@@ -358,8 +356,6 @@ const ClassList: React.FC = () => {
         <div className="max-w-lg mx-auto">
           {renderClasses()}
         </div>
-
-
 
         <div className="mt-8 text-center text-xs text-gray-400">
           <p>Apenas classes atribuídas a você são mostradas</p>
