@@ -37,14 +37,14 @@ const MobileMenu: React.FC = () => {
   return (
     <Sheet>
       <SheetTrigger asChild>
-        <Button variant="ghost" size="icon" className="md:hidden">
+        <Button variant="ghost" size="icon" className="md:hidden text-white">
           <Menu className="h-6 w-6" />
         </Button>
       </SheetTrigger>
       <SheetContent side="left" className="w-[80vw] max-w-xs">
         <SheetHeader className="text-left">
           <SheetTitle className="flex items-center gap-2">
-            <School className="h-5 w-5 text-primary-500" />
+            <School className="h-5 w-5 text-blue-600" />
             <span>CLASSE ALUNOS</span>
           </SheetTitle>
         </SheetHeader>
@@ -141,15 +141,15 @@ const Header: React.FC = () => {
   }
   
   return (
-    <header className="bg-white shadow">
+    <header className="bg-blue-600 shadow">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex justify-between items-center">
         {isMobile ? (
           <div className="flex items-center justify-between w-full">
             <MobileMenu />
             <Link href="/">
               <div className="flex items-center cursor-pointer">
-                <School className="h-5 w-5 text-primary-500 mr-2" />
-                <h1 className="text-lg font-semibold text-gray-800">CLASSE ALUNOS</h1>
+                <School className="h-5 w-5 text-white mr-2" />
+                <h1 className="text-lg font-semibold text-white">CLASSE ALUNOS</h1>
               </div>
             </Link>
             <div className="w-8" aria-hidden="true"></div>
@@ -161,21 +161,21 @@ const Header: React.FC = () => {
                 "flex items-center cursor-pointer",
                 "hover:opacity-90 transition-opacity"
               )}>
-                <School className="h-6 w-6 text-primary-500 mr-2" />
-                <h1 className="text-xl font-semibold text-gray-800">CLASSE ALUNOS</h1>
+                <School className="h-6 w-6 text-white mr-2" />
+                <h1 className="text-xl font-semibold text-white">CLASSE ALUNOS</h1>
               </div>
             </Link>
             
             <div className="flex items-center gap-4">
               {isWizard && currentClassName && (
-                <span className="text-sm text-gray-600">{currentClassName}</span>
+                <span className="text-sm text-white">{currentClassName}</span>
               )}
               
               <Button 
                 variant="outline" 
                 size="sm" 
                 onClick={handleLogout}
-                className="flex items-center gap-1 text-gray-600 hover:text-red-600"
+                className="flex items-center gap-1 bg-white text-gray-600 hover:text-red-600"
               >
                 <LogOut className="h-4 w-4" />
                 <span>Sair</span>
