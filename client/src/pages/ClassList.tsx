@@ -302,14 +302,7 @@ const ClassList: React.FC = () => {
                 )}
               </div>
             </div>
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              onClick={() => handleSelectClass(classObj)}
-              className="h-8 w-8"
-            >
-              <UserPlus className="h-4 w-4" />
-            </Button>
+
           </div>
 
           <div className="flex items-center justify-between mt-4 pt-3 border-t border-gray-100">
