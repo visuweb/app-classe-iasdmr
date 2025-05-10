@@ -962,16 +962,16 @@ const AdminHome = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <header className="bg-primary-500 text-white py-3 px-4 flex justify-between items-center">
+      <header className="bg-blue-600 text-white py-3 px-4 flex justify-between items-center">
         <div>
-          <h1 className={`${isMobile ? 'text-lg' : 'text-xl'} font-bold`}>Administração</h1>
-          <p className="text-xs">Bem-vindo, {teacher.name}</p>
+          <h1 className={`${isMobile ? 'text-lg' : 'text-xl'} font-bold text-white`}>Administração</h1>
+          <p className="text-xs text-white">Bem-vindo, {teacher.name}</p>
         </div>
         <Button 
           variant="outline" 
           size="sm" 
           onClick={handleLogout} 
-          className="flex items-center gap-1 text-gray-600 hover:text-red-600"
+          className="flex items-center gap-1 bg-white text-gray-600 hover:text-red-600"
         >
           <LogOut className="h-4 w-4" />
           {!isMobile && "Sair"}
