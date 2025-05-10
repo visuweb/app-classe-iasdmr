@@ -38,7 +38,6 @@ import { apiRequest, queryClient } from '@/lib/queryClient';
 import { 
   School, 
   PenSquare, 
-  UserPlus, 
   Users,
   ChevronRight,
   Plus,
@@ -47,7 +46,7 @@ import {
   CheckSquare,
   Pencil
 } from 'lucide-react';
-import { Class, insertClassSchema, insertStudentSchema } from '@shared/schema';
+import { Class, insertClassSchema } from '@shared/schema';
 import Header from '@/components/Header';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { getCurrentDateBRT } from '@/lib/date-utils';
@@ -57,16 +56,10 @@ const classFormSchema = insertClassSchema.extend({
   name: z.string().min(2, { message: 'O nome da classe deve ter pelo menos 2 caracteres' })
 });
 
-const studentFormSchema = insertStudentSchema.extend({
-  name: z.string().min(2, { message: 'O nome do aluno deve ter pelo menos 2 caracteres' })
-});
-
 const ClassList: React.FC = () => {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const { teacher } = useAuth();
-  const [selectedClass, setSelectedClass] = useState<Class | null>(null);
-  const [isAddStudentOpen, setIsAddStudentOpen] = useState(false);
   const [classesTodayRecords, setClassesTodayRecords] = useState<Record<number, boolean>>({});
 
   // Fetch classes
@@ -109,13 +102,7 @@ const ClassList: React.FC = () => {
     },
   });
 
-  const studentForm = useForm<z.infer<typeof studentFormSchema>>({
-    resolver: zodResolver(studentFormSchema),
-    defaultValues: {
-      name: '',
-      classId: 0,
-    },
-  });
+
 
   // Mutations
   const createClassMutation = useMutation({
@@ -140,53 +127,9 @@ const ClassList: React.FC = () => {
     },
   });
 
-  const createStudentMutation = useMutation({
-    mutationFn: async (data: z.infer<typeof studentFormSchema>) => {
-      const response = await apiRequest('POST', '/api/students', data);
-      return response.json();
-    },
-    onSuccess: () => {
-      // Invalidate both classes and the student counts
-      queryClient.invalidateQueries({ queryKey: ['/api/classes'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/classes-students-count'] });
-
-      toast({
-        title: 'Aluno adicionado com sucesso',
-        description: 'O novo aluno foi adicionado à classe',
-      });
-      setIsAddStudentOpen(false);
-      studentForm.reset();
-    },
-    onError: (error) => {
-      toast({
-        title: 'Erro ao adicionar aluno',
-        description: error.message,
-        variant: 'destructive',
-      });
-    },
-  });
-
   // Submit handlers
   const onSubmitClass = (data: z.infer<typeof classFormSchema>) => {
     createClassMutation.mutate(data);
-  };
-
-  const onSubmitStudent = (data: z.infer<typeof studentFormSchema>) => {
-    if (selectedClass) {
-      createStudentMutation.mutate({
-        ...data,
-        classId: selectedClass.id,
-      });
-    }
-  };
-
-  const handleSelectClass = (classObj: Class) => {
-    setSelectedClass(classObj);
-    setIsAddStudentOpen(true);
-    studentForm.reset({
-      name: '',
-      classId: classObj.id,
-    });
   };
 
   // Função para verificar se a classe já tem registro para o dia atual - versão melhorada que verifica a data atual precisamente
@@ -416,41 +359,7 @@ const ClassList: React.FC = () => {
           {renderClasses()}
         </div>
 
-        {/* Add Student Dialog */}
-        <Dialog open={isAddStudentOpen} onOpenChange={setIsAddStudentOpen}>
-          <DialogContent className={isMobile ? "w-[90vw] max-w-md" : ""}>
-            <DialogHeader>
-              <DialogTitle>Adicionar Novo Aluno</DialogTitle>
-              <DialogDescription>
-                {selectedClass && `Adicionar aluno à classe: ${selectedClass.name}`}
-              </DialogDescription>
-            </DialogHeader>
 
-            <Form {...studentForm}>
-              <form onSubmit={studentForm.handleSubmit(onSubmitStudent)} className="space-y-4">
-                <FormField
-                  control={studentForm.control}
-                  name="name"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Nome do Aluno</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Nome completo do aluno" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <DialogFooter>
-                  <Button type="submit" disabled={createStudentMutation.isPending}>
-                    {createStudentMutation.isPending ? 'Adicionando...' : 'Adicionar Aluno'}
-                  </Button>
-                </DialogFooter>
-              </form>
-            </Form>
-          </DialogContent>
-        </Dialog>
 
         <div className="mt-8 text-center text-xs text-gray-400">
           <p>Apenas classes atribuídas a você são mostradas</p>
