@@ -139,11 +139,7 @@ const AuthPage = () => {
           
           <CardFooter className="flex justify-center pt-0">
             <p className="text-xs text-center text-gray-500">
-              Credenciais para teste:
-              <br />
-              Admin: admin / admincei2025
-              <br />
-              Professor: 123456789 / 123456
+              Entre com suas credenciais para acessar o sistema
             </p>
           </CardFooter>
         </Card>
