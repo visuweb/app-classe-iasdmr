@@ -1766,58 +1766,59 @@ const AdminHome = () => {
                     ) : missionaryActivities.length === 0 ? (
                       <div className="text-center py-4">Nenhum registro de atividade missionária encontrado.</div>
                     ) : selectedTrimester ? (
-                      /* Visualização agrupada por classe com acordeão quando filtrado por trimestre */
-                      <ScrollArea className="h-[400px]">
-                        <Accordion type="single" collapsible className="w-full">
-                          {getActivitiesByClass().map((classGroup) => (
-                            <AccordionItem key={`class-${classGroup.classId}`} value={`class-${classGroup.classId}`}>
-                              <AccordionTrigger className="hover:bg-muted/50 px-4">
-                                <div className="flex w-full justify-between items-center">
-                                  <span className="font-semibold">{classGroup.className}</span>
-                                </div>
-                              </AccordionTrigger>
-                              <AccordionContent>
-                                <div className="rounded border overflow-hidden mx-4 my-2">
-                                  <Table>
-                                    <TableHeader>
-                                      <TableRow>
-                                        <TableHead>Atividade Missionária</TableHead>
-                                        <TableHead className="text-right">Total no Trimestre</TableHead>
-                                      </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                      <TableRow>
-                                        <TableCell className="font-medium">Literaturas Distribuídas</TableCell>
-                                        <TableCell className="text-right">{classGroup.summary.literaturasDistribuidas}</TableCell>
-                                      </TableRow>
-                                      <TableRow>
-                                        <TableCell className="font-medium">Contatos Missionários</TableCell>
-                                        <TableCell className="text-right">{classGroup.summary.qtdContatosMissionarios}</TableCell>
-                                      </TableRow>
-                                      <TableRow>
-                                        <TableCell className="font-medium">Estudos Bíblicos Ministrados</TableCell>
-                                        <TableCell className="text-right">{classGroup.summary.estudosBiblicos + classGroup.summary.ministrados}</TableCell>
-                                      </TableRow>
-                                      <TableRow>
-                                        <TableCell className="font-medium">Visitas Missionárias</TableCell>
-                                        <TableCell className="text-right">{classGroup.summary.visitasMissionarias}</TableCell>
-                                      </TableRow>
-                                      <TableRow>
-                                        <TableCell className="font-medium">Pessoas Auxiliadas</TableCell>
-                                        <TableCell className="text-right">{classGroup.summary.pessoasAuxiliadas}</TableCell>
-                                      </TableRow>
-                                      <TableRow>
-                                        <TableCell className="font-medium">Pessoas Trazidas à Igreja</TableCell>
-                                        <TableCell className="text-right">{classGroup.summary.pessoasTrazidasIgreja}</TableCell>
-                                      </TableRow>
-                                    </TableBody>
-                                  </Table>
-                                </div>
-                              </AccordionContent>
-                            </AccordionItem>
-                          ))}
-                        </Accordion>
-                      </ScrollArea>
+                      /* Nova visualização em grid com uma coluna para cada classe quando filtrado por trimestre */
+                      (() => {
+                        const gridData = getActivitiesGridData();
+                        
+                        if (!gridData || gridData.classes.length === 0) {
+                          return (
+                            <div className="text-center py-4">
+                              Nenhum registro de atividade missionária encontrado para o trimestre selecionado.
+                            </div>
+                          );
+                        }
+                        
+                        return (
+                          <div className="overflow-auto" style={{ maxHeight: '400px' }}>
+                            <div className="min-w-max">
+                              <Table>
+                                <TableHeader>
+                                  <TableRow>
+                                    <TableHead className="sticky left-0 bg-white z-10">Atividade Missionária</TableHead>
+                                    {gridData.classes.map(classData => (
+                                      <TableHead key={`class-header-${classData.id}`} className="text-center">
+                                        {classData.name}
+                                      </TableHead>
+                                    ))}
+                                    <TableHead className="text-center bg-muted/50 font-bold">Total</TableHead>
+                                  </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                  {gridData.activityTypes.map(activityType => (
+                                    <TableRow key={`activity-${activityType.id}`}>
+                                      <TableCell className="font-medium sticky left-0 bg-white z-10">
+                                        {activityType.name}
+                                      </TableCell>
+                                      {gridData.classes.map(classData => (
+                                        <TableCell 
+                                          key={`value-${classData.id}-${activityType.id}`} 
+                                          className="text-center"
+                                        >
+                                          {classData[activityType.id] || 0}
+                                        </TableCell>
+                                      ))}
+                                      <TableCell className="text-center bg-muted/50 font-bold">
+                                        {gridData.totals[activityType.id] || 0}
+                                      </TableCell>
+                                    </TableRow>
+                                  ))}
+                                </TableBody>
+                              </Table>
+                            </div>
+                          </div>
+                        );
+                      })()
+                    
                     ) : (
                       /* Visualização normal quando não filtrado por trimestre */
                       <ScrollArea className="h-[400px]">
