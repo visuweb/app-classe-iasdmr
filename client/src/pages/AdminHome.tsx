@@ -318,16 +318,24 @@ const AdminHome = () => {
       }
     });
     
-    // Calcular os totais gerais para cada tipo de atividade
+    // Filtrar as classes com base no filtro de classe selecionado
+    let filteredClasses = Array.from(classActivityTotals.values());
+    
+    // Se uma classe específica foi selecionada, filtrar apenas essa classe
+    if (selectedClassForReports) {
+      filteredClasses = filteredClasses.filter(classData => classData.id === selectedClassForReports);
+    }
+    
+    // Calcular os totais gerais apenas para as classes filtradas
     const totalsByActivity = activityTypes.reduce((totals, activityType) => {
-      totals[activityType.id] = Array.from(classActivityTotals.values())
+      totals[activityType.id] = filteredClasses
         .reduce((sum, classData) => sum + classData[activityType.id], 0);
       return totals;
     }, {} as Record<string, number>);
     
     return {
       activityTypes,
-      classes: Array.from(classActivityTotals.values()),
+      classes: filteredClasses,
       totals: totalsByActivity
     };
   };
@@ -1783,20 +1791,20 @@ const AdminHome = () => {
                             <div className="min-w-max">
                               <Table>
                                 <TableHeader>
-                                  <TableRow>
-                                    <TableHead className="sticky left-0 bg-white z-10">Atividade Missionária</TableHead>
+                                  <TableRow className="bg-muted/30">
+                                    <TableHead className="sticky left-0 bg-muted/30 z-10 font-bold border-r">Atividade Missionária</TableHead>
                                     {gridData.classes.map(classData => (
-                                      <TableHead key={`class-header-${classData.id}`} className="text-center">
+                                      <TableHead key={`class-header-${classData.id}`} className="text-center font-bold">
                                         {classData.name}
                                       </TableHead>
                                     ))}
-                                    <TableHead className="text-center bg-muted/50 font-bold">Total</TableHead>
+                                    <TableHead className="text-center bg-blue-100 font-bold">Total</TableHead>
                                   </TableRow>
                                 </TableHeader>
                                 <TableBody>
                                   {gridData.activityTypes.map(activityType => (
-                                    <TableRow key={`activity-${activityType.id}`}>
-                                      <TableCell className="font-medium sticky left-0 bg-white z-10">
+                                    <TableRow key={`activity-${activityType.id}`} className="hover:bg-gray-50">
+                                      <TableCell className="font-medium sticky left-0 bg-white z-10 border-r">
                                         {activityType.name}
                                       </TableCell>
                                       {gridData.classes.map(classData => (
@@ -1807,7 +1815,7 @@ const AdminHome = () => {
                                           {classData[activityType.id] || 0}
                                         </TableCell>
                                       ))}
-                                      <TableCell className="text-center bg-muted/50 font-bold">
+                                      <TableCell className="text-center bg-blue-100 font-bold">
                                         {gridData.totals[activityType.id] || 0}
                                       </TableCell>
                                     </TableRow>
