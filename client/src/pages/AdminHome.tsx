@@ -211,7 +211,7 @@ const AdminHome = () => {
     }
   }, [missionaryActivities, availableDates]);
   
-  // Função para agrupar atividades por classe quando o trimestre está selecionado
+  // Função para agrupar atividades por classe quando o trimestre está selecionado (versão anterior)
   const getActivitiesByClass = () => {
     if (!selectedTrimester || missionaryActivities.length === 0) return [];
     
@@ -264,6 +264,72 @@ const AdminHome = () => {
     
     // Converter o Map em Array
     return Array.from(groupedActivities.values());
+  };
+  
+  // Nova função para gerar a tabela de atividades missionárias com uma coluna para cada classe
+  const getActivitiesGridData = () => {
+    if (!selectedTrimester || missionaryActivities.length === 0) return null;
+    
+    // Definir tipos de atividades missionárias
+    const activityTypes = [
+      { id: 'literaturasDistribuidas', name: 'Literaturas Distribuídas' },
+      { id: 'qtdContatosMissionarios', name: 'Contatos Missionários' },
+      { id: 'estudosBiblicosTotal', name: 'Estudos Bíblicos Ministrados' },
+      { id: 'visitasMissionarias', name: 'Visitas Missionárias' },
+      { id: 'pessoasAuxiliadas', name: 'Pessoas Auxiliadas' },
+      { id: 'pessoasTrazidasIgreja', name: 'Pessoas Trazidas à Igreja' }
+    ];
+    
+    // Filtrar atividades do trimestre
+    const activitiesInTrimester = missionaryActivities.filter(activity => 
+      isDateInTrimester(activity.date, selectedTrimester)
+    );
+    
+    // Obter todas as classes ativas
+    const activeClasses = classes.filter(c => c.active);
+    
+    // Criar o mapa da classe para seus totais
+    const classActivityTotals = new Map();
+    
+    // Inicializar todos os totais como zero para todas as classes
+    activeClasses.forEach(classItem => {
+      classActivityTotals.set(classItem.id, {
+        id: classItem.id,
+        name: classItem.name,
+        literaturasDistribuidas: 0,
+        qtdContatosMissionarios: 0,
+        estudosBiblicosTotal: 0, // Combinação de estudosBiblicos e ministrados
+        visitasMissionarias: 0,
+        pessoasAuxiliadas: 0,
+        pessoasTrazidasIgreja: 0
+      });
+    });
+    
+    // Calcular totais por classe
+    activitiesInTrimester.forEach(activity => {
+      const classData = classActivityTotals.get(activity.classId);
+      if (classData) {
+        classData.literaturasDistribuidas += (activity.literaturasDistribuidas || 0);
+        classData.qtdContatosMissionarios += (activity.qtdContatosMissionarios || 0);
+        classData.estudosBiblicosTotal += ((activity.estudosBiblicos || 0) + (activity.ministrados || 0));
+        classData.visitasMissionarias += (activity.visitasMissionarias || 0);
+        classData.pessoasAuxiliadas += (activity.pessoasAuxiliadas || 0);
+        classData.pessoasTrazidasIgreja += (activity.pessoasTrazidasIgreja || 0);
+      }
+    });
+    
+    // Calcular os totais gerais para cada tipo de atividade
+    const totalsByActivity = activityTypes.reduce((totals, activityType) => {
+      totals[activityType.id] = Array.from(classActivityTotals.values())
+        .reduce((sum, classData) => sum + classData[activityType.id], 0);
+      return totals;
+    }, {} as Record<string, number>);
+    
+    return {
+      activityTypes,
+      classes: Array.from(classActivityTotals.values()),
+      totals: totalsByActivity
+    };
   };
 
   // Fetch classes
