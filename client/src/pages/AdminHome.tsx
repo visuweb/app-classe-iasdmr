@@ -266,8 +266,34 @@ const AdminHome = () => {
     return Array.from(groupedActivities.values());
   };
   
+  // Interface para tipagem dos resultados da função getActivitiesGridData
+  interface ActivityGridData {
+    activityTypes: Array<{ id: string; name: string }>;
+    classes: Array<{
+      id: number;
+      name: string;
+      literaturasDistribuidas: number;
+      qtdContatosMissionarios: number;
+      estudosBiblicosTotal: number;
+      visitasMissionarias: number;
+      pessoasAuxiliadas: number;
+      pessoasTrazidasIgreja: number;
+      [key: string]: any;
+    }>;
+    totals: Record<string, number>;
+    empty: boolean;
+  }
+  
+  // Interface para dados vazios ou nulos
+  interface ActivityGridDataEmpty {
+    empty: true;
+    activityTypes?: never;
+    classes?: never;
+    totals?: never;
+  }
+
   // Nova função para gerar a tabela de atividades missionárias com uma coluna para cada classe
-  const getActivitiesGridData = () => {
+  const getActivitiesGridData = (): ActivityGridData | ActivityGridDataEmpty | null => {
     if (!selectedTrimester || missionaryActivities.length === 0) return null;
     
     // Definir tipos de atividades missionárias
@@ -284,6 +310,11 @@ const AdminHome = () => {
     const activitiesInTrimester = missionaryActivities.filter(activity => 
       isDateInTrimester(activity.date, selectedTrimester)
     );
+    
+    // Verificar se existem atividades no trimestre
+    if (activitiesInTrimester.length === 0) {
+      return { empty: true } as ActivityGridDataEmpty;
+    }
     
     // Obter todas as classes ativas
     const activeClasses = classes.filter(c => c.active);
@@ -326,6 +357,22 @@ const AdminHome = () => {
       filteredClasses = filteredClasses.filter(classData => classData.id === selectedClassForReports);
     }
     
+    // Verificar se após a filtragem ainda temos dados para mostrar
+    if (filteredClasses.length === 0) {
+      return { empty: true } as ActivityGridDataEmpty;
+    }
+    
+    // Verificar se o total geral de todas as atividades é zero
+    const hasNonZeroValues = filteredClasses.some(classData => {
+      return activityTypes.some(activityType => 
+        classData[activityType.id] > 0
+      );
+    });
+    
+    if (!hasNonZeroValues) {
+      return { empty: true } as ActivityGridDataEmpty;
+    }
+    
     // Calcular os totais gerais apenas para as classes filtradas
     const totalsByActivity = activityTypes.reduce((totals, activityType) => {
       totals[activityType.id] = filteredClasses
@@ -336,8 +383,9 @@ const AdminHome = () => {
     return {
       activityTypes,
       classes: filteredClasses,
-      totals: totalsByActivity
-    };
+      totals: totalsByActivity,
+      empty: false
+    } as ActivityGridData;
   };
 
   // Fetch classes
@@ -1778,13 +1826,20 @@ const AdminHome = () => {
                       (() => {
                         const gridData = getActivitiesGridData();
                         
-                        if (!gridData || gridData.classes.length === 0) {
+                        // Caso não tenhamos dados ou os dados estejam vazios
+                        if (!gridData || gridData.empty === true) {
                           return (
-                            <div className="text-center py-4">
-                              Nenhum registro de atividade missionária encontrado para o trimestre selecionado.
+                            <div className="text-center py-8 px-4">
+                              <div className="text-gray-500 text-lg">
+                                Nenhum registro de atividade missionária encontrado para o trimestre selecionado.
+                              </div>
                             </div>
                           );
                         }
+                        
+                        // Após este ponto, sabemos que temos dados válidos
+                        // Para satisfazer o TypeScript, faremos uma asserção de tipo
+                        const validGridData = gridData as Required<ActivityGridData>;
                         
                         return (
                           <div className="overflow-auto" style={{ maxHeight: '400px' }}>
@@ -1793,7 +1848,7 @@ const AdminHome = () => {
                                 <TableHeader>
                                   <TableRow className="bg-muted/30">
                                     <TableHead className="sticky left-0 bg-muted/30 z-10 font-bold border-r">Atividade Missionária</TableHead>
-                                    {gridData.classes.map(classData => (
+                                    {validGridData.classes.map(classData => (
                                       <TableHead key={`class-header-${classData.id}`} className="text-center font-bold">
                                         {classData.name}
                                       </TableHead>
@@ -1802,12 +1857,12 @@ const AdminHome = () => {
                                   </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                  {gridData.activityTypes.map(activityType => (
+                                  {validGridData.activityTypes.map(activityType => (
                                     <TableRow key={`activity-${activityType.id}`} className="hover:bg-gray-50">
                                       <TableCell className="font-medium sticky left-0 bg-white z-10 border-r">
                                         {activityType.name}
                                       </TableCell>
-                                      {gridData.classes.map(classData => (
+                                      {validGridData.classes.map(classData => (
                                         <TableCell 
                                           key={`value-${classData.id}-${activityType.id}`} 
                                           className="text-center"
@@ -1816,7 +1871,7 @@ const AdminHome = () => {
                                         </TableCell>
                                       ))}
                                       <TableCell className="text-center bg-blue-100 font-bold">
-                                        {gridData.totals[activityType.id] || 0}
+                                        {validGridData.totals[activityType.id] || 0}
                                       </TableCell>
                                     </TableRow>
                                   ))}
