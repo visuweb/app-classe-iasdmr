@@ -7,6 +7,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { formatBrazilianDate } from '@/lib/date-utils';
 import { startOfYear, setMonth, setDate, endOfMonth, format } from "date-fns";
 import { LogOut, School, User, Book, BarChart, Plus, UserPlus, Calendar, Filter, Trash2, Check, Pencil, MinusCircle, Search, CalendarIcon } from 'lucide-react';
+import MissionaryTable from './MissionaryTable';
 import {
   Popover,
   PopoverContent,
@@ -48,7 +49,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -58,145 +58,247 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
+  AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { Teacher, Class, Student, AttendanceRecord, MissionaryActivity } from '@shared/schema';
-import { useToast } from '@/hooks/use-toast';
-import { useLocation } from 'wouter';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion";
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from '@/components/ui/tabs';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+  SelectGroup,
+  SelectLabel,
+} from '@/components/ui/select';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Separator } from '@/components/ui/separator';
+import { cn } from '@/lib/utils';
+import { useToast } from '@/hooks/use-toast';
+import { Teacher, Class, Student, MissionaryActivity, AttendanceRecord } from '@shared/schema';
 
-const AdminHome = () => {
+// Definir tipos para ActivityClass e ActivityType para facilitar a tipagem
+type ActivityClass = {
+  id: number;
+  name: string;
+  literaturasDistribuidas: number;
+  qtdContatosMissionarios: number;
+  estudosBiblicosTotal: number;
+  visitasMissionarias: number;
+  pessoasAuxiliadas: number;
+  pessoasTrazidasIgreja: number;
+  [key: string]: any;
+};
+
+type ActivityType = {
+  id: string;
+  name: string;
+};
+
+// Interface para dados completos
+interface ActivityGridDataComplete {
+  empty: false;
+  activityTypes: ActivityType[];
+  classes: ActivityClass[];
+  totals: Record<string, number>;
+}
+
+// Interface para dados vazios
+interface ActivityGridDataEmpty {
+  empty: true;
+}
+
+// Union type para ambos os casos
+type ActivityGridData = ActivityGridDataComplete | ActivityGridDataEmpty;
+
+export default function AdminHome() {
   const { teacher, logoutMutation } = useAuth();
+  const isMobile = useIsMobile();
   const { toast } = useToast();
-  const [_, setLocation] = useLocation();
-  const [selectedClassId, setSelectedClassId] = useState<number | null>(null);
-  const [newClassName, setNewClassName] = useState('');
-  const [newStudentName, setNewStudentName] = useState('');
+  const [selectedTeacherId, setSelectedTeacherId] = useState<number | null>(null);
+  const [isAddTeacherOpen, setIsAddTeacherOpen] = useState(false);
   const [newTeacherData, setNewTeacherData] = useState({
     name: '',
     cpf: '',
     password: '',
-    isAdmin: false,
+    isAdmin: false
   });
-  const [teacherClassAssignment, setTeacherClassAssignment] = useState({
-    teacherId: 0,
-    classId: 0,
-  });
-  const [selectedClassForReports, setSelectedClassForReports] = useState<number | null>(null);
-  const [selectedDateForReports, setSelectedDateForReports] = useState<string | null>(null);
-  const [availableDates, setAvailableDates] = useState<string[]>([]);
-  const [selectedTrimester, setSelectedTrimester] = useState<string | null>(null);
-  const [reportsTabActive, setReportsTabActive] = useState<string>("attendance");
-  const [teacherToToggle, setTeacherToToggle] = useState<Teacher | null>(null);
+  
+  const [isEditClassOpen, setIsEditClassOpen] = useState(false);
+  const [classToEdit, setClassToEdit] = useState<Class | null>(null);
+  const [editClassName, setEditClassName] = useState('');
+
+  const [isAddClassOpen, setIsAddClassOpen] = useState(false);
+  const [newClassName, setNewClassName] = useState('');
+  
   const [isToggleTeacherOpen, setIsToggleTeacherOpen] = useState(false);
+  const [teacherToToggle, setTeacherToToggle] = useState<Teacher | null>(null);
+  
+  const [isToggleClassOpen, setIsToggleClassOpen] = useState(false);
+  const [classToToggle, setClassToToggle] = useState<Class | null>(null);
+  
+  const [isAddStudentOpen, setIsAddStudentOpen] = useState(false);
+  const [newStudentName, setNewStudentName] = useState('');
+  const [selectedClassId, setSelectedClassId] = useState<number | null>(null);
+  
+  const [isToggleStudentOpen, setIsToggleStudentOpen] = useState(false);
+  const [studentToToggle, setStudentToToggle] = useState<Student | null>(null);
+  
+  const [isEditStudentOpen, setIsEditStudentOpen] = useState(false);
+  const [studentToEdit, setStudentToEdit] = useState<Student | null>(null);
+  const [editStudentName, setEditStudentName] = useState('');
+  
+  const [isEditTeacherOpen, setIsEditTeacherOpen] = useState(false);
   const [teacherToEdit, setTeacherToEdit] = useState<Teacher | null>(null);
-  const [teacherNameFilter, setTeacherNameFilter] = useState('');
   const [editTeacherData, setEditTeacherData] = useState({
     name: '',
     cpf: '',
     password: '',
-    isAdmin: false,
+    isAdmin: false
   });
-  const [classToToggle, setClassToToggle] = useState<Class | null>(null);
-  const [isToggleClassOpen, setIsToggleClassOpen] = useState(false);
   
-  // Estado para edição de nome de classe
-  const [classToEdit, setClassToEdit] = useState<Class | null>(null);
-  const [isEditClassOpen, setIsEditClassOpen] = useState(false);
-  const [editClassName, setEditClassName] = useState('');
+  const [isAssignTeacherOpen, setIsAssignTeacherOpen] = useState(false);
+  const [selectedTeacherForAssignment, setSelectedTeacherForAssignment] = useState<number | null>(null);
+  const [selectedClassForAssignment, setSelectedClassForAssignment] = useState<number | null>(null);
   
-  // Estado para edição de nome de aluno
-  const [studentToEdit, setStudentToEdit] = useState<Student | null>(null);
-  const [isEditStudentOpen, setIsEditStudentOpen] = useState(false);
-  const [editStudentName, setEditStudentName] = useState('');
+  const [selectedTab, setSelectedTab] = useState("teachers");
   
-  // Estado para adicionar aluno
-  const [isAddStudentOpen, setIsAddStudentOpen] = useState(false);
-  const [studentToToggle, setStudentToToggle] = useState<Student | null>(null);
-  const [isToggleStudentOpen, setIsToggleStudentOpen] = useState(false);
+  // Attendance & Activity Filters
+  const [selectedClassForReports, setSelectedClassForReports] = useState<number | null>(null);
+  const [selectedDateForReports, setSelectedDateForReports] = useState<string | null>(null);
+  const [selectedTrimester, setSelectedTrimester] = useState<number | null>(null);
+  const [availableDates, setAvailableDates] = useState<string[]>([]);
   
-  // Fetch attendance records
-  const {
-    data: attendanceRecords = [],
-    isLoading: attendanceLoading,
-  } = useQuery<(AttendanceRecord & { studentName: string, className: string })[]>({
-    queryKey: ['/api/attendance', selectedClassForReports, selectedDateForReports, selectedTrimester],
-    queryFn: async () => {
-      let url = '/api/attendance';
-      const params = new URLSearchParams();
-      
-      if (selectedClassForReports) {
-        params.append('classId', selectedClassForReports.toString());
-      }
-      
-      if (selectedDateForReports) {
-        params.append('date', selectedDateForReports);
-      }
-      
-      // Se tiver um trimestre selecionado, poderia adicionar parâmetros de consulta
-      // para a API filtrar por intervalo de datas, mas isso exigiria mudanças no backend
-      // Por enquanto, o filtro de trimestre é aplicado apenas localmente
-      
-      if (params.toString()) {
-        url += `?${params.toString()}`;
-      }
-      
-      const res = await apiRequest('GET', url);
-      return res.json();
+  // Determine current trimester
+  const getCurrentTrimester = () => {
+    const now = new Date();
+    const month = now.getMonth() + 1; // January is 0
+    
+    if (month >= 1 && month <= 4) return 1;
+    if (month >= 5 && month <= 8) return 2;
+    return 3; // September to December
+  };
+  
+  // Determine if a date falls within a specific trimester
+  const isDateInTrimester = (dateStr: string, trimester: number) => {
+    const date = new Date(dateStr);
+    const year = date.getFullYear();
+    const month = date.getMonth() + 1; // January is 0
+    
+    if (trimester === 1 && month >= 1 && month <= 4) return true;
+    if (trimester === 2 && month >= 5 && month <= 8) return true;
+    if (trimester === 3 && month >= 9 && month <= 12) return true;
+    
+    return false;
+  };
+  
+  // Get dates for a specific trimester
+  const getTrimesterDateRange = (trimester: number) => {
+    const currentYear = new Date().getFullYear();
+    
+    let startMonth, endMonth;
+    if (trimester === 1) {
+      startMonth = 0; // January (0-indexed)
+      endMonth = 3;  // April
+    } else if (trimester === 2) {
+      startMonth = 4; // May
+      endMonth = 7;  // August
+    } else {
+      startMonth = 8; // September
+      endMonth = 11; // December
     }
-  });
+    
+    const start = new Date(currentYear, startMonth, 1);
+    const end = new Date(currentYear, endMonth + 1, 0); // Last day of end month
+    
+    return { start, end };
+  };
   
-  // Extrair datas únicas quando os dados de frequência mudarem
+  // Group attendance records by class for trimester view
+  const getAttendanceByClassAndTrimester = () => {
+    if (!selectedTrimester || attendanceRecords.length === 0) return [];
+    
+    // Filter records that fall within the selected trimester
+    const recordsInTrimester = attendanceRecords.filter(record => 
+      isDateInTrimester(record.date, selectedTrimester)
+    );
+    
+    // Group records by class
+    const classSummary = new Map();
+    
+    // Initialize with all classes
+    classes.forEach(classItem => {
+      if (!classSummary.has(classItem.id)) {
+        classSummary.set(classItem.id, {
+          classId: classItem.id,
+          className: classItem.name,
+          presentCount: 0,
+          absentCount: 0,
+          totalRecords: 0
+        });
+      }
+    });
+    
+    // Count present/absent for each class
+    recordsInTrimester.forEach(record => {
+      const classData = classSummary.get(record.classId);
+      if (classData) {
+        classData.totalRecords++;
+        if (record.present) {
+          classData.presentCount++;
+        } else {
+          classData.absentCount++;
+        }
+      }
+    });
+    
+    // Calculate totals
+    let totalPresent = 0;
+    let totalAbsent = 0;
+    
+    classSummary.forEach(summary => {
+      totalPresent += summary.presentCount;
+      totalAbsent += summary.absentCount;
+    });
+    
+    // Add a "total" row
+    classSummary.set('total', {
+      classId: 'total',
+      className: 'Total',
+      presentCount: totalPresent,
+      absentCount: totalAbsent,
+      totalRecords: totalPresent + totalAbsent
+    });
+    
+    // Convert to array and filter if a specific class is selected
+    let result = Array.from(classSummary.values());
+    
+    if (selectedClassForReports) {
+      result = result.filter(summary => 
+        summary.classId === selectedClassForReports || summary.classId === 'total'
+      );
+    }
+    
+    return result;
+  };
+  
+  // Extract unique dates from attendance records
   useEffect(() => {
-    if (attendanceRecords && attendanceRecords.length > 0) {
-      // Criar um conjunto de datas únicas e convertê-lo em array
-      const dateSet = new Set<string>();
-      attendanceRecords.forEach(record => dateSet.add(record.date));
-      const uniqueDates = Array.from(dateSet).sort().reverse();
-      setAvailableDates(uniqueDates);
+    if (attendanceRecords.length > 0) {
+      const dates = attendanceRecords
+        .map(record => record.date)
+        .filter((date, index, self) => self.indexOf(date) === index);
+      setAvailableDates(dates.sort().reverse());
     }
   }, [attendanceRecords]);
   
-  // Fetch missionary activities
-  const {
-    data: missionaryActivities = [],
-    isLoading: activitiesLoading,
-  } = useQuery<(MissionaryActivity & { className: string })[]>({
-    queryKey: ['/api/missionary-activities', selectedClassForReports, selectedDateForReports, selectedTrimester],
-    queryFn: async () => {
-      let url = '/api/missionary-activities';
-      const params = new URLSearchParams();
-      
-      if (selectedClassForReports) {
-        params.append('classId', selectedClassForReports.toString());
-      }
-      
-      if (selectedDateForReports) {
-        params.append('date', selectedDateForReports);
-      }
-      
-      // Se tiver um trimestre selecionado, poderia adicionar parâmetros de consulta
-      // para a API filtrar por intervalo de datas, mas isso exigiria mudanças no backend
-      // Por enquanto, o filtro de trimestre é aplicado apenas localmente
-      
-      if (params.toString()) {
-        url += `?${params.toString()}`;
-      }
-      
-      const res = await apiRequest('GET', url);
-      return res.json();
-    }
-  });
-  
-  // Atualizamos as datas disponíveis a partir das atividades missionárias
+  // Update available dates when missionary activities data is loaded
   useEffect(() => {
-    if (missionaryActivities && missionaryActivities.length > 0) {
-      // Extrair datas únicas das atividades missionárias usando array e filtro
+    if (missionaryActivities.length > 0) {
       const missionaryDates = missionaryActivities
         .map(activity => activity.date)
         .filter((date, index, self) => self.indexOf(date) === index);
@@ -266,34 +368,8 @@ const AdminHome = () => {
     return Array.from(groupedActivities.values());
   };
   
-  // Interface para tipagem dos resultados da função getActivitiesGridData
-  interface ActivityGridData {
-    activityTypes: Array<{ id: string; name: string }>;
-    classes: Array<{
-      id: number;
-      name: string;
-      literaturasDistribuidas: number;
-      qtdContatosMissionarios: number;
-      estudosBiblicosTotal: number;
-      visitasMissionarias: number;
-      pessoasAuxiliadas: number;
-      pessoasTrazidasIgreja: number;
-      [key: string]: any;
-    }>;
-    totals: Record<string, number>;
-    empty: boolean;
-  }
-  
-  // Interface para dados vazios ou nulos
-  interface ActivityGridDataEmpty {
-    empty: true;
-    activityTypes?: never;
-    classes?: never;
-    totals?: never;
-  }
-
   // Nova função para gerar a tabela de atividades missionárias com uma coluna para cada classe
-  const getActivitiesGridData = (): ActivityGridData | ActivityGridDataEmpty | null => {
+  const getActivitiesGridData = (): ActivityGridData | null => {
     if (!selectedTrimester || missionaryActivities.length === 0) return null;
     
     // Definir tipos de atividades missionárias
@@ -313,7 +389,7 @@ const AdminHome = () => {
     
     // Verificar se existem atividades no trimestre
     if (activitiesInTrimester.length === 0) {
-      return { empty: true } as ActivityGridDataEmpty;
+      return { empty: true };
     }
     
     // Obter todas as classes ativas
@@ -359,7 +435,7 @@ const AdminHome = () => {
     
     // Verificar se após a filtragem ainda temos dados para mostrar
     if (filteredClasses.length === 0) {
-      return { empty: true } as ActivityGridDataEmpty;
+      return { empty: true };
     }
     
     // Verificar se o total geral de todas as atividades é zero
@@ -370,7 +446,7 @@ const AdminHome = () => {
     });
     
     if (!hasNonZeroValues) {
-      return { empty: true } as ActivityGridDataEmpty;
+      return { empty: true };
     }
     
     // Calcular os totais gerais apenas para as classes filtradas
@@ -385,7 +461,7 @@ const AdminHome = () => {
       classes: filteredClasses,
       totals: totalsByActivity,
       empty: false
-    } as ActivityGridData;
+    };
   };
 
   // Fetch classes
@@ -427,1370 +503,529 @@ const AdminHome = () => {
     enabled: !!selectedClassId,
   });
 
-  // Fetch teachers for a class
+  // Fetch attendance records
   const {
-    data: classTeachers = [],
-    isLoading: classTeachersLoading,
-    refetch: refetchClassTeachers
-  } = useQuery<Teacher[]>({
-    queryKey: ['/api/classes', selectedClassId, 'teachers'],
+    data: attendanceRecords = [],
+    isLoading: attendanceLoading
+  } = useQuery<(AttendanceRecord & { studentName: string, className: string })[]>({
+    queryKey: ['/api/attendance'],
     queryFn: async () => {
-      if (!selectedClassId) return [];
-      const res = await apiRequest('GET', `/api/classes/${selectedClassId}/teachers`);
+      const res = await apiRequest('GET', `/api/attendance`);
       return res.json();
-    },
-    enabled: !!selectedClassId,
-  });
-
-  // Create class mutation
-  const createClassMutation = useMutation({
-    mutationFn: async (className: string) => {
-      const res = await apiRequest('POST', '/api/classes', { name: className });
-      return res.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/classes'] });
-      toast({
-        title: 'Sucesso',
-        description: 'Classe criada com sucesso',
-      });
-      setNewClassName('');
-    },
-    onError: (error) => {
-      toast({
-        title: 'Erro',
-        description: error.message || 'Erro ao criar classe',
-        variant: 'destructive',
-      });
     },
   });
 
-  // Create student mutation
-  const createStudentMutation = useMutation({
-    mutationFn: async ({ name, classId }: { name: string; classId: number }) => {
-      const res = await apiRequest('POST', '/api/students', { name, classId });
+  // Fetch missionary activities
+  const {
+    data: missionaryActivities = [],
+    isLoading: activitiesLoading
+  } = useQuery<MissionaryActivity[]>({
+    queryKey: ['/api/missionary-activities'],
+    queryFn: async () => {
+      const res = await apiRequest('GET', `/api/missionary-activities`);
       return res.json();
-    },
-    onSuccess: () => {
-      refetchStudents();
-      toast({
-        title: 'Sucesso',
-        description: 'Aluno adicionado com sucesso',
-      });
-      setNewStudentName('');
-    },
-    onError: (error) => {
-      toast({
-        title: 'Erro',
-        description: error.message || 'Erro ao adicionar aluno',
-        variant: 'destructive',
-      });
     },
   });
 
   // Create teacher mutation
   const createTeacherMutation = useMutation({
-    mutationFn: async (teacherData: typeof newTeacherData) => {
-      const res = await apiRequest('POST', '/api/teachers', teacherData);
+    mutationFn: async (data: typeof newTeacherData) => {
+      const res = await apiRequest('POST', '/api/teachers', data);
       return res.json();
     },
     onSuccess: () => {
+      toast({
+        title: "Professor criado com sucesso",
+        description: "O novo professor foi adicionado",
+      });
+      setIsAddTeacherOpen(false);
+      setNewTeacherData({
+        name: '',
+        cpf: '',
+        password: '',
+        isAdmin: false
+      });
       queryClient.invalidateQueries({ queryKey: ['/api/teachers'] });
+    },
+    onError: (error: Error) => {
       toast({
-        title: 'Sucesso',
-        description: 'Professor criado com sucesso',
+        title: "Erro ao criar professor",
+        description: error.message,
+        variant: "destructive",
       });
-      setNewTeacherData({ name: '', cpf: '', password: '', isAdmin: false });
-    },
-    onError: (error) => {
-      toast({
-        title: 'Erro',
-        description: error.message || 'Erro ao criar professor',
-        variant: 'destructive',
-      });
-    },
-  });
-
-  // Assign teacher to class mutation
-  const assignTeacherMutation = useMutation({
-    mutationFn: async (data: typeof teacherClassAssignment) => {
-      const res = await apiRequest('POST', '/api/teacher-classes', data);
-      return res.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/classes', selectedClassId, 'teachers'] });
-      toast({
-        title: 'Sucesso',
-        description: 'Professor atribuído à classe com sucesso',
-      });
-      setTeacherClassAssignment({ teacherId: 0, classId: 0 });
-    },
-    onError: (error) => {
-      toast({
-        title: 'Erro',
-        description: error.message || 'Erro ao atribuir professor à classe',
-        variant: 'destructive',
-      });
-    },
+    }
   });
 
   // Edit teacher mutation
   const editTeacherMutation = useMutation({
-    mutationFn: async () => {
-      if (!teacherToEdit) throw new Error("Nenhum professor selecionado para edição");
-      
-      const data: any = {};
-      if (editTeacherData.name) data.name = editTeacherData.name;
-      if (editTeacherData.cpf) data.cpf = editTeacherData.cpf;
-      if (editTeacherData.password) data.password = editTeacherData.password;
-      data.isAdmin = editTeacherData.isAdmin;
-      
-      const res = await apiRequest('PUT', `/api/teachers/${teacherToEdit.id}`, data);
-      if (!res.ok) {
-        const errorData = await res.json();
-        throw new Error(errorData.message || "Erro ao editar professor");
-      }
-      return await res.json();
+    mutationFn: async (data: { id: number, updateData: Partial<Teacher> }) => {
+      const res = await apiRequest('PATCH', `/api/teachers/${data.id}`, data.updateData);
+      return res.json();
     },
     onSuccess: () => {
       toast({
-        title: 'Professor atualizado',
-        description: 'O professor foi atualizado com sucesso',
+        title: "Professor atualizado com sucesso",
+        description: "As informações do professor foram atualizadas",
       });
-      queryClient.invalidateQueries({ queryKey: ['/api/teachers'] });
+      setIsEditTeacherOpen(false);
       setTeacherToEdit(null);
-      setEditTeacherData({ name: '', cpf: '', password: '', isAdmin: false });
+      queryClient.invalidateQueries({ queryKey: ['/api/teachers'] });
     },
     onError: (error: Error) => {
       toast({
-        title: 'Erro ao atualizar professor',
+        title: "Erro ao atualizar professor",
         description: error.message,
-        variant: 'destructive'
+        variant: "destructive",
       });
     }
   });
-  
-  // Edit student name mutation
-  const editStudentMutation = useMutation({
-    mutationFn: async () => {
-      if (!studentToEdit) throw new Error("Nenhum aluno selecionado para edição");
-      
-      const res = await apiRequest('PUT', `/api/students/${studentToEdit.id}`, {
-        name: editStudentName
-      });
-      if (!res.ok) {
-        const errorData = await res.json();
-        throw new Error(errorData.message || "Erro ao editar nome do aluno");
-      }
-      return await res.json();
-    },
-    onSuccess: () => {
-      toast({
-        title: 'Aluno atualizado',
-        description: 'O nome do aluno foi atualizado com sucesso',
-      });
-      
-      // Atualizar a lista de alunos da classe
-      if (selectedClassId) {
-        queryClient.invalidateQueries({ queryKey: ['/api/classes', selectedClassId, 'students'] });
-      }
-      
-      setStudentToEdit(null);
-      setEditStudentName('');
-      setIsEditStudentOpen(false);
-    },
-    onError: (error: Error) => {
-      toast({
-        title: 'Erro ao atualizar aluno',
-        description: error.message,
-        variant: 'destructive'
-      });
-    }
-  });
-  
-  // Toggle student status mutation
-  const toggleStudentStatusMutation = useMutation({
-    mutationFn: async (studentId: number) => {
-      const newStatus = !studentToToggle?.active;
-      const res = await apiRequest('PUT', `/api/students/${studentId}`, {
-        active: newStatus
-      });
-      if (!res.ok) {
-        const errorData = await res.json();
-        throw new Error(errorData.message || `Erro ao ${newStatus ? 'reativar' : 'desativar'} aluno`);
-      }
-      return { success: true, active: newStatus };
-    },
-    onSuccess: (data) => {
-      toast({
-        title: data.active ? 'Aluno reativado' : 'Aluno desativado',
-        description: data.active
-          ? 'O aluno foi reativado com sucesso.'
-          : 'O aluno foi desativado com sucesso.',
-      });
-      
-      // Atualizar a lista de alunos da classe
-      if (selectedClassId) {
-        queryClient.invalidateQueries({ queryKey: ['/api/classes', selectedClassId, 'students'] });
-      }
-      
-      // Fechar o diálogo
-      setIsToggleStudentOpen(false);
-      setStudentToToggle(null);
-    },
-    onError: (error: Error) => {
-      toast({
-        title: studentToToggle?.active ? 'Erro ao desativar aluno' : 'Erro ao reativar aluno',
-        description: error.message,
-        variant: 'destructive'
-      });
-    }
-  });
-  
-  // Edit class name mutation
-  const editClassMutation = useMutation({
-    mutationFn: async () => {
-      if (!classToEdit) throw new Error("Nenhuma classe selecionada para edição");
-      
-      const res = await apiRequest('PUT', `/api/classes/${classToEdit.id}`, {
-        name: editClassName
-      });
-      if (!res.ok) {
-        const errorData = await res.json();
-        throw new Error(errorData.message || "Erro ao editar nome da classe");
-      }
-      return await res.json();
-    },
-    onSuccess: () => {
-      toast({
-        title: 'Classe atualizada',
-        description: 'O nome da classe foi atualizado com sucesso',
-      });
-      queryClient.invalidateQueries({ queryKey: ['/api/classes'] });
-      setClassToEdit(null);
-      setEditClassName('');
-      setIsEditClassOpen(false);
-    },
-    onError: (error: Error) => {
-      toast({
-        title: 'Erro ao atualizar classe',
-        description: error.message,
-        variant: 'destructive'
-      });
-    }
-  });
-  
-  // Toggle class status mutation
-  const toggleClassStatusMutation = useMutation({
-    mutationFn: async (classId: number) => {
-      const newStatus = !classToToggle?.active;
-      const res = await apiRequest('PUT', `/api/classes/${classId}`, {
-        active: newStatus
-      });
-      if (!res.ok) {
-        const errorData = await res.json();
-        throw new Error(errorData.message || `Erro ao ${newStatus ? 'reativar' : 'desativar'} classe`);
-      }
-      return { success: true, active: newStatus };
-    },
-    onSuccess: (data) => {
-      toast({
-        title: data.active ? 'Classe reativada' : 'Classe desativada',
-        description: data.active
-          ? 'A classe foi reativada com sucesso.'
-          : 'A classe foi desativada com sucesso.',
-      });
-      
-      // Atualizar a lista de classes
-      queryClient.invalidateQueries({ queryKey: ['/api/classes'] });
-      
-      // Atualizar as relações
-      if (selectedClassId) {
-        queryClient.invalidateQueries({ queryKey: ['/api/classes', selectedClassId, 'teachers'] });
-        queryClient.invalidateQueries({ queryKey: ['/api/classes', selectedClassId, 'students'] });
-      }
-      
-      // Fechar o diálogo
-      setIsToggleClassOpen(false);
-      setClassToToggle(null);
-    },
-    onError: (error: Error) => {
-      toast({
-        title: classToToggle?.active ? 'Erro ao desativar classe' : 'Erro ao reativar classe',
-        description: error.message,
-        variant: 'destructive'
-      });
-    }
-  });
-  
-  // Remove teacher assignment mutation
-  const removeTeacherAssignmentMutation = useMutation({
-    mutationFn: async ({ teacherId, classId }: { teacherId: number, classId: number }) => {
-      const res = await apiRequest('DELETE', `/api/teacher-classes/${teacherId}/${classId}`);
-      if (!res.ok) {
-        const errorData = await res.json();
-        throw new Error(errorData.message || 'Erro ao remover atribuição do professor');
-      }
-      return { success: true };
-    },
-    onSuccess: () => {
-      toast({
-        title: 'Atribuição removida',
-        description: 'O professor foi removido da classe com sucesso',
-      });
-      
-      // Atualizar a lista de professores da classe
-      if (selectedClassId) {
-        queryClient.invalidateQueries({ queryKey: ['/api/classes', selectedClassId, 'teachers'] });
-      }
-    },
-    onError: (error: Error) => {
-      toast({
-        title: 'Erro ao remover atribuição',
-        description: error.message,
-        variant: 'destructive'
-      });
-    }
-  });
-  
+
   // Toggle teacher status mutation
   const toggleTeacherStatusMutation = useMutation({
-    mutationFn: async (teacherId: number) => {
-      // Em vez de excluir, vamos atualizar o status para o oposto
-      const newStatus = !teacherToToggle?.active;
-      const res = await apiRequest('PUT', `/api/teachers/${teacherId}`, { 
-        active: newStatus 
-      });
-      if (!res.ok) {
-        const errorData = await res.json();
-        throw new Error(errorData.message || `Erro ao ${newStatus ? 'reativar' : 'desativar'} professor`);
-      }
-      return { success: true, active: newStatus };
+    mutationFn: async (data: { id: number, active: boolean }) => {
+      const res = await apiRequest('PATCH', `/api/teachers/${data.id}`, { active: data.active });
+      return res.json();
     },
-    onSuccess: (data) => {
+    onSuccess: () => {
       toast({
-        title: data.active ? 'Professor reativado' : 'Professor desativado',
-        description: data.active 
-          ? 'O professor foi reativado com sucesso.' 
-          : 'O professor foi desativado com sucesso.',
+        title: "Status do professor alterado",
+        description: "O status do professor foi atualizado com sucesso",
       });
-      // Atualizar a lista de professores
-      queryClient.invalidateQueries({ queryKey: ['/api/teachers'] });
-      
-      // Atualizar a lista de classes, pois professores inativos não devem aparecer nas classes
-      queryClient.invalidateQueries({ queryKey: ['/api/classes'] });
-      
-      // Atualizar as listas de professores por classe
-      if (selectedClassId) {
-        queryClient.invalidateQueries({ queryKey: ['/api/classes', selectedClassId, 'teachers'] });
-      }
-      
-      // Fechar o diálogo
       setIsToggleTeacherOpen(false);
       setTeacherToToggle(null);
+      queryClient.invalidateQueries({ queryKey: ['/api/teachers'] });
     },
     onError: (error: Error) => {
       toast({
-        title: teacherToToggle?.active ? 'Erro ao desativar professor' : 'Erro ao reativar professor',
+        title: "Erro ao alterar status do professor",
         description: error.message,
-        variant: 'destructive'
+        variant: "destructive",
       });
     }
   });
 
-  // Handle class selection
-  const handleClassSelection = (classId: number) => {
-    setSelectedClassId(classId);
-  };
-  
-  // Handle class selection for reports
-  const handleClassSelectionForReports = (classId: number | null) => {
-    setSelectedClassForReports(classId);
-  };
-  
-  // Handle date selection for reports
-  const handleDateSelectionForReports = (date: string | null) => {
-    setSelectedDateForReports(date);
-    // Ao selecionar uma data, limpa o filtro de trimestre
-    if (date) {
-      setSelectedTrimester(null);
+  // Create class mutation
+  const createClassMutation = useMutation({
+    mutationFn: async (name: string) => {
+      const res = await apiRequest('POST', '/api/classes', { name });
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Classe criada com sucesso",
+        description: "A nova classe foi adicionada",
+      });
+      setIsAddClassOpen(false);
+      setNewClassName('');
+      queryClient.invalidateQueries({ queryKey: ['/api/classes'] });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Erro ao criar classe",
+        description: error.message,
+        variant: "destructive",
+      });
     }
-  };
-  
-  // Função para verificar se uma data está dentro de um trimestre
-  const isDateInTrimester = (dateStr: string, trimester: string): boolean => {
-    if (!dateStr || !trimester) return false;
-    
-    const date = new Date(dateStr);
-    const month = date.getMonth(); // 0-indexed (0 = Janeiro, 11 = Dezembro)
-    const currentYear = new Date().getFullYear();
-    
-    // Verifica se o ano da data corresponde ao ano atual
-    if (date.getFullYear() !== currentYear) return false;
-    
-    // Verifica se o mês está dentro do trimestre
-    switch (trimester) {
-      case "1": // 1º Trimestre (Jan-Mar)
-        return month >= 0 && month <= 2;
-      case "2": // 2º Trimestre (Abr-Jun)
-        return month >= 3 && month <= 5;
-      case "3": // 3º Trimestre (Jul-Set)
-        return month >= 6 && month <= 8;
-      case "4": // 4º Trimestre (Out-Dez)
-        return month >= 9 && month <= 11;
-      default:
-        return false;
+  });
+
+  // Edit class mutation
+  const editClassMutation = useMutation({
+    mutationFn: async (data: { id: number, name: string }) => {
+      const res = await apiRequest('PATCH', `/api/classes/${data.id}`, { name: data.name });
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Classe atualizada com sucesso",
+        description: "O nome da classe foi atualizado",
+      });
+      setIsEditClassOpen(false);
+      setClassToEdit(null);
+      queryClient.invalidateQueries({ queryKey: ['/api/classes'] });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Erro ao atualizar classe",
+        description: error.message,
+        variant: "destructive",
+      });
     }
-  };
-  
-  // Função para gerar dados de presença agrupados por classe para visualização em grid
-  const getAttendanceGridData = () => {
-    if (!selectedTrimester || !attendanceRecords) return null;
-    
-    // Usamos um mapa com nome da classe como chave em vez de ID para evitar problemas de tipo
-    const classTotals = new Map<string, { 
-      className: string, 
-      presentCount: number, 
-      absentCount: number,
-      totalCount: number
-    }>();
-    
-    // Se temos uma classe específica selecionada, apenas inicializamos ela
-    if (selectedClassForReports) {
-      const classItem = classes.find(c => c.id === selectedClassForReports);
-      
-      if (classItem) {
-        classTotals.set(classItem.name, {
-          className: classItem.name,
-          presentCount: 0,
-          absentCount: 0,
-          totalCount: 0
-        });
+  });
+
+  // Toggle class status mutation
+  const toggleClassStatusMutation = useMutation({
+    mutationFn: async (data: { id: number, active: boolean }) => {
+      const res = await apiRequest('PATCH', `/api/classes/${data.id}`, { active: data.active });
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Status da classe alterado",
+        description: "O status da classe foi atualizado com sucesso",
+      });
+      setIsToggleClassOpen(false);
+      setClassToToggle(null);
+      queryClient.invalidateQueries({ queryKey: ['/api/classes'] });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Erro ao alterar status da classe",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  });
+
+  // Create student mutation
+  const createStudentMutation = useMutation({
+    mutationFn: async (data: { name: string, classId: number }) => {
+      const res = await apiRequest('POST', '/api/students', data);
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Aluno criado com sucesso",
+        description: "O novo aluno foi adicionado",
+      });
+      setIsAddStudentOpen(false);
+      setNewStudentName('');
+      if (selectedClassId) {
+        refetchStudents();
       }
-    } else {
-      // Caso contrário, inicializamos todas as classes conhecidas
-      classes.forEach(classItem => {
-        classTotals.set(classItem.name, {
-          className: classItem.name,
-          presentCount: 0,
-          absentCount: 0,
-          totalCount: 0
-        });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Erro ao criar aluno",
+        description: error.message,
+        variant: "destructive",
       });
     }
-    
-    // Processamos todos os registros de presença no período do trimestre
-    attendanceRecords
-      .filter(record => isDateInTrimester(record.date, selectedTrimester))
-      .forEach(record => {
-        const className = record.className;
-        
-        // Se ainda não temos esta classe no mapa (provavelmente porque ela foi adicionada após inicialização),
-        // criamos uma entrada para ela agora
-        if (!classTotals.has(className)) {
-          classTotals.set(className, {
-            className,
-            presentCount: 0,
-            absentCount: 0,
-            totalCount: 0
-          });
-        }
-        
-        // Atualizamos os totais para esta classe
-        const classSummary = classTotals.get(className)!;
-        
-        if (record.present) {
-          classSummary.presentCount += 1;
-        } else {
-          classSummary.absentCount += 1;
-        }
-        classSummary.totalCount += 1;
-      });
-    
-    // Convertemos o mapa para um array e filtramos classes sem registros
-    const gridData = Array.from(classTotals.values())
-      .filter(summary => summary.totalCount > 0);
-    
-    // Calculamos o total geral para todas as classes
-    const totalSummary = {
-      className: 'Total Geral',
-      presentCount: gridData.reduce((sum, item) => sum + item.presentCount, 0),
-      absentCount: gridData.reduce((sum, item) => sum + item.absentCount, 0),
-      totalCount: gridData.reduce((sum, item) => sum + item.totalCount, 0)
-    };
-    
-    return {
-      classes: gridData,
-      totals: totalSummary
-    };
-  };
+  });
 
-  // Handle trimester selection for reports
-  const handleTrimesterSelection = (trimester: string | null) => {
-    setSelectedTrimester(trimester);
-    
-    // Ao selecionar um trimestre, limpa o filtro de data específica
-    if (trimester) {
-      setSelectedDateForReports(null);
-      
-      // Define as datas do trimestre selecionado
-      const currentYear = new Date().getFullYear();
-      let startMonth: number, endMonth: number;
-      
-      switch (trimester) {
-        case "1":
-          startMonth = 0; // Janeiro (0-indexed)
-          endMonth = 2;   // Março
-          break;
-        case "2":
-          startMonth = 3; // Abril
-          endMonth = 5;   // Junho
-          break;
-        case "3":
-          startMonth = 6; // Julho
-          endMonth = 8;   // Setembro
-          break;
-        case "4":
-          startMonth = 9; // Outubro
-          endMonth = 11;  // Dezembro
-          break;
-        default:
-          return;
+  // Edit student mutation
+  const editStudentMutation = useMutation({
+    mutationFn: async (data: { id: number, name: string }) => {
+      const res = await apiRequest('PATCH', `/api/students/${data.id}`, { name: data.name });
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Aluno atualizado com sucesso",
+        description: "O nome do aluno foi atualizado",
+      });
+      setIsEditStudentOpen(false);
+      setStudentToEdit(null);
+      if (selectedClassId) {
+        refetchStudents();
       }
-      
-      // Atualiza as consultas com o filtro de trimestre
-      const startDate = format(setDate(setMonth(startOfYear(new Date(currentYear, 0)), startMonth), 1), 'yyyy-MM-dd');
-      const endDate = format(endOfMonth(new Date(currentYear, endMonth)), 'yyyy-MM-dd');
-      
-      console.log(`Filtrando por trimestre ${trimester}: ${startDate} até ${endDate}`);
-      
-      // Como não temos filtro de trimestre no backend, invalidamos as queries para forçar a atualização
-      // dos dados. O filtro será aplicado localmente no frontend.
-      queryClient.invalidateQueries({ queryKey: ['/api/attendance'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/missionary-activities'] });
-    } else {
-      // Se nenhum trimestre foi selecionado, limpa o filtro
-      queryClient.invalidateQueries({ queryKey: ['/api/attendance'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/missionary-activities'] });
-    }
-  };
-
-  // Handle create class
-  const handleCreateClass = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (newClassName.trim()) {
-      createClassMutation.mutate(newClassName);
-    }
-  };
-
-  // Handle create student
-  const handleCreateStudent = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (newStudentName.trim() && selectedClassId) {
-      createStudentMutation.mutate({
-        name: newStudentName,
-        classId: selectedClassId,
-      }, {
-        onSuccess: () => {
-          setIsAddStudentOpen(false);
-        }
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Erro ao atualizar aluno",
+        description: error.message,
+        variant: "destructive",
       });
     }
-  };
+  });
 
-  // Handle create teacher
-  const handleCreateTeacher = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (newTeacherData.name && newTeacherData.cpf && newTeacherData.password) {
-      createTeacherMutation.mutate(newTeacherData);
+  // Toggle student status mutation
+  const toggleStudentStatusMutation = useMutation({
+    mutationFn: async (data: { id: number, active: boolean }) => {
+      const res = await apiRequest('PATCH', `/api/students/${data.id}`, { active: data.active });
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Status do aluno alterado",
+        description: "O status do aluno foi atualizado com sucesso",
+      });
+      setIsToggleStudentOpen(false);
+      setStudentToToggle(null);
+      if (selectedClassId) {
+        refetchStudents();
+      }
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Erro ao alterar status do aluno",
+        description: error.message,
+        variant: "destructive",
+      });
     }
-  };
+  });
 
-  // Handle assign teacher to class
-  const handleAssignTeacher = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (teacherClassAssignment.teacherId && teacherClassAssignment.classId) {
-      assignTeacherMutation.mutate(teacherClassAssignment);
+  // Assign teacher to class mutation
+  const assignTeacherClassMutation = useMutation({
+    mutationFn: async (data: { teacherId: number, classId: number }) => {
+      const res = await apiRequest('POST', '/api/teacher-classes', data);
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Professor atribuído com sucesso",
+        description: "O professor foi atribuído à classe",
+      });
+      setIsAssignTeacherOpen(false);
+      setSelectedTeacherForAssignment(null);
+      setSelectedClassForAssignment(null);
+      // You might want to invalidate some queries here
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Erro ao atribuir professor",
+        description: error.message,
+        variant: "destructive",
+      });
     }
-  };
+  });
 
-  // Handle toggle teacher status
   const toggleTeacherStatus = (teacher: Teacher) => {
     setTeacherToToggle(teacher);
     setIsToggleTeacherOpen(true);
   };
-  
-  // Handle toggle class status
+
   const toggleClassStatus = (classObj: Class) => {
     setClassToToggle(classObj);
     setIsToggleClassOpen(true);
   };
-  
-  // Handle edit class
+
   const handleEditClass = (classObj: Class) => {
     setClassToEdit(classObj);
     setEditClassName(classObj.name);
     setIsEditClassOpen(true);
   };
-  
-  // Handle toggle student status
+
   const toggleStudentStatus = (student: Student) => {
     setStudentToToggle(student);
     setIsToggleStudentOpen(true);
   };
-  
-  // Handle edit student
+
   const handleEditStudent = (student: Student) => {
     setStudentToEdit(student);
     setEditStudentName(student.name);
     setIsEditStudentOpen(true);
   };
-  
-  // Handle edit teacher
+
   const handleEditTeacher = (teacher: Teacher) => {
+    setTeacherToEdit(teacher);
     setEditTeacherData({
       name: teacher.name,
       cpf: teacher.cpf,
-      password: '',
+      password: '', // We don't send the current password for security reasons
       isAdmin: teacher.isAdmin
     });
-    // Define o professor para edição (isso abrirá o modal automaticamente)
-    setTeacherToEdit(teacher);
+    setIsEditTeacherOpen(true);
   };
-
-  // Handle logout
-  const handleLogout = () => {
-    logoutMutation.mutate(undefined, {
-      onSuccess: () => {
-        setLocation('/auth');
-      },
-    });
-  };
-
-  // Redirect if not admin or not logged in
-  useEffect(() => {
-    if (!teacher) {
-      setLocation('/auth');
-    } else if (!teacher.isAdmin) {
-      setLocation('/');
-    }
-  }, [teacher, setLocation]);
-
-  if (!teacher || !teacher.isAdmin) {
-    return null;
-  }
-
-  const isMobile = useIsMobile();
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-blue-600 text-white py-3 px-4 flex justify-between items-center">
-        <div>
-          <h1 className={`${isMobile ? 'text-lg' : 'text-xl'} font-bold text-white`}>Administração</h1>
-          <p className="text-xs text-white">Bem-vindo, {teacher.name}</p>
+    <div className="flex flex-col h-screen">
+      {/* Header */}
+      <header className="bg-blue-600 text-white p-4 flex justify-between items-center shadow-md">
+        <h1 className="text-xl md:text-2xl font-bold">CLASSE ALUNOS</h1>
+        <div className="flex items-center space-x-3">
+          <span className="hidden md:inline">Olá, {teacher?.name}</span>
+          <button 
+            onClick={() => logoutMutation.mutate()}
+            className="flex items-center bg-white/10 hover:bg-white/20 rounded px-2 py-1 transition"
+          >
+            <LogOut className="h-4 w-4 mr-1" />
+            <span className="hidden md:inline">Sair</span>
+          </button>
         </div>
-        <Button 
-          variant="outline" 
-          size="sm" 
-          onClick={handleLogout} 
-          className="flex items-center gap-1 bg-white text-gray-600 hover:text-red-600"
-        >
-          <LogOut className="h-4 w-4" />
-          {!isMobile && "Sair"}
-        </Button>
       </header>
 
-      <main className="py-4 px-4 max-w-5xl mx-auto">
-        <Tabs defaultValue="classes">
-          <TabsList className={`mb-4 ${isMobile ? 'w-full' : ''}`}>
-            <TabsTrigger value="classes" className={isMobile ? "text-xs" : ""}>
-              {isMobile ? <School className="h-4 w-4 mr-1" /> : null}
-              Classes
+      {/* Main content */}
+      <main className="flex-1 overflow-auto p-4 space-y-6">
+        <h1 className="text-2xl font-bold">Painel do Administrador</h1>
+
+        <Tabs 
+          defaultValue="teachers" 
+          value={selectedTab}
+          onValueChange={setSelectedTab}
+          className="space-y-4"
+        >
+          <TabsList className="grid grid-cols-3 w-full max-w-md">
+            <TabsTrigger value="teachers">
+              <User className="h-4 w-4 mr-1 inline" />
+              <span>Professores</span>
             </TabsTrigger>
-            <TabsTrigger value="teachers" className={isMobile ? "text-xs" : ""}>
-              {isMobile ? <User className="h-4 w-4 mr-1" /> : null}
-              Professores
+            <TabsTrigger value="classes">
+              <School className="h-4 w-4 mr-1 inline" />
+              <span>Classes</span>
             </TabsTrigger>
-            <TabsTrigger value="reports" className={isMobile ? "text-xs" : ""}>
-              {isMobile ? <BarChart className="h-4 w-4 mr-1" /> : null}
-              Registros
+            <TabsTrigger value="records">
+              <Book className="h-4 w-4 mr-1 inline" />
+              <span>Registros</span>
             </TabsTrigger>
           </TabsList>
-          
-          {/* Classes Tab */}
-          <TabsContent value="classes" className="space-y-6">
-            <div className="grid md:grid-cols-2 gap-6">
-              {/* Classes List */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Classes ({classes.length})</CardTitle>
-                  <CardDescription>
-                    Selecione uma classe para gerenciar alunos e professores
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  {classesLoading ? (
-                    <div className="text-center py-4">Carregando classes...</div>
-                  ) : classes.length === 0 ? (
-                    <div className="text-center py-4">Nenhuma classe encontrada</div>
-                  ) : (
-                    <ScrollArea className="h-[300px]">
-                      <div className="space-y-2">
-                        {classes.map((classObj) => (
-                          <div
-                            key={classObj.id}
-                            className={`p-3 border rounded-md hover:bg-gray-100 ${
-                              selectedClassId === classObj.id ? 'bg-primary-100 border-primary-500' : ''
-                            } ${classObj.active ? '' : 'opacity-50'}`}
-                          >
-                            <div className="flex justify-between items-center">
-                              <h3 
-                                className="font-medium cursor-pointer" 
-                                onClick={() => handleClassSelection(classObj.id)}
-                              >
-                                {classObj.name}
-                              </h3>
-                              <div className="flex items-center space-x-2">
-                                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                                  classObj.active 
-                                    ? 'bg-green-100 text-green-800' 
-                                    : 'bg-gray-100 text-gray-800'
-                                }`}>
-                                  {classObj.active ? 'Ativa' : 'Inativa'}
-                                </span>
-                                <Button 
-                                  variant="ghost" 
-                                  size="icon"
-                                  className="h-6 w-6 text-blue-600"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleEditClass(classObj);
-                                  }}
-                                >
-                                  <Pencil className="h-3 w-3" />
-                                </Button>
-                                <Button 
-                                  variant="ghost" 
-                                  size="icon"
-                                  className={`h-6 w-6 ${classObj.active ? 'text-red-600' : 'text-green-600'}`}
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    toggleClassStatus(classObj);
-                                  }}
-                                >
-                                  {classObj.active ? (
-                                    <Trash2 className="h-3 w-3" />
-                                  ) : (
-                                    <Check className="h-3 w-3" />
-                                  )}
-                                </Button>
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </ScrollArea>
-                  )}
-                </CardContent>
-                <CardFooter>
-                  <Dialog>
-                    <DialogTrigger asChild>
-                      <Button>Adicionar Nova Classe</Button>
-                    </DialogTrigger>
-                    <DialogContent>
-                      <DialogHeader>
-                        <DialogTitle>Adicionar Nova Classe</DialogTitle>
-                        <DialogDescription>
-                          Insira o nome para criar uma nova classe
-                        </DialogDescription>
-                      </DialogHeader>
-                      <form onSubmit={handleCreateClass}>
-                        <div className="space-y-4 py-4">
-                          <div className="space-y-2">
-                            <Label htmlFor="className">Nome da Classe</Label>
-                            <Input
-                              id="className"
-                              value={newClassName}
-                              onChange={(e) => setNewClassName(e.target.value)}
-                              required
-                            />
-                          </div>
-                        </div>
-                        <DialogFooter>
-                          <Button type="submit" disabled={createClassMutation.isPending}>
-                            {createClassMutation.isPending ? 'Adicionando...' : 'Adicionar Classe'}
-                          </Button>
-                        </DialogFooter>
-                      </form>
-                    </DialogContent>
-                  </Dialog>
-                </CardFooter>
-              </Card>
 
-              {/* Class Details */}
-              {selectedClassId && (
-                <div className="space-y-6">
-                  {/* Students */}
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Alunos da Classe ({students.length})</CardTitle>
-                      <CardDescription>
-                        {classes.find(c => c.id === selectedClassId)?.name || ''}
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      {studentsLoading ? (
-                        <div className="text-center py-4">Carregando alunos...</div>
-                      ) : students.length === 0 ? (
-                        <div className="text-center py-4">Nenhum aluno encontrado</div>
-                      ) : (
-                        <ScrollArea className="h-[200px]">
-                          <Table>
-                            <TableHeader>
-                              <TableRow>
-                                <TableHead>Nome</TableHead>
-                                <TableHead>Status</TableHead>
-                                <TableHead className="w-12 text-right">Ações</TableHead>
-                              </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                              {students.map((student) => (
-                                <TableRow key={student.id} className={student.active ? "" : "opacity-50"}>
-                                  <TableCell>{student.name}</TableCell>
-                                  <TableCell>
-                                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                                      student.active 
-                                        ? 'bg-green-100 text-green-800' 
-                                        : 'bg-gray-100 text-gray-800'
-                                    }`}>
-                                      {student.active ? 'Ativo' : 'Inativo'}
-                                    </span>
-                                  </TableCell>
-                                  <TableCell className="text-right">
-                                    <div className="flex justify-end space-x-1">
-                                      <Button 
-                                        variant="ghost" 
-                                        size="icon"
-                                        className="h-8 w-8 text-blue-600"
-                                        onClick={() => handleEditStudent(student)}
-                                      >
-                                        <Pencil className="h-4 w-4" />
-                                      </Button>
-                                      <Button 
-                                        variant="ghost" 
-                                        size="icon"
-                                        className={`h-8 w-8 ${student.active ? 'text-red-600' : 'text-green-600'}`}
-                                        onClick={() => toggleStudentStatus(student)}
-                                        disabled={toggleStudentStatusMutation.isPending}
-                                      >
-                                        {student.active ? (
-                                          <Trash2 className="h-4 w-4" />
-                                        ) : (
-                                          <Check className="h-4 w-4" />
-                                        )}
-                                      </Button>
-                                    </div>
-                                  </TableCell>
-                                </TableRow>
-                              ))}
-                            </TableBody>
-                          </Table>
-                        </ScrollArea>
-                      )}
-                    </CardContent>
-                    <CardFooter>
-                      <Dialog open={isAddStudentOpen} onOpenChange={setIsAddStudentOpen}>
-                        <DialogTrigger asChild>
-                          <Button>Adicionar Novo Aluno</Button>
-                        </DialogTrigger>
-                        <DialogContent>
-                          <DialogHeader>
-                            <DialogTitle>Adicionar Novo Aluno</DialogTitle>
-                            <DialogDescription>
-                              Insira o nome para adicionar um novo aluno à classe
-                            </DialogDescription>
-                          </DialogHeader>
-                          <form onSubmit={handleCreateStudent}>
-                            <div className="space-y-4 py-4">
-                              <div className="space-y-2">
-                                <Label htmlFor="studentName">Nome do Aluno</Label>
-                                <Input
-                                  id="studentName"
-                                  value={newStudentName}
-                                  onChange={(e) => setNewStudentName(e.target.value)}
-                                  required
-                                />
-                              </div>
-                            </div>
-                            <DialogFooter>
-                              <Button type="submit" disabled={createStudentMutation.isPending}>
-                                {createStudentMutation.isPending ? 'Adicionando...' : 'Adicionar Aluno'}
-                              </Button>
-                            </DialogFooter>
-                          </form>
-                        </DialogContent>
-                      </Dialog>
-                    </CardFooter>
-                  </Card>
-
-                  {/* Teachers */}
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Professores da Classe ({classTeachers.length})</CardTitle>
-                      <CardDescription>Máximo de 2 professores por classe</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      {classTeachersLoading ? (
-                        <div className="text-center py-4">Carregando professores...</div>
-                      ) : classTeachers.length === 0 ? (
-                        <div className="text-center py-4">Nenhum professor atribuído</div>
-                      ) : (
-                        <Table>
-                          <TableHeader>
-                            <TableRow>
-                              <TableHead>Nome</TableHead>
-                              <TableHead>CPF</TableHead>
-                              <TableHead className="w-12 text-right">Ações</TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {classTeachers.map((teacher) => (
-                              <TableRow key={teacher.id}>
-                                <TableCell>{teacher.name}</TableCell>
-                                <TableCell>{teacher.cpf}</TableCell>
-                                <TableCell className="text-right">
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-8 w-8 text-red-600"
-                                    onClick={() => {
-                                      if (selectedClassId) {
-                                        removeTeacherAssignmentMutation.mutate({
-                                          teacherId: teacher.id,
-                                          classId: selectedClassId
-                                        });
-                                      }
-                                    }}
-                                    title="Remover atribuição"
-                                    disabled={removeTeacherAssignmentMutation.isPending}
-                                  >
-                                    <MinusCircle className="h-4 w-4" />
-                                  </Button>
-                                </TableCell>
-                              </TableRow>
-                            ))}
-                          </TableBody>
-                        </Table>
-                      )}
-                    </CardContent>
-                    <CardFooter>
-                      {classTeachers && classTeachers.length < 2 && (
-                        <Dialog>
-                          <DialogTrigger asChild>
-                            <Button>Atribuir Professor</Button>
-                          </DialogTrigger>
-                          <DialogContent>
-                            <DialogHeader>
-                              <DialogTitle>Atribuir Professor à Classe</DialogTitle>
-                              <DialogDescription>
-                                Selecione um professor para atribuir a esta classe
-                              </DialogDescription>
-                            </DialogHeader>
-                            <form onSubmit={handleAssignTeacher}>
-                              <div className="space-y-4 py-4">
-                                <div className="space-y-2">
-                                  <Label htmlFor="teacherId">Professor</Label>
-                                  <select
-                                    id="teacherId"
-                                    className="w-full p-2 border rounded"
-                                    value={teacherClassAssignment.teacherId || ''}
-                                    onChange={(e) => setTeacherClassAssignment({
-                                      ...teacherClassAssignment,
-                                      teacherId: Number(e.target.value),
-                                      classId: selectedClassId
-                                    })}
-                                    required
-                                  >
-                                    <option value="">Selecione um professor</option>
-                                    {teachers.map((teacher) => (
-                                      <option key={teacher.id} value={teacher.id}>
-                                        {teacher.name} - {teacher.cpf}
-                                      </option>
-                                    ))}
-                                  </select>
-                                </div>
-                              </div>
-                              <DialogFooter>
-                                <Button type="submit" disabled={assignTeacherMutation.isPending}>
-                                  {assignTeacherMutation.isPending ? 'Atribuindo...' : 'Atribuir Professor'}
-                                </Button>
-                              </DialogFooter>
-                            </form>
-                          </DialogContent>
-                        </Dialog>
-                      )}
-                    </CardFooter>
-                  </Card>
-                </div>
-              )}
-            </div>
-          </TabsContent>
-          
           {/* Teachers Tab */}
-          <TabsContent value="teachers" className="space-y-6">
+          <TabsContent value="teachers">
             <Card>
-              <CardHeader>
-                <CardTitle>
-                  Professores ({teacherNameFilter 
-                    ? teachers.filter(teacher => teacher.name.toLowerCase().includes(teacherNameFilter.toLowerCase())).length 
-                    : teachers.length})
-                </CardTitle>
-                <CardDescription>Lista de todos os professores cadastrados</CardDescription>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <div>
+                  <CardTitle>Professores</CardTitle>
+                  <CardDescription>Gerenciar professores e permissões</CardDescription>
+                </div>
+                <Button onClick={() => setIsAddTeacherOpen(true)}>
+                  <Plus className="h-4 w-4 mr-1" />
+                  Adicionar Professor
+                </Button>
               </CardHeader>
               <CardContent>
-                <div className="mb-4 relative">
-                  <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                  <div className="flex space-x-2">
-                    <Input
-                      placeholder="Filtrar por nome..."
-                      className="pl-8"
-                      value={teacherNameFilter}
-                      onChange={(e) => setTeacherNameFilter(e.target.value)}
-                    />
-                    {teacherNameFilter && (
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={() => setTeacherNameFilter('')}
-                      >
-                        Limpar
-                      </Button>
-                    )}
-                  </div>
-                </div>
                 {teachersLoading ? (
                   <div className="text-center py-4">Carregando professores...</div>
+                ) : teachers.length === 0 ? (
+                  <div className="text-center py-4">Nenhum professor encontrado.</div>
                 ) : (
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Nome</TableHead>
-                        <TableHead>CPF</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Administrador</TableHead>
-                        <TableHead className="w-24 text-right">Ações</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {teachers
-                        .filter(teacher => 
-                          teacherNameFilter === '' || 
-                          teacher.name.toLowerCase().includes(teacherNameFilter.toLowerCase())
-                        )
-                        .map((teacher) => (
-                        <TableRow key={teacher.id} className={teacher.active ? "" : "opacity-50"}>
-                          <TableCell>{teacher.name}</TableCell>
-                          <TableCell>{teacher.cpf}</TableCell>
-                          <TableCell>
-                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                              teacher.active 
-                                ? 'bg-green-100 text-green-800' 
-                                : 'bg-gray-100 text-gray-800'
-                            }`}>
-                              {teacher.active ? 'Ativo' : 'Inativo'}
-                            </span>
-                          </TableCell>
-                          <TableCell>{teacher.isAdmin ? 'Sim' : 'Não'}</TableCell>
-                          <TableCell className="text-right">
-                            <div className="flex justify-end items-center space-x-2">
+                  <ScrollArea className="h-[400px]">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Nome</TableHead>
+                          <TableHead>CPF</TableHead>
+                          <TableHead>Tipo</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead className="text-right">Ações</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {teachers.map((teacher) => (
+                          <TableRow key={teacher.id} className={!teacher.active ? "opacity-60" : ""}>
+                            <TableCell className="font-medium">{teacher.name}</TableCell>
+                            <TableCell>{teacher.cpf}</TableCell>
+                            <TableCell>{teacher.isAdmin ? "Administrador" : "Professor"}</TableCell>
+                            <TableCell>
+                              <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                teacher.active ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
+                              }`}>
+                                {teacher.active ? "Ativo" : "Inativo"}
+                              </span>
+                            </TableCell>
+                            <TableCell className="text-right space-x-1">
                               <Button 
                                 variant="ghost" 
-                                size="icon" 
-                                className="h-8 w-8 text-blue-600"
+                                size="sm"
                                 onClick={() => handleEditTeacher(teacher)}
                               >
                                 <Pencil className="h-4 w-4" />
                               </Button>
-                              <Button 
-                                variant="ghost" 
-                                size="icon"
-                                className={`h-8 w-8 ${teacher.active ? 'text-red-600' : 'text-green-600'}`}
-                                onClick={() => {
-                                  toggleTeacherStatus(teacher);
-                                }}
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => toggleTeacherStatus(teacher)}
                               >
                                 {teacher.active ? (
-                                  <Trash2 className="h-4 w-4" />
+                                  <MinusCircle className="h-4 w-4 text-red-500" />
                                 ) : (
-                                  <Check className="h-4 w-4" />
+                                  <Check className="h-4 w-4 text-green-500" />
                                 )}
                               </Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </ScrollArea>
                 )}
               </CardContent>
-              <CardFooter>
-                <Dialog>
-                  <DialogTrigger asChild>
-                    <Button>Adicionar Novo Professor</Button>
-                  </DialogTrigger>
-                  <DialogContent>
-                    <DialogHeader>
-                      <DialogTitle>Adicionar Novo Professor</DialogTitle>
-                      <DialogDescription>
-                        Preencha os dados para criar um novo professor
-                      </DialogDescription>
-                    </DialogHeader>
-                    <form onSubmit={handleCreateTeacher}>
-                      <div className="space-y-4 py-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="teacherName">Nome</Label>
-                          <Input
-                            id="teacherName"
-                            value={newTeacherData.name}
-                            onChange={(e) => setNewTeacherData({ ...newTeacherData, name: e.target.value })}
-                            required
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="teacherCpf">CPF</Label>
-                          <Input
-                            id="teacherCpf"
-                            value={newTeacherData.cpf}
-                            onChange={(e) => setNewTeacherData({ ...newTeacherData, cpf: e.target.value })}
-                            required
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="teacherPassword">Senha</Label>
-                          <Input
-                            id="teacherPassword"
-                            type="password"
-                            value={newTeacherData.password}
-                            onChange={(e) => setNewTeacherData({ ...newTeacherData, password: e.target.value })}
-                            required
-                          />
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <Switch
-                            id="teacherIsAdmin"
-                            checked={newTeacherData.isAdmin}
-                            onCheckedChange={(checked) => setNewTeacherData({ ...newTeacherData, isAdmin: checked })}
-                          />
-                          <Label htmlFor="teacherIsAdmin">É administrador</Label>
-                        </div>
-                      </div>
-                      <DialogFooter>
-                        <Button type="submit" disabled={createTeacherMutation.isPending}>
-                          {createTeacherMutation.isPending ? 'Adicionando...' : 'Adicionar Professor'}
-                        </Button>
-                      </DialogFooter>
-                    </form>
-                  </DialogContent>
-                </Dialog>
-              </CardFooter>
             </Card>
           </TabsContent>
-          
-          {/* Reports Tab */}
-          <TabsContent value="reports" className="space-y-6">
-            {/* Filter Controls */}
+
+          {/* Classes Tab */}
+          <TabsContent value="classes">
             <Card>
-              <CardHeader>
-                <CardTitle>Filtros</CardTitle>
-                <CardDescription>Selecione filtros para os registros de presença e atividades</CardDescription>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <div>
+                  <CardTitle>Classes</CardTitle>
+                  <CardDescription>Gerenciar classes e alunos</CardDescription>
+                </div>
+                <div className="space-x-2">
+                  <Button onClick={() => setIsAddClassOpen(true)}>
+                    <Plus className="h-4 w-4 mr-1" />
+                    Adicionar Classe
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    onClick={() => setIsAssignTeacherOpen(true)}
+                    disabled={classes.length === 0 || teachers.length === 0}
+                  >
+                    <UserPlus className="h-4 w-4 mr-1" />
+                    Atribuir Professor
+                  </Button>
+                </div>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div>
-                    <Label htmlFor="classFilter">Filtrar por Classe</Label>
-                    <select
-                      id="classFilter"
-                      className="w-full p-2 border rounded mt-1"
-                      value={selectedClassForReports || ''}
-                      onChange={(e) => handleClassSelectionForReports(e.target.value ? Number(e.target.value) : null)}
-                    >
-                      <option value="">Todas as Classes</option>
-                      {classes.map((classObj) => (
-                        <option key={classObj.id} value={classObj.id}>
-                          {classObj.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <Label htmlFor="dateFilter">Filtrar por Data</Label>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button 
-                          variant="outline" 
-                          className="w-full justify-between mt-1 bg-white text-left font-normal"
-                          disabled={selectedTrimester !== null}
-                        >
-                          {selectedDateForReports ? formatBrazilianDate(selectedDateForReports) : "Selecione uma data"}
-                          <CalendarIcon className="h-4 w-4 opacity-50" />
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-52 p-0" align="start">
-                        <Command>
-                          <CommandInput placeholder="Buscar data..." />
-                          <CommandEmpty>Nenhuma data encontrada</CommandEmpty>
-                          <CommandGroup>
-                            <CommandItem 
-                              onSelect={() => handleDateSelectionForReports(null)}
-                              className="justify-between"
-                            >
-                              Todas as datas
-                              {!selectedDateForReports && <Check className="h-4 w-4" />}
-                            </CommandItem>
-                            {availableDates.map((date) => (
-                              <CommandItem 
-                                key={date} 
-                                value={date}
-                                onSelect={() => handleDateSelectionForReports(date)}
-                                className="justify-between"
-                              >
-                                {formatBrazilianDate(date)}
-                                {selectedDateForReports === date && <Check className="h-4 w-4" />}
-                              </CommandItem>
-                            ))}
-                          </CommandGroup>
-                        </Command>
-                      </PopoverContent>
-                    </Popover>
-                  </div>
-                  <div>
-                    <Label htmlFor="trimesterFilter">Filtrar por Trimestre</Label>
-                    <select
-                      id="trimesterFilter"
-                      className="w-full p-2 border rounded mt-1"
-                      value={selectedTrimester || ''}
-                      onChange={(e) => handleTrimesterSelection(e.target.value || null)}
-                      disabled={selectedDateForReports !== null}
-                    >
-                      <option value="">Todos os Trimestres</option>
-                      <option value="1">1º Trimestre (Janeiro - Março)</option>
-                      <option value="2">2º Trimestre (Abril - Junho)</option>
-                      <option value="3">3º Trimestre (Julho - Setembro)</option>
-                      <option value="4">4º Trimestre (Outubro - Dezembro)</option>
-                    </select>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            
-            {/* Tabs for Reports */}
-            <Card>
-              <CardHeader className="pb-0">
-                <Tabs 
-                  defaultValue="attendance" 
-                  className="w-full" 
-                  value={reportsTabActive}
-                  onValueChange={(value) => setReportsTabActive(value)}
-                >
-                  <TabsList className="grid w-full grid-cols-2">
-                    <TabsTrigger value="attendance">Registros de Frequência</TabsTrigger>
-                    <TabsTrigger value="activities">Atividades Missionárias</TabsTrigger>
+                <Tabs defaultValue="classes" className="w-full">
+                  <TabsList className="grid grid-cols-2 w-full max-w-md mb-4">
+                    <TabsTrigger value="classes">
+                      <School className="h-4 w-4 mr-1 inline" />
+                      <span>Classes</span>
+                    </TabsTrigger>
+                    <TabsTrigger value="students" disabled={!selectedClassId}>
+                      <User className="h-4 w-4 mr-1 inline" />
+                      <span>Alunos</span>
+                    </TabsTrigger>
                   </TabsList>
-                
-                  {/* Attendance Records Tab */}
-                  <TabsContent value="attendance" className="mt-4">
-                    <div className="pb-4">
-                      <h3 className="text-lg font-medium">
-                        Registros de Frequência ({
-                          selectedTrimester
-                            ? attendanceRecords.filter(record => isDateInTrimester(record.date, selectedTrimester)).length
-                            : attendanceRecords.length
-                        })
-                      </h3>
-                      <div className="text-sm text-muted-foreground flex flex-wrap gap-2">
-                        <span>
-                          {selectedClassForReports
-                            ? `Classe: ${classes.find(c => c.id === selectedClassForReports)?.name || ''}`
-                            : 'Todas as Classes'}
-                        </span>
-                        {selectedDateForReports && <span>| Data: {formatBrazilianDate(selectedDateForReports)}</span>}
-                        {selectedTrimester && <span>| Trimestre: {selectedTrimester}º Trimestre</span>}
-                      </div>
-                    </div>
-                    
-                    {attendanceLoading ? (
-                      <div className="text-center py-4">Carregando registros de frequência...</div>
-                    ) : attendanceRecords.length === 0 ? (
-                      <div className="text-center py-4">Nenhum registro de frequência encontrado.</div>
-                    ) : selectedTrimester ? (
-                      // Visualização em grid quando um trimestre está selecionado
-                      (() => {
-                        const gridData = getAttendanceGridData();
-                        
-                        if (!gridData || gridData.classes.length === 0) {
-                          return (
-                            <div className="text-center py-4">
-                              Nenhum registro de frequência encontrado para o trimestre selecionado.
-                            </div>
-                          );
-                        }
-                        
-                        return (
-                          <ScrollArea className="h-[400px]">
-                            <Table>
-                              <TableHeader>
-                                <TableRow>
-                                  <TableHead>Classe</TableHead>
-                                  <TableHead className="text-center">Quantidade Presença</TableHead>
-                                  <TableHead className="text-center">Quantidade Ausência</TableHead>
-                                </TableRow>
-                              </TableHeader>
-                              <TableBody>
-                                {gridData.classes.map((classData, index) => (
-                                  <TableRow key={`class-${index}-${classData.className}`}>
-                                    <TableCell className="font-medium">{classData.className}</TableCell>
-                                    <TableCell className="text-center text-green-600 font-medium">{classData.presentCount}</TableCell>
-                                    <TableCell className="text-center text-red-600 font-medium">{classData.absentCount}</TableCell>
-                                  </TableRow>
-                                ))}
-                                
-                                {/* Linha com totais gerais */}
-                                <TableRow className="bg-muted/50 font-bold">
-                                  <TableCell className="font-bold">{gridData.totals.className}</TableCell>
-                                  <TableCell className="text-center text-green-600 font-bold">{gridData.totals.presentCount}</TableCell>
-                                  <TableCell className="text-center text-red-600 font-bold">{gridData.totals.absentCount}</TableCell>
-                                </TableRow>
-                              </TableBody>
-                            </Table>
-                          </ScrollArea>
-                        );
-                      })()
+
+                  <TabsContent value="classes">
+                    {classesLoading ? (
+                      <div className="text-center py-4">Carregando classes...</div>
+                    ) : classes.length === 0 ? (
+                      <div className="text-center py-4">Nenhuma classe encontrada.</div>
                     ) : (
-                      // Visualização detalhada quando nenhum trimestre está selecionado
-                      <ScrollArea className="h-[400px]">
+                      <ScrollArea className="h-[300px]">
                         <Table>
                           <TableHeader>
                             <TableRow>
-                              <TableHead>Data</TableHead>
-                              <TableHead>Aluno</TableHead>
-                              <TableHead>Classe</TableHead>
-                              <TableHead>Presença</TableHead>
+                              <TableHead>Nome da Classe</TableHead>
+                              <TableHead>Status</TableHead>
+                              <TableHead className="text-right">Ações</TableHead>
                             </TableRow>
                           </TableHeader>
                           <TableBody>
-                            {attendanceRecords.map((record) => (
-                              <TableRow key={record.id}>
-                                <TableCell>{formatBrazilianDate(record.date)}</TableCell>
-                                <TableCell>{record.studentName}</TableCell>
+                            {classes.map((classObj) => (
+                              <TableRow 
+                                key={classObj.id} 
+                                className={cn(
+                                  !classObj.active ? "opacity-60" : "",
+                                  selectedClassId === classObj.id ? "bg-muted" : ""
+                                )}
+                                onClick={() => setSelectedClassId(classObj.id)}
+                              >
+                                <TableCell className="font-medium">{classObj.name}</TableCell>
                                 <TableCell>
-                                  {record.className || 'N/A'}
+                                  <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                    classObj.active ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
+                                  }`}>
+                                    {classObj.active ? "Ativa" : "Inativa"}
+                                  </span>
                                 </TableCell>
-                                <TableCell>
-                                  {record.present ? (
-                                    <span className="text-green-600 font-medium">Presente</span>
-                                  ) : (
-                                    <span className="text-red-600 font-medium">Ausente</span>
-                                  )}
+                                <TableCell className="text-right space-x-1">
+                                  <Button 
+                                    variant="ghost" 
+                                    size="sm"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleEditClass(classObj);
+                                    }}
+                                  >
+                                    <Pencil className="h-4 w-4" />
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      toggleClassStatus(classObj);
+                                    }}
+                                  >
+                                    {classObj.active ? (
+                                      <MinusCircle className="h-4 w-4 text-red-500" />
+                                    ) : (
+                                      <Check className="h-4 w-4 text-green-500" />
+                                    )}
+                                  </Button>
                                 </TableCell>
                               </TableRow>
                             ))}
@@ -1799,9 +1034,263 @@ const AdminHome = () => {
                       </ScrollArea>
                     )}
                   </TabsContent>
+
+                  <TabsContent value="students">
+                    {!selectedClassId ? (
+                      <div className="text-center py-4">Selecione uma classe para ver os alunos.</div>
+                    ) : (
+                      <div className="space-y-4">
+                        <div className="flex justify-between items-center">
+                          <h3 className="font-semibold">
+                            Alunos da {classes.find(c => c.id === selectedClassId)?.name}
+                          </h3>
+                          <Button onClick={() => setIsAddStudentOpen(true)}>
+                            <Plus className="h-4 w-4 mr-1" />
+                            Adicionar Aluno
+                          </Button>
+                        </div>
+                        
+                        {studentsLoading ? (
+                          <div className="text-center py-4">Carregando alunos...</div>
+                        ) : students.length === 0 ? (
+                          <div className="text-center py-4">Nenhum aluno encontrado.</div>
+                        ) : (
+                          <ScrollArea className="h-[300px]">
+                            <Table>
+                              <TableHeader>
+                                <TableRow>
+                                  <TableHead>Nome</TableHead>
+                                  <TableHead>Status</TableHead>
+                                  <TableHead className="text-right">Ações</TableHead>
+                                </TableRow>
+                              </TableHeader>
+                              <TableBody>
+                                {students.map((student) => (
+                                  <TableRow key={student.id} className={!student.active ? "opacity-60" : ""}>
+                                    <TableCell className="font-medium">{student.name}</TableCell>
+                                    <TableCell>
+                                      <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                        student.active ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
+                                      }`}>
+                                        {student.active ? "Ativo" : "Inativo"}
+                                      </span>
+                                    </TableCell>
+                                    <TableCell className="text-right space-x-1">
+                                      <Button 
+                                        variant="ghost" 
+                                        size="sm"
+                                        onClick={() => handleEditStudent(student)}
+                                      >
+                                        <Pencil className="h-4 w-4" />
+                                      </Button>
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => toggleStudentStatus(student)}
+                                      >
+                                        {student.active ? (
+                                          <MinusCircle className="h-4 w-4 text-red-500" />
+                                        ) : (
+                                          <Check className="h-4 w-4 text-green-500" />
+                                        )}
+                                      </Button>
+                                    </TableCell>
+                                  </TableRow>
+                                ))}
+                              </TableBody>
+                            </Table>
+                          </ScrollArea>
+                        )}
+                      </div>
+                    )}
+                  </TabsContent>
+                </Tabs>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Records Tab */}
+          <TabsContent value="records">
+            <Card>
+              <CardHeader className="flex flex-col space-y-2 md:flex-row md:items-center md:justify-between md:space-y-0 pb-2">
+                <div>
+                  <CardTitle>Registros</CardTitle>
+                  <CardDescription>Visualizar registros de frequência e atividades missionárias</CardDescription>
+                </div>
+                <div className="flex flex-col md:flex-row gap-2 items-stretch md:items-center">
+                  <Select
+                    value={selectedClassForReports?.toString() || ""}
+                    onValueChange={(value) => setSelectedClassForReports(value ? parseInt(value) : null)}
+                  >
+                    <SelectTrigger className="w-full md:w-[200px]">
+                      <SelectValue placeholder="Filtrar por Classe" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">Todas as Classes</SelectItem>
+                      {classes.filter(c => c.active).map((classObj) => (
+                        <SelectItem key={classObj.id} value={classObj.id.toString()}>
+                          {classObj.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  
+                  <div className="flex gap-2">
+                    <Select
+                      value={selectedDateForReports || ""}
+                      onValueChange={(value) => {
+                        setSelectedDateForReports(value || null);
+                        // Reset trimester when a specific date is selected
+                        if (value) {
+                          setSelectedTrimester(null);
+                        }
+                      }}
+                    >
+                      <SelectTrigger className="w-full md:w-[180px]">
+                        <SelectValue placeholder="Filtrar por Data" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="">Todas as Datas</SelectItem>
+                        {availableDates.map((date) => (
+                          <SelectItem key={date} value={date}>
+                            {formatBrazilianDate(date)}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    
+                    <Select
+                      value={selectedTrimester?.toString() || ""}
+                      onValueChange={(value) => {
+                        setSelectedTrimester(value ? parseInt(value) : null);
+                        // Reset specific date when a trimester is selected
+                        if (value) {
+                          setSelectedDateForReports(null);
+                        }
+                      }}
+                    >
+                      <SelectTrigger className="w-full md:w-[180px]">
+                        <SelectValue placeholder="Filtrar por Trimestre" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="">Todos os Trimestres</SelectItem>
+                        <SelectItem value="1">1º Trimestre</SelectItem>
+                        <SelectItem value="2">2º Trimestre</SelectItem>
+                        <SelectItem value="3">3º Trimestre</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <Tabs defaultValue="attendance" className="w-full">
+                  <TabsList className="grid grid-cols-2 w-full max-w-md mb-4">
+                    <TabsTrigger value="attendance">
+                      <User className="h-4 w-4 mr-1 inline" />
+                      <span>Registros de Presença</span>
+                    </TabsTrigger>
+                    <TabsTrigger value="activities">
+                      <BarChart className="h-4 w-4 mr-1 inline" />
+                      <span>Atividades Missionárias</span>
+                    </TabsTrigger>
+                  </TabsList>
+
+                  {/* Attendance Tab */}
+                  <TabsContent value="attendance">
+                    <div className="pb-4">
+                      <h3 className="text-lg font-medium">
+                        Registros de Presença
+                      </h3>
+                      <div className="text-sm text-muted-foreground flex flex-wrap gap-2">
+                        <span>
+                          {selectedClassForReports 
+                            ? `Classe: ${classes.find(c => c.id === selectedClassForReports)?.name || ''}` 
+                            : 'Todas as Classes'}
+                        </span>
+                        {selectedDateForReports && <span>| Data: {formatBrazilianDate(selectedDateForReports)}</span>}
+                        {selectedTrimester && <span>| Trimestre: {selectedTrimester}º Trimestre</span>}
+                      </div>
+                    </div>
+                    
+                    {attendanceLoading ? (
+                      <div className="text-center py-4">Carregando registros de presença...</div>
+                    ) : attendanceRecords.length === 0 ? (
+                      <div className="text-center py-4">Nenhum registro de presença encontrado.</div>
+                    ) : selectedTrimester ? (
+                      /* Visualização do trimestre (resumo por classe) */
+                      <ScrollArea className="h-[400px]">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Classe</TableHead>
+                              <TableHead className="text-center">Quantidade Presença</TableHead>
+                              <TableHead className="text-center">Quantidade Ausência</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {getAttendanceByClassAndTrimester().map((summary) => (
+                              <TableRow 
+                                key={summary.classId} 
+                                className={summary.classId === 'total' ? 'bg-muted font-medium' : ''}
+                              >
+                                <TableCell className="font-medium">{summary.className}</TableCell>
+                                <TableCell className="text-center">{summary.presentCount}</TableCell>
+                                <TableCell className="text-center">{summary.absentCount}</TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </ScrollArea>
+                    ) : (
+                      /* Visualização padrão (registros individuais) */
+                      <ScrollArea className="h-[400px]">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Data</TableHead>
+                              <TableHead>Classe</TableHead>
+                              <TableHead>Aluno</TableHead>
+                              <TableHead className="text-center">Presente</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {attendanceRecords
+                              .filter(record => {
+                                let matchesFilters = true;
+                                if (selectedClassForReports) {
+                                  matchesFilters = matchesFilters && record.classId === selectedClassForReports;
+                                }
+                                if (selectedDateForReports) {
+                                  matchesFilters = matchesFilters && record.date === selectedDateForReports;
+                                }
+                                return matchesFilters;
+                              })
+                              .map((record) => (
+                                <TableRow key={record.id}>
+                                  <TableCell>{formatBrazilianDate(record.date)}</TableCell>
+                                  <TableCell>{record.className}</TableCell>
+                                  <TableCell>{record.studentName}</TableCell>
+                                  <TableCell className="text-center">
+                                    {record.present ? (
+                                      <div className="flex justify-center">
+                                        <Check className="h-5 w-5 text-green-500" />
+                                      </div>
+                                    ) : (
+                                      <div className="flex justify-center">
+                                        <MinusCircle className="h-5 w-5 text-red-500" />
+                                      </div>
+                                    )}
+                                  </TableCell>
+                                </TableRow>
+                              ))}
+                          </TableBody>
+                        </Table>
+                      </ScrollArea>
+                    )}
+                  </TabsContent>
                   
                   {/* Missionary Activities Tab */}
-                  <TabsContent value="activities" className="mt-4">
+                  <TabsContent value="activities">
                     <div className="pb-4">
                       <h3 className="text-lg font-medium">
                         Atividades Missionárias
@@ -1823,65 +1312,7 @@ const AdminHome = () => {
                       <div className="text-center py-4">Nenhum registro de atividade missionária encontrado.</div>
                     ) : selectedTrimester ? (
                       /* Nova visualização em grid com uma coluna para cada classe quando filtrado por trimestre */
-                      (() => {
-                        const gridData = getActivitiesGridData();
-                        
-                        // Caso não tenhamos dados ou os dados estejam vazios
-                        if (!gridData || gridData.empty === true) {
-                          return (
-                            <div className="text-center py-8 px-4">
-                              <div className="text-gray-500 text-lg">
-                                Nenhum registro de atividade missionária encontrado para o trimestre selecionado.
-                              </div>
-                            </div>
-                          );
-                        }
-                        
-                        // Após este ponto, sabemos que temos dados válidos
-                        // Para satisfazer o TypeScript, faremos uma asserção de tipo
-                        const validGridData = gridData as Required<ActivityGridData>;
-                        
-                        return (
-                          <div className="overflow-auto" style={{ maxHeight: '400px' }}>
-                            <div className="min-w-max">
-                              <Table>
-                                <TableHeader>
-                                  <TableRow className="bg-muted/30">
-                                    <TableHead className="sticky left-0 bg-muted/30 z-10 font-bold border-r">Atividade Missionária</TableHead>
-                                    {validGridData.classes.map(classData => (
-                                      <TableHead key={`class-header-${classData.id}`} className="text-center font-bold">
-                                        {classData.name}
-                                      </TableHead>
-                                    ))}
-                                    <TableHead className="text-center bg-blue-100 font-bold">Total</TableHead>
-                                  </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                  {validGridData.activityTypes.map(activityType => (
-                                    <TableRow key={`activity-${activityType.id}`} className="hover:bg-gray-50">
-                                      <TableCell className="font-medium sticky left-0 bg-white z-10 border-r">
-                                        {activityType.name}
-                                      </TableCell>
-                                      {validGridData.classes.map(classData => (
-                                        <TableCell 
-                                          key={`value-${classData.id}-${activityType.id}`} 
-                                          className="text-center"
-                                        >
-                                          {classData[activityType.id] || 0}
-                                        </TableCell>
-                                      ))}
-                                      <TableCell className="text-center bg-blue-100 font-bold">
-                                        {validGridData.totals[activityType.id] || 0}
-                                      </TableCell>
-                                    </TableRow>
-                                  ))}
-                                </TableBody>
-                              </Table>
-                            </div>
-                          </div>
-                        );
-                      })()
-                    
+                      <MissionaryTable data={getActivitiesGridData()} />
                     ) : (
                       /* Visualização normal quando não filtrado por trimestre */
                       <ScrollArea className="h-[400px]">
@@ -1890,133 +1321,206 @@ const AdminHome = () => {
                             <TableRow>
                               <TableHead>Data</TableHead>
                               <TableHead>Classe</TableHead>
-                              <TableHead>Atividade</TableHead>
-                              <TableHead>Quantidade</TableHead>
+                              <TableHead className="text-right">Lit. Distribuídas</TableHead>
+                              <TableHead className="text-right">Contatos Missionários</TableHead>
+                              <TableHead className="text-right">Est. Bíblicos</TableHead>
+                              <TableHead className="text-right">Ministrados</TableHead>
+                              <TableHead className="text-right">Visitas</TableHead>
+                              <TableHead className="text-right">Auxiliadas</TableHead>
+                              <TableHead className="text-right">Trazidas à Igreja</TableHead>
                             </TableRow>
                           </TableHeader>
                           <TableBody>
                             {missionaryActivities
-                              .flatMap((activity) => {
-                              const activityEntries = [];
-                              
-                              // Sempre mostrar contatos missionários, mesmo com valor 0 ou null
-                              activityEntries.push(
-                                <TableRow key={`${activity.id}-contatos`}>
+                              .filter(activity => {
+                                let matchesFilters = true;
+                                if (selectedClassForReports) {
+                                  matchesFilters = matchesFilters && activity.classId === selectedClassForReports;
+                                }
+                                if (selectedDateForReports) {
+                                  matchesFilters = matchesFilters && activity.date === selectedDateForReports;
+                                }
+                                return matchesFilters;
+                              })
+                              .map((activity) => (
+                                <TableRow key={activity.id}>
                                   <TableCell>{formatBrazilianDate(activity.date)}</TableCell>
-                                  <TableCell>{activity.className}</TableCell>
-                                  <TableCell>Contatos Missionários</TableCell>
-                                  <TableCell>{activity.qtdContatosMissionarios ?? 0}</TableCell>
+                                  <TableCell>{classes.find(c => c.id === activity.classId)?.name}</TableCell>
+                                  <TableCell className="text-right">{activity.literaturasDistribuidas || 0}</TableCell>
+                                  <TableCell className="text-right">{activity.qtdContatosMissionarios || 0}</TableCell>
+                                  <TableCell className="text-right">{activity.estudosBiblicos || 0}</TableCell>
+                                  <TableCell className="text-right">{activity.ministrados || 0}</TableCell>
+                                  <TableCell className="text-right">{activity.visitasMissionarias || 0}</TableCell>
+                                  <TableCell className="text-right">{activity.pessoasAuxiliadas || 0}</TableCell>
+                                  <TableCell className="text-right">{activity.pessoasTrazidasIgreja || 0}</TableCell>
                                 </TableRow>
-                              );
-                              
-                              // Sempre mostrar literaturas distribuídas, mesmo com valor 0 ou null
-                              activityEntries.push(
-                                <TableRow key={`${activity.id}-literaturas`}>
-                                  <TableCell>{formatBrazilianDate(activity.date)}</TableCell>
-                                  <TableCell>{activity.className}</TableCell>
-                                  <TableCell>Literaturas Distribuídas</TableCell>
-                                  <TableCell>{activity.literaturasDistribuidas ?? 0}</TableCell>
-                                </TableRow>
-                              );
-                              
-                              // Sempre mostrar visitas missionárias, mesmo com valor 0 ou null
-                              activityEntries.push(
-                                <TableRow key={`${activity.id}-visitas`}>
-                                  <TableCell>{formatBrazilianDate(activity.date)}</TableCell>
-                                  <TableCell>{activity.className}</TableCell>
-                                  <TableCell>Visitas Missionárias</TableCell>
-                                  <TableCell>{activity.visitasMissionarias ?? 0}</TableCell>
-                                </TableRow>
-                              );
-                              
-                              // Combinar "Estudos Bíblicos" e "Ministrados" em uma única linha
-                              activityEntries.push(
-                                <TableRow key={`${activity.id}-estudos-ministrados`}>
-                                  <TableCell>{formatBrazilianDate(activity.date)}</TableCell>
-                                  <TableCell>{activity.className}</TableCell>
-                                  <TableCell>Estudos Bíblicos Ministrados</TableCell>
-                                  <TableCell>{(activity.estudosBiblicos ?? 0) + (activity.ministrados ?? 0)}</TableCell>
-                                </TableRow>
-                              );
-                              
-                              // Sempre mostrar pessoas auxiliadas, mesmo com valor 0 ou null
-                              activityEntries.push(
-                                <TableRow key={`${activity.id}-auxiliadas`}>
-                                  <TableCell>{formatBrazilianDate(activity.date)}</TableCell>
-                                  <TableCell>{activity.className}</TableCell>
-                                  <TableCell>Pessoas Auxiliadas</TableCell>
-                                  <TableCell>{activity.pessoasAuxiliadas ?? 0}</TableCell>
-                                </TableRow>
-                              );
-                              
-                              // Sempre mostrar pessoas trazidas à igreja, mesmo com valor 0 ou null
-                              activityEntries.push(
-                                <TableRow key={`${activity.id}-trazidas`}>
-                                  <TableCell>{formatBrazilianDate(activity.date)}</TableCell>
-                                  <TableCell>{activity.className}</TableCell>
-                                  <TableCell>Pessoas Trazidas à Igreja</TableCell>
-                                  <TableCell>{activity.pessoasTrazidasIgreja ?? 0}</TableCell>
-                                </TableRow>
-                              );
-                              
-                              return activityEntries;
-                            })}
+                              ))}
                           </TableBody>
                         </Table>
                       </ScrollArea>
                     )}
                   </TabsContent>
                 </Tabs>
-              </CardHeader>
+              </CardContent>
             </Card>
           </TabsContent>
         </Tabs>
       </main>
-      
-      {/* Dialog de edição de classe */}
-      <Dialog open={isEditClassOpen} onOpenChange={setIsEditClassOpen}>
-        <DialogContent>
+
+      {/* Add Teacher Dialog */}
+      <Dialog open={isAddTeacherOpen} onOpenChange={setIsAddTeacherOpen}>
+        <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
-            <DialogTitle>Editar Nome da Classe</DialogTitle>
+            <DialogTitle>Adicionar Novo Professor</DialogTitle>
             <DialogDescription>
-              Insira o novo nome para a classe
+              Preencha as informações do novo professor abaixo.
             </DialogDescription>
           </DialogHeader>
-          <form onSubmit={(e) => {
-            e.preventDefault();
-            editClassMutation.mutate();
-          }}>
-            <div className="space-y-4 py-4">
-              <div className="space-y-2">
-                <Label htmlFor="editClassName">Nome da Classe</Label>
-                <Input
-                  id="editClassName"
-                  value={editClassName}
-                  onChange={(e) => setEditClassName(e.target.value)}
-                  required
-                />
-              </div>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="name" className="text-right">
+                Nome
+              </Label>
+              <Input
+                id="name"
+                value={newTeacherData.name}
+                onChange={(e) => setNewTeacherData({ ...newTeacherData, name: e.target.value })}
+                className="col-span-3"
+              />
             </div>
-            <DialogFooter>
-              <Button type="submit" disabled={editClassMutation.isPending}>
-                {editClassMutation.isPending ? 'Salvando...' : 'Salvar Alterações'}
-              </Button>
-            </DialogFooter>
-          </form>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="cpf" className="text-right">
+                CPF
+              </Label>
+              <Input
+                id="cpf"
+                value={newTeacherData.cpf}
+                onChange={(e) => setNewTeacherData({ ...newTeacherData, cpf: e.target.value })}
+                className="col-span-3"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="password" className="text-right">
+                Senha
+              </Label>
+              <Input
+                id="password"
+                type="password"
+                value={newTeacherData.password}
+                onChange={(e) => setNewTeacherData({ ...newTeacherData, password: e.target.value })}
+                className="col-span-3"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="isAdmin" className="text-right">
+                Administrador
+              </Label>
+              <Switch
+                id="isAdmin"
+                checked={newTeacherData.isAdmin}
+                onCheckedChange={(checked) => setNewTeacherData({ ...newTeacherData, isAdmin: checked })}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              type="submit"
+              onClick={() => createTeacherMutation.mutate(newTeacherData)}
+              disabled={createTeacherMutation.isPending}
+            >
+              {createTeacherMutation.isPending ? "Salvando..." : "Salvar"}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
-      
-      {/* Alert Dialog for toggle teacher status */}
+
+      {/* Edit Teacher Dialog */}
+      <Dialog open={isEditTeacherOpen} onOpenChange={setIsEditTeacherOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Editar Professor</DialogTitle>
+            <DialogDescription>
+              Atualize as informações do professor abaixo.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="edit-name" className="text-right">
+                Nome
+              </Label>
+              <Input
+                id="edit-name"
+                value={editTeacherData.name}
+                onChange={(e) => setEditTeacherData({ ...editTeacherData, name: e.target.value })}
+                className="col-span-3"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="edit-cpf" className="text-right">
+                CPF
+              </Label>
+              <Input
+                id="edit-cpf"
+                value={editTeacherData.cpf}
+                onChange={(e) => setEditTeacherData({ ...editTeacherData, cpf: e.target.value })}
+                className="col-span-3"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="edit-password" className="text-right">
+                Nova Senha
+              </Label>
+              <Input
+                id="edit-password"
+                type="password"
+                value={editTeacherData.password}
+                onChange={(e) => setEditTeacherData({ ...editTeacherData, password: e.target.value })}
+                className="col-span-3"
+                placeholder="Deixe em branco para manter a senha atual"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="edit-isAdmin" className="text-right">
+                Administrador
+              </Label>
+              <Switch
+                id="edit-isAdmin"
+                checked={editTeacherData.isAdmin}
+                onCheckedChange={(checked) => setEditTeacherData({ ...editTeacherData, isAdmin: checked })}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              type="submit"
+              onClick={() => {
+                if (teacherToEdit) {
+                  const updateData: Partial<Teacher> = { ...editTeacherData };
+                  if (!updateData.password) {
+                    delete updateData.password;
+                  }
+                  editTeacherMutation.mutate({ id: teacherToEdit.id, updateData });
+                }
+              }}
+              disabled={editTeacherMutation.isPending}
+            >
+              {editTeacherMutation.isPending ? "Salvando..." : "Salvar"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Toggle Teacher Status Dialog */}
       <AlertDialog open={isToggleTeacherOpen} onOpenChange={setIsToggleTeacherOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>
-              {teacherToToggle?.active ? 'Desativar Professor' : 'Reativar Professor'}
+              {teacherToToggle?.active ? "Desativar Professor" : "Ativar Professor"}
             </AlertDialogTitle>
             <AlertDialogDescription>
               {teacherToToggle?.active 
-                ? `Tem certeza que deseja desativar o professor "${teacherToToggle?.name}"? Esse professor não poderá fazer login no sistema enquanto estiver desativado.`
-                : `Tem certeza que deseja reativar o professor "${teacherToToggle?.name}"? Esse professor poderá fazer login no sistema novamente.`
+                ? `Tem certeza que deseja desativar o professor "${teacherToToggle?.name}"? Professores desativados não poderão mais acessar o sistema.`
+                : `Tem certeza que deseja ativar o professor "${teacherToToggle?.name}"? Professores ativos podem acessar o sistema.`
               }
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -2025,96 +1529,106 @@ const AdminHome = () => {
             <AlertDialogAction
               onClick={() => {
                 if (teacherToToggle) {
-                  toggleTeacherStatusMutation.mutate(teacherToToggle.id);
+                  toggleTeacherStatusMutation.mutate({
+                    id: teacherToToggle.id,
+                    active: !teacherToToggle.active
+                  });
                 }
               }}
-              className={teacherToToggle?.active ? 'bg-red-600 hover:bg-red-700' : 'bg-green-600 hover:bg-green-700'}
             >
-              {toggleTeacherStatusMutation.isPending 
-                ? 'Processando...' 
-                : teacherToToggle?.active 
-                  ? 'Sim, desativar' 
-                  : 'Sim, reativar'
-              }
+              {teacherToToggle?.active ? "Desativar" : "Ativar"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-      
-      {/* Dialog de edição de professor */}
-      <Dialog open={!!teacherToEdit} onOpenChange={(open) => {
-        if (!open) setTeacherToEdit(null);
-      }}>
-        <DialogContent>
+
+      {/* Add Class Dialog */}
+      <Dialog open={isAddClassOpen} onOpenChange={setIsAddClassOpen}>
+        <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
-            <DialogTitle>Editar Professor</DialogTitle>
+            <DialogTitle>Adicionar Nova Classe</DialogTitle>
             <DialogDescription>
-              Atualize os dados do professor
+              Insira o nome da nova classe abaixo.
             </DialogDescription>
           </DialogHeader>
-          <form onSubmit={(e) => {
-            e.preventDefault();
-            editTeacherMutation.mutate();
-          }}>
-            <div className="space-y-4 py-4">
-              <div className="space-y-2">
-                <Label htmlFor="editTeacherName">Nome</Label>
-                <Input
-                  id="editTeacherName"
-                  value={editTeacherData.name}
-                  onChange={(e) => setEditTeacherData({ ...editTeacherData, name: e.target.value })}
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="editTeacherCpf">CPF</Label>
-                <Input
-                  id="editTeacherCpf"
-                  value={editTeacherData.cpf}
-                  onChange={(e) => setEditTeacherData({ ...editTeacherData, cpf: e.target.value })}
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="editTeacherPassword">Nova Senha (deixe em branco para manter a atual)</Label>
-                <Input
-                  id="editTeacherPassword"
-                  type="password"
-                  value={editTeacherData.password}
-                  onChange={(e) => setEditTeacherData({ ...editTeacherData, password: e.target.value })}
-                />
-              </div>
-              <div className="flex items-center space-x-2">
-                <Switch
-                  id="editTeacherIsAdmin"
-                  checked={editTeacherData.isAdmin}
-                  onCheckedChange={(checked) => setEditTeacherData({ ...editTeacherData, isAdmin: checked })}
-                />
-                <Label htmlFor="editTeacherIsAdmin">É administrador</Label>
-              </div>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="className" className="text-right">
+                Nome
+              </Label>
+              <Input
+                id="className"
+                value={newClassName}
+                onChange={(e) => setNewClassName(e.target.value)}
+                className="col-span-3"
+              />
             </div>
-            <DialogFooter>
-              <Button type="submit" disabled={editTeacherMutation.isPending}>
-                {editTeacherMutation.isPending ? 'Salvando...' : 'Salvar Alterações'}
-              </Button>
-            </DialogFooter>
-          </form>
+          </div>
+          <DialogFooter>
+            <Button
+              type="submit"
+              onClick={() => createClassMutation.mutate(newClassName)}
+              disabled={createClassMutation.isPending || !newClassName.trim()}
+            >
+              {createClassMutation.isPending ? "Salvando..." : "Salvar"}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
-      
-      {/* Confirmação de ativação/desativação de classe */}
+
+      {/* Edit Class Dialog */}
+      <Dialog open={isEditClassOpen} onOpenChange={setIsEditClassOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Editar Classe</DialogTitle>
+            <DialogDescription>
+              Atualize o nome da classe abaixo.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="editClassName" className="text-right">
+                Nome
+              </Label>
+              <Input
+                id="editClassName"
+                value={editClassName}
+                onChange={(e) => setEditClassName(e.target.value)}
+                className="col-span-3"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              type="submit"
+              onClick={() => {
+                if (classToEdit) {
+                  editClassMutation.mutate({
+                    id: classToEdit.id,
+                    name: editClassName
+                  });
+                }
+              }}
+              disabled={editClassMutation.isPending || !editClassName.trim()}
+            >
+              {editClassMutation.isPending ? "Salvando..." : "Salvar"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Toggle Class Status Dialog */}
       <AlertDialog open={isToggleClassOpen} onOpenChange={setIsToggleClassOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>
-              {classToToggle?.active 
-                ? 'Desativar Classe' 
-                : 'Reativar Classe'}
+              {classToToggle?.active ? "Desativar Classe" : "Ativar Classe"}
             </AlertDialogTitle>
             <AlertDialogDescription>
               {classToToggle?.active 
-                ? `Tem certeza que deseja desativar a classe "${classToToggle?.name}"? Esta classe não aparecerá no perfil dos professores enquanto estiver desativada.` 
-                : `Tem certeza que deseja reativar a classe "${classToToggle?.name}"? Esta classe voltará a aparecer no perfil dos professores.`}
+                ? `Tem certeza que deseja desativar a classe "${classToToggle?.name}"? Classes desativadas não aparecerão nas listas de seleção.`
+                : `Tem certeza que deseja ativar a classe "${classToToggle?.name}"? Classes ativas aparecerão nas listas de seleção.`
+              }
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -2122,35 +1636,72 @@ const AdminHome = () => {
             <AlertDialogAction
               onClick={() => {
                 if (classToToggle) {
-                  toggleClassStatusMutation.mutate(classToToggle.id);
+                  toggleClassStatusMutation.mutate({
+                    id: classToToggle.id,
+                    active: !classToToggle.active
+                  });
                 }
               }}
-              className={classToToggle?.active ? "bg-red-600 hover:bg-red-700" : "bg-green-600 hover:bg-green-700"}
             >
-              {toggleClassStatusMutation.isPending 
-                ? 'Processando...' 
-                : classToToggle?.active 
-                  ? 'Sim, desativar' 
-                  : 'Sim, reativar'
-              }
+              {classToToggle?.active ? "Desativar" : "Ativar"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Confirmação de ativação/desativação de aluno */}
+      {/* Add Student Dialog */}
+      <Dialog open={isAddStudentOpen} onOpenChange={setIsAddStudentOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Adicionar Novo Aluno</DialogTitle>
+            <DialogDescription>
+              Insira o nome do novo aluno para a classe {classes.find(c => c.id === selectedClassId)?.name}.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="studentName" className="text-right">
+                Nome
+              </Label>
+              <Input
+                id="studentName"
+                value={newStudentName}
+                onChange={(e) => setNewStudentName(e.target.value)}
+                className="col-span-3"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              type="submit"
+              onClick={() => {
+                if (selectedClassId) {
+                  createStudentMutation.mutate({
+                    name: newStudentName,
+                    classId: selectedClassId
+                  });
+                }
+              }}
+              disabled={createStudentMutation.isPending || !newStudentName.trim() || !selectedClassId}
+            >
+              {createStudentMutation.isPending ? "Salvando..." : "Salvar"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Toggle Student Status Dialog */}
       <AlertDialog open={isToggleStudentOpen} onOpenChange={setIsToggleStudentOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>
-              {studentToToggle?.active 
-                ? 'Desativar Aluno' 
-                : 'Reativar Aluno'}
+              {studentToToggle?.active ? "Desativar Aluno" : "Ativar Aluno"}
             </AlertDialogTitle>
             <AlertDialogDescription>
               {studentToToggle?.active 
-                ? `Tem certeza que deseja desativar o aluno "${studentToToggle?.name}"? Este aluno não aparecerá nas listas de presença enquanto estiver desativado.` 
-                : `Tem certeza que deseja reativar o aluno "${studentToToggle?.name}"? Este aluno voltará a aparecer nas listas de presença.`}
+                ? `Tem certeza que deseja desativar o aluno "${studentToToggle?.name}"? Alunos desativados não aparecerão nas listas de chamada.`
+                : `Tem certeza que deseja ativar o aluno "${studentToToggle?.name}"? Alunos ativos aparecerão nas listas de chamada.`
+              }
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -2158,66 +1709,137 @@ const AdminHome = () => {
             <AlertDialogAction
               onClick={() => {
                 if (studentToToggle) {
-                  toggleStudentStatusMutation.mutate(studentToToggle.id);
+                  toggleStudentStatusMutation.mutate({
+                    id: studentToToggle.id,
+                    active: !studentToToggle.active
+                  });
                 }
               }}
-              className={studentToToggle?.active ? "bg-red-600 hover:bg-red-700" : "bg-green-600 hover:bg-green-700"}
             >
-              {toggleStudentStatusMutation.isPending 
-                ? 'Processando...' 
-                : studentToToggle?.active 
-                  ? 'Sim, desativar' 
-                  : 'Sim, reativar'
-              }
+              {studentToToggle?.active ? "Desativar" : "Ativar"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Modal de edição de aluno */}
+      {/* Edit Student Dialog */}
       <Dialog open={isEditStudentOpen} onOpenChange={setIsEditStudentOpen}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
             <DialogTitle>Editar Aluno</DialogTitle>
             <DialogDescription>
-              Altere o nome do aluno
+              Atualize o nome do aluno abaixo.
             </DialogDescription>
           </DialogHeader>
-          <form onSubmit={(e) => {
-            e.preventDefault();
-            editStudentMutation.mutate();
-          }}>
-            <div className="space-y-4 py-4">
-              <div className="space-y-2">
-                <Label htmlFor="editStudentName">Nome do Aluno</Label>
-                <Input
-                  id="editStudentName"
-                  value={editStudentName}
-                  onChange={(e) => setEditStudentName(e.target.value)}
-                  required
-                />
-              </div>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="editStudentName" className="text-right">
+                Nome
+              </Label>
+              <Input
+                id="editStudentName"
+                value={editStudentName}
+                onChange={(e) => setEditStudentName(e.target.value)}
+                className="col-span-3"
+              />
             </div>
-            <DialogFooter>
-              <Button 
-                variant="outline" 
-                type="button"
-                onClick={() => setIsEditStudentOpen(false)}
+          </div>
+          <DialogFooter>
+            <Button
+              type="submit"
+              onClick={() => {
+                if (studentToEdit) {
+                  editStudentMutation.mutate({
+                    id: studentToEdit.id,
+                    name: editStudentName
+                  });
+                }
+              }}
+              disabled={editStudentMutation.isPending || !editStudentName.trim()}
+            >
+              {editStudentMutation.isPending ? "Salvando..." : "Salvar"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Assign Teacher to Class Dialog */}
+      <Dialog open={isAssignTeacherOpen} onOpenChange={setIsAssignTeacherOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Atribuir Professor à Classe</DialogTitle>
+            <DialogDescription>
+              Selecione o professor e a classe para fazer a atribuição.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="teacherSelect" className="text-right">
+                Professor
+              </Label>
+              <Select
+                value={selectedTeacherForAssignment?.toString() || ""}
+                onValueChange={(value) => setSelectedTeacherForAssignment(parseInt(value))}
               >
-                Cancelar
-              </Button>
-              <Button 
-                type="submit"
-                disabled={editStudentMutation.isPending}
+                <SelectTrigger className="col-span-3" id="teacherSelect">
+                  <SelectValue placeholder="Selecione um professor" />
+                </SelectTrigger>
+                <SelectContent>
+                  {teachers
+                    .filter(t => t.active)
+                    .map((teacher) => (
+                      <SelectItem key={teacher.id} value={teacher.id.toString()}>
+                        {teacher.name}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="classSelect" className="text-right">
+                Classe
+              </Label>
+              <Select
+                value={selectedClassForAssignment?.toString() || ""}
+                onValueChange={(value) => setSelectedClassForAssignment(parseInt(value))}
               >
-                {editStudentMutation.isPending ? 'Salvando...' : 'Salvar Alterações'}
-              </Button>
-            </DialogFooter>
-          </form>
+                <SelectTrigger className="col-span-3" id="classSelect">
+                  <SelectValue placeholder="Selecione uma classe" />
+                </SelectTrigger>
+                <SelectContent>
+                  {classes
+                    .filter(c => c.active)
+                    .map((classObj) => (
+                      <SelectItem key={classObj.id} value={classObj.id.toString()}>
+                        {classObj.name}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              type="submit"
+              onClick={() => {
+                if (selectedTeacherForAssignment && selectedClassForAssignment) {
+                  assignTeacherClassMutation.mutate({
+                    teacherId: selectedTeacherForAssignment,
+                    classId: selectedClassForAssignment
+                  });
+                }
+              }}
+              disabled={
+                assignTeacherClassMutation.isPending || 
+                !selectedTeacherForAssignment || 
+                !selectedClassForAssignment
+              }
+            >
+              {assignTeacherClassMutation.isPending ? "Atribuindo..." : "Atribuir"}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
   );
-};
-
-export default AdminHome;
+}
