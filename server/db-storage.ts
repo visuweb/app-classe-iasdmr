@@ -101,7 +101,9 @@ export class DatabaseStorage implements IStorage {
   
   async createTeacher(data: InsertTeacher): Promise<Teacher> {
     // Aplicar hash na senha antes de salvar no banco (exceto para o admin)
-    if (data.password && data.cpf !== "admin") {
+    if (data.password 
+      //&& data.cpf !== "admin"
+    ) {
       data.password = await hashPassword(data.password);
     }
     

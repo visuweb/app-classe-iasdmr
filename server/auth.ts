@@ -39,29 +39,29 @@ export function setupAuth(app: Express) {
       async (cpf, password, done) => {
         try {
           // Verificar admin especial com login "admin"
-          if (cpf === "admin") {
-            // Login especial para o admin
-            try {
-              const adminTeacher = await storage.getTeacherByCpf("admin");
-              if (!adminTeacher) {
-                return done(null, false, { message: "Login ou Senha informado incorreto" });
-              }
+          // if (cpf === "admin") {
+          //   // Login especial para o admin
+          //   try {
+          //     const adminTeacher = await storage.getTeacherByCpf("admin");
+          //     if (!adminTeacher) {
+          //       return done(null, false, { message: "Login ou Senha informado incorreto" });
+          //     }
               
-              // Verificar se o admin está ativo
-              if (!adminTeacher.active) {
-                return done(null, false, { message: "Acesso negado, favor entrar em contato com o Administrador!" });
-              }
+          //     // Verificar se o admin está ativo
+          //     if (!adminTeacher.active) {
+          //       return done(null, false, { message: "Acesso negado, favor entrar em contato com o Administrador!" });
+          //     }
               
-              // Verificação especial para o admin (senha hard-coded para compatibilidade)
-              if (password === "admincei2025") {
-                return done(null, adminTeacher);
-              }
+          //     // Verificação especial para o admin (senha hard-coded para compatibilidade)
+          //     if (password === "admincei2025") {
+          //       return done(null, adminTeacher);
+          //     }
               
-              return done(null, false, { message: "Login ou Senha informado incorreto" });
-            } catch (error) {
-              return done(null, false, { message: "Acesso negado, favor entrar em contato com o Administrador!" });
-            }
-          }
+          //     return done(null, false, { message: "Login ou Senha informado incorreto" });
+          //   } catch (error) {
+          //     return done(null, false, { message: "Acesso negado, favor entrar em contato com o Administrador!" });
+          //   }
+          // }
           
           // Login normal para professores
           try {
