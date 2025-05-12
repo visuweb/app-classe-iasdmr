@@ -1114,30 +1114,37 @@ export default function AdminHome() {
           {/* Records Tab */}
           <TabsContent value="records">
             <Card>
-              <CardHeader className="flex flex-col space-y-2 md:flex-row md:items-center md:justify-between md:space-y-0 pb-2">
+              <CardHeader className="pb-2">
                 <div>
                   <CardTitle>Registros</CardTitle>
                   <CardDescription>Visualizar registros de frequência e atividades missionárias</CardDescription>
                 </div>
-                <div className="flex flex-col md:flex-row gap-2 items-stretch md:items-center">
-                  <Select
-                    value={selectedClassForReports?.toString() || "all_classes"}
-                    onValueChange={(value) => setSelectedClassForReports(value !== "all_classes" ? parseInt(value) : null)}
-                  >
-                    <SelectTrigger className="w-full md:w-[200px]">
-                      <SelectValue placeholder="Filtrar por Classe" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all_classes">Todas as Classes</SelectItem>
-                      {classes.filter(c => c.active).map((classObj) => (
-                        <SelectItem key={classObj.id} value={classObj.id.toString()}>
-                          {classObj.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+              </CardHeader>
+              <CardContent>
+                {/* Filters now appear above the tabs */}
+                <div className="flex flex-wrap gap-2 mb-4">
+                  <div className="flex-1 min-w-[200px]">
+                    <div className="text-sm font-semibold mb-1 text-gray-500">Classe</div>
+                    <Select
+                      value={selectedClassForReports?.toString() || "all_classes"}
+                      onValueChange={(value) => setSelectedClassForReports(value !== "all_classes" ? parseInt(value) : null)}
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Filtrar por Classe" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all_classes">Todas as Classes</SelectItem>
+                        {classes.filter(c => c.active).map((classObj) => (
+                          <SelectItem key={classObj.id} value={classObj.id.toString()}>
+                            {classObj.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                   
-                  <div className="flex gap-2">
+                  <div className="flex-1 min-w-[180px]">
+                    <div className="text-sm font-semibold mb-1 text-gray-500">Data</div>
                     <Select
                       value={selectedDateForReports || "all_dates"}
                       onValueChange={(value) => {
@@ -1148,7 +1155,7 @@ export default function AdminHome() {
                         }
                       }}
                     >
-                      <SelectTrigger className="w-full md:w-[180px]">
+                      <SelectTrigger className="w-full">
                         <SelectValue placeholder="Filtrar por Data" />
                       </SelectTrigger>
                       <SelectContent>
@@ -1160,7 +1167,10 @@ export default function AdminHome() {
                         ))}
                       </SelectContent>
                     </Select>
-                    
+                  </div>
+                  
+                  <div className="flex-1 min-w-[180px]">
+                    <div className="text-sm font-semibold mb-1 text-gray-500">Trimestre</div>
                     <Select
                       value={selectedTrimester?.toString() || "all_trimesters"}
                       onValueChange={(value) => {
@@ -1171,7 +1181,7 @@ export default function AdminHome() {
                         }
                       }}
                     >
-                      <SelectTrigger className="w-full md:w-[180px]">
+                      <SelectTrigger className="w-full">
                         <SelectValue placeholder="Filtrar por Trimestre" />
                       </SelectTrigger>
                       <SelectContent>
@@ -1183,8 +1193,7 @@ export default function AdminHome() {
                     </Select>
                   </div>
                 </div>
-              </CardHeader>
-              <CardContent>
+                
                 <Tabs defaultValue="attendance" className="w-full">
                   <TabsList className="grid grid-cols-2 w-full max-w-md mb-4">
                     <TabsTrigger value="attendance">
@@ -1264,6 +1273,10 @@ export default function AdminHome() {
                                 }
                                 if (selectedDateForReports) {
                                   matchesFilters = matchesFilters && record.date === selectedDateForReports;
+                                }
+                                // Adicionar filtro por trimestre se selecionado
+                                if (selectedTrimester && !selectedDateForReports) {
+                                  matchesFilters = matchesFilters && isDateInTrimester(record.date, selectedTrimester);
                                 }
                                 return matchesFilters;
                               })
