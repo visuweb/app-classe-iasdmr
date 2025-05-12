@@ -1121,14 +1121,14 @@ export default function AdminHome() {
                 </div>
                 <div className="flex flex-col md:flex-row gap-2 items-stretch md:items-center">
                   <Select
-                    value={selectedClassForReports?.toString() || ""}
-                    onValueChange={(value) => setSelectedClassForReports(value ? parseInt(value) : null)}
+                    value={selectedClassForReports?.toString() || "all_classes"}
+                    onValueChange={(value) => setSelectedClassForReports(value !== "all_classes" ? parseInt(value) : null)}
                   >
                     <SelectTrigger className="w-full md:w-[200px]">
                       <SelectValue placeholder="Filtrar por Classe" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">Todas as Classes</SelectItem>
+                      <SelectItem value="all_classes">Todas as Classes</SelectItem>
                       {classes.filter(c => c.active).map((classObj) => (
                         <SelectItem key={classObj.id} value={classObj.id.toString()}>
                           {classObj.name}
@@ -1139,11 +1139,11 @@ export default function AdminHome() {
                   
                   <div className="flex gap-2">
                     <Select
-                      value={selectedDateForReports || ""}
+                      value={selectedDateForReports || "all_dates"}
                       onValueChange={(value) => {
-                        setSelectedDateForReports(value || null);
+                        setSelectedDateForReports(value !== "all_dates" ? value : null);
                         // Reset trimester when a specific date is selected
-                        if (value) {
+                        if (value !== "all_dates") {
                           setSelectedTrimester(null);
                         }
                       }}
@@ -1152,7 +1152,7 @@ export default function AdminHome() {
                         <SelectValue placeholder="Filtrar por Data" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">Todas as Datas</SelectItem>
+                        <SelectItem value="all_dates">Todas as Datas</SelectItem>
                         {availableDates.map((date) => (
                           <SelectItem key={date} value={date}>
                             {formatBrazilianDate(date)}
@@ -1162,11 +1162,11 @@ export default function AdminHome() {
                     </Select>
                     
                     <Select
-                      value={selectedTrimester?.toString() || ""}
+                      value={selectedTrimester?.toString() || "all_trimesters"}
                       onValueChange={(value) => {
-                        setSelectedTrimester(value ? parseInt(value) : null);
+                        setSelectedTrimester(value !== "all_trimesters" ? parseInt(value) : null);
                         // Reset specific date when a trimester is selected
-                        if (value) {
+                        if (value !== "all_trimesters") {
                           setSelectedDateForReports(null);
                         }
                       }}
@@ -1175,7 +1175,7 @@ export default function AdminHome() {
                         <SelectValue placeholder="Filtrar por Trimestre" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">Todos os Trimestres</SelectItem>
+                        <SelectItem value="all_trimesters">Todos os Trimestres</SelectItem>
                         <SelectItem value="1">1º Trimestre</SelectItem>
                         <SelectItem value="2">2º Trimestre</SelectItem>
                         <SelectItem value="3">3º Trimestre</SelectItem>
