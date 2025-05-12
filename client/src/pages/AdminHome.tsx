@@ -227,6 +227,9 @@ export default function AdminHome() {
       isDateInTrimester(record.date, selectedTrimester)
     );
     
+    // Return empty array if no records in the selected trimester
+    if (recordsInTrimester.length === 0) return [];
+    
     // Group records by class
     const classSummary = new Map();
     
@@ -1227,12 +1230,25 @@ export default function AdminHome() {
                       </div>
                     </div>
                     
-                    {attendanceLoading ? (
+                    {/* Condição de carregamento */}
+                    {attendanceLoading && (
                       <div className="text-center py-4">Carregando registros de presença...</div>
-                    ) : attendanceRecords.length === 0 ? (
+                    )}
+                    
+                    {/* Condição de nenhum registro */}
+                    {!attendanceLoading && attendanceRecords.length === 0 && (
                       <div className="text-center py-4">Nenhum registro de presença encontrado.</div>
-                    ) : selectedTrimester ? (
-                      /* Visualização do trimestre (resumo por classe) */
+                    )}
+                    
+                    {/* Visualização por trimestre sem registros */}
+                    {!attendanceLoading && attendanceRecords.length > 0 && selectedTrimester && getAttendanceByClassAndTrimester().length === 0 && (
+                      <div className="text-center py-4">
+                        Nenhum registro de presença encontrado para o trimestre selecionado.
+                      </div>
+                    )}
+                    
+                    {/* Visualização por trimestre com registros */}
+                    {!attendanceLoading && attendanceRecords.length > 0 && selectedTrimester && getAttendanceByClassAndTrimester().length > 0 && (
                       <ScrollArea className="h-[400px]">
                         <Table>
                           <TableHeader>
@@ -1256,8 +1272,10 @@ export default function AdminHome() {
                           </TableBody>
                         </Table>
                       </ScrollArea>
-                    ) : (
-                      /* Visualização padrão (registros individuais) */
+                    )}
+                    
+                    {/* Visualização padrão (sem trimestre selecionado) */}
+                    {!attendanceLoading && attendanceRecords.length > 0 && !selectedTrimester && (
                       <ScrollArea className="h-[400px]">
                         <Table>
                           <TableHeader>
@@ -1279,10 +1297,6 @@ export default function AdminHome() {
                                 }
                                 if (selectedDateForReports) {
                                   matchesFilters = matchesFilters && record.date === selectedDateForReports;
-                                }
-                                // Adicionar filtro por trimestre se selecionado
-                                if (selectedTrimester && !selectedDateForReports) {
-                                  matchesFilters = matchesFilters && isDateInTrimester(record.date, selectedTrimester);
                                 }
                                 return matchesFilters;
                               })
