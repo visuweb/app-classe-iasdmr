@@ -568,7 +568,7 @@ export default function AdminHome() {
   // Edit teacher mutation
   const editTeacherMutation = useMutation({
     mutationFn: async (data: { id: number, updateData: Partial<Teacher> }) => {
-      const res = await apiRequest('PATCH', `/api/teachers/${data.id}`, data.updateData);
+      const res = await apiRequest('PUT', `/api/teachers/${data.id}`, data.updateData);
       return res.json();
     },
     onSuccess: () => {
