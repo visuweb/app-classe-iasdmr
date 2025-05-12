@@ -286,6 +286,30 @@ export default function AdminHome() {
     return result;
   };
   
+  // Fetch attendance records
+  const {
+    data: attendanceRecords = [],
+    isLoading: attendanceLoading
+  } = useQuery<(AttendanceRecord & { studentName: string, className: string })[]>({
+    queryKey: ['/api/attendance'],
+    queryFn: async () => {
+      const res = await apiRequest('GET', `/api/attendance`);
+      return res.json();
+    },
+  });
+  
+  // Fetch missionary activities
+  const {
+    data: missionaryActivities = [],
+    isLoading: activitiesLoading
+  } = useQuery<MissionaryActivity[]>({
+    queryKey: ['/api/missionary-activities'],
+    queryFn: async () => {
+      const res = await apiRequest('GET', `/api/missionary-activities`);
+      return res.json();
+    },
+  });
+
   // Extract unique dates from attendance records
   useEffect(() => {
     if (attendanceRecords.length > 0) {
@@ -503,29 +527,7 @@ export default function AdminHome() {
     enabled: !!selectedClassId,
   });
 
-  // Fetch attendance records
-  const {
-    data: attendanceRecords = [],
-    isLoading: attendanceLoading
-  } = useQuery<(AttendanceRecord & { studentName: string, className: string })[]>({
-    queryKey: ['/api/attendance'],
-    queryFn: async () => {
-      const res = await apiRequest('GET', `/api/attendance`);
-      return res.json();
-    },
-  });
 
-  // Fetch missionary activities
-  const {
-    data: missionaryActivities = [],
-    isLoading: activitiesLoading
-  } = useQuery<MissionaryActivity[]>({
-    queryKey: ['/api/missionary-activities'],
-    queryFn: async () => {
-      const res = await apiRequest('GET', `/api/missionary-activities`);
-      return res.json();
-    },
-  });
 
   // Create teacher mutation
   const createTeacherMutation = useMutation({
