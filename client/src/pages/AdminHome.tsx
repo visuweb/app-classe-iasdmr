@@ -245,7 +245,11 @@ export default function AdminHome() {
     
     // Count present/absent for each class
     recordsInTrimester.forEach(record => {
-      const classData = classSummary.get(record.classId);
+      // Encontrar o classId pelo nome da classe
+      const classObj = classes.find(c => c.name === record.className);
+      if (!classObj) return; // Classe não encontrada
+      
+      const classData = classSummary.get(classObj.id);
       if (classData) {
         classData.totalRecords++;
         if (record.present) {
@@ -1269,7 +1273,9 @@ export default function AdminHome() {
                               .filter(record => {
                                 let matchesFilters = true;
                                 if (selectedClassForReports) {
-                                  matchesFilters = matchesFilters && record.classId === selectedClassForReports;
+                                  // Precisamos comparar pelo nome da classe, já que não temos o classId diretamente
+                                  const selectedClassName = classes.find(c => c.id === selectedClassForReports)?.name;
+                                  matchesFilters = matchesFilters && record.className === selectedClassName;
                                 }
                                 if (selectedDateForReports) {
                                   matchesFilters = matchesFilters && record.date === selectedDateForReports;
