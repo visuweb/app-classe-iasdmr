@@ -35,6 +35,7 @@ import {
   DialogTitle,
   DialogFooter,
   DialogClose,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import {
@@ -59,10 +60,12 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+import { Switch } from "@/components/ui/switch";
 
 type AttendanceRecordWithStudent = AttendanceRecord & {
   studentName: string;
   classId?: number;
+  active?: boolean;
 };
 type MissionaryActivityWithClass = MissionaryActivity & { className: string };
 
@@ -84,6 +87,25 @@ const TeacherRecords: React.FC = () => {
     }
     return null;
   });
+
+  // Força uma única atualização quando a classe muda
+  useEffect(() => {
+    if (selectedClassId) {
+      console.log("TeacherRecords - Atualizando dados para a classe:", selectedClassId);
+      
+      // Usar setTimeout para evitar problemas de concorrência
+      setTimeout(() => {
+        queryClient.invalidateQueries({ 
+          queryKey: ["/api/attendance", {classId: selectedClassId}],
+          refetchType: "all" 
+        });
+        queryClient.invalidateQueries({ 
+          queryKey: ["/api/missionary-activities", {classId: selectedClassId}],
+          refetchType: "all"
+        });
+      }, 0);
+    }
+  }, [selectedClassId]);
 
   // Estados para os modais de edição
   const [isEditAttendanceOpen, setIsEditAttendanceOpen] = useState(false);
@@ -207,7 +229,7 @@ const TeacherRecords: React.FC = () => {
   const teacherClassIds = teacherClasses.map((cls) => cls.id);
 
   // Carregar registros de presença - enviar classId como parâmetro de consulta
-  const { data: allAttendanceRecords = [], isLoading: attendanceLoading } =
+  const { data: allAttendanceRecords = [], isLoading: attendanceLoading, refetch: refetchAttendance } =
     useQuery<AttendanceRecordWithStudent[]>({
       queryKey: ["/api/attendance", selectedClassId ? { classId: selectedClassId } : null],
       queryFn: async ({ queryKey }) => {
@@ -220,6 +242,10 @@ const TeacherRecords: React.FC = () => {
         return response.json();
       },
       enabled: !!selectedClassId, // Só carregar quando tiver uma classe selecionada
+      staleTime: 0, // Considerar os dados obsoletos imediatamente
+      gcTime: 0, // Não manter cache
+      refetchOnMount: true, // Recarregar sempre que o componente for montado
+      refetchOnWindowFocus: true, // Recarregar quando a janela receber foco
     });
 
   // Encontrar a classe selecionada
@@ -254,7 +280,7 @@ const TeacherRecords: React.FC = () => {
   const uniqueDates = Array.from(uniqueDatesSet).sort().reverse(); // Mais recentes primeiro
 
   // Carregar atividades missionárias - enviar classId como parâmetro de consulta
-  const { data: allMissionaryActivities = [], isLoading: activitiesLoading } =
+  const { data: allMissionaryActivities = [], isLoading: activitiesLoading, refetch: refetchActivities } =
     useQuery<MissionaryActivityWithClass[]>({
       queryKey: ["/api/missionary-activities", selectedClassId ? { classId: selectedClassId } : null],
       queryFn: async ({ queryKey }) => {
@@ -267,6 +293,10 @@ const TeacherRecords: React.FC = () => {
         return response.json();
       },
       enabled: !!selectedClassId, // Só carregar quando tiver uma classe selecionada
+      staleTime: 0, // Considerar os dados obsoletos imediatamente
+      gcTime: 0, // Não manter cache
+      refetchOnMount: true, // Recarregar sempre que o componente for montado
+      refetchOnWindowFocus: true, // Recarregar quando a janela receber foco
     });
 
   // Filtrar atividades apenas das classes do professor e apenas da classe selecionada se houver uma
@@ -348,6 +378,44 @@ const TeacherRecords: React.FC = () => {
     ? formatBrazilianDateExtended(selectedDate)
     : "Selecione uma data";
 
+  // Estado para rastrear se já fizemos um recarregamento nesta sessão
+  const [didInitialLoad, setDidInitialLoad] = useState(false);
+
+  // Forçar recarregamento de dados quando o componente é montado, mas apenas uma vez por sessão
+  useEffect(() => {
+    // Verificar se já fizemos um recarregamento nesta sessão
+    if (didInitialLoad) return;
+
+    // Abordagem mais controlada para evitar loops infinitos
+    const loadFreshData = async () => {
+      console.log('TeacherRecords - Carregando dados iniciais');
+      
+      // Invalidar queries específicas sem limpar o cache inteiro
+      if (selectedClassId) {
+        console.log('TeacherRecords - Atualizando dados para a classe:', selectedClassId);
+        try {
+          await queryClient.invalidateQueries({ 
+            queryKey: ['/api/attendance', {classId: selectedClassId}] 
+          });
+          await queryClient.invalidateQueries({ 
+            queryKey: ['/api/missionary-activities', {classId: selectedClassId}] 
+          });
+          
+          // Executar refetch apenas se necessário
+          if (refetchAttendance) await refetchAttendance();
+          if (refetchActivities) await refetchActivities();
+        } catch (error) {
+          console.error('Erro ao atualizar dados:', error);
+        }
+      }
+
+      // Marcar que já fizemos o carregamento inicial
+      setDidInitialLoad(true);
+    };
+    
+    loadFreshData();
+  }, [selectedClassId, didInitialLoad, refetchAttendance, refetchActivities]);
+
   return (
     <div className="flex flex-col min-h-screen bg-gray-50">
       <main className="flex-1 p-4">
@@ -366,7 +434,7 @@ const TeacherRecords: React.FC = () => {
               className={`${isMobile ? "text-xl" : "text-2xl"} font-bold flex items-center`}
             >
               <FileText className="h-6 w-6 mr-2 text-primary-500" />
-              Registros {selectedClass && ` → ${selectedClass.name}`}
+              Registros {selectedClass && ` : ${selectedClass.name}`}
             </h1>
             <div className="text-sm text-gray-500">
               Visualize os registros de presença e atividades
@@ -374,71 +442,10 @@ const TeacherRecords: React.FC = () => {
           </div>
         </div>
 
-        {/* Filtro por Data */}
-        <div className="flex justify-between items-start gap-4 mb-6">
-          <div className="flex items-center">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="outline"
-                  className="min-w-[220px] flex justify-between items-center text-left"
-                  disabled={allUniqueDates.length === 0}
-                >
-                  <div className="flex items-center truncate">
-                    <Calendar className="h-4 w-4 mr-2 flex-shrink-0" />
-                    <span className="truncate">
-                      {selectedDate 
-                        ? formatBrazilianDateExtended(selectedDate)
-                        : "Selecione uma data"}
-                    </span>
-                  </div>
-                  <Filter className="h-4 w-4 ml-2 flex-shrink-0" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent
-                align="start"
-                className="max-h-[300px] overflow-auto"
-              >
-                {allUniqueDates.length === 0 ? (
-                  <div className="px-2 py-1.5 text-sm text-muted-foreground">
-                    Nenhum registro encontrado
-                  </div>
-                ) : (
-                  allUniqueDates.map((date) => (
-                    <DropdownMenuItem
-                      key={date}
-                      onClick={() => setSelectedDate(date)}
-                      className="flex justify-between items-center"
-                    >
-                      {formatBrazilianDate(date)}
-                      {date === selectedDate && (
-                        <Check className="h-4 w-4 text-primary-500" />
-                      )}
-                    </DropdownMenuItem>
-                  ))
-                )}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-          
-          {/* Botão "Limpar filtro" apenas quando não houver uma classe específica selecionada */}
-          {!selectedClassId && allUniqueDates.length > 0 && selectedDate && (
-            <Button 
-              variant="outline" 
-              size="sm"
-              className="px-3"
-              onClick={() => setSelectedDate(null)}
-            >
-              <X className="h-3.5 w-3.5 mr-1.5" />
-              Limpar filtro
-            </Button>
-          )}
-        </div>
-
         {/* Conteúdo principal */}
         <div className="max-w-5xl mx-auto">
           <Tabs defaultValue="attendance">
-            <TabsList className="mb-4">
+            <TabsList className="mb-4 grid w-full grid-cols-2">
               <TabsTrigger 
                 value="attendance" 
                 className="flex items-center"
@@ -462,24 +469,77 @@ const TeacherRecords: React.FC = () => {
                   <CardDescription>
                     Presença dos alunos nas aulas - {formattedSelectedDate}
                   </CardDescription>
+                  <div className="flex items-center justify-between mt-3">
+                    <div className="flex items-center">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            variant="outline"
+                            className="min-w-[220px] flex justify-between items-center text-left"
+                            disabled={allUniqueDates.length === 0}
+                          >
+                            <div className="flex items-center truncate">
+                              <Calendar className="h-4 w-4 mr-2 flex-shrink-0" />
+                              <span className="truncate">
+                                {selectedDate 
+                                  ? formatBrazilianDateExtended(selectedDate)
+                                  : "Selecione uma data"}
+                              </span>
+                            </div>
+                            <Filter className="h-4 w-4 ml-2 flex-shrink-0" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent
+                          align="start"
+                          className="max-h-[300px] overflow-auto"
+                        >
+                          {allUniqueDates.length === 0 ? (
+                            <div className="px-2 py-1.5 text-sm text-muted-foreground">
+                              Nenhum registro encontrado
+                            </div>
+                          ) : (
+                            allUniqueDates.map((date) => (
+                              <DropdownMenuItem
+                                key={date}
+                                onClick={() => setSelectedDate(date)}
+                                className="flex justify-between items-center"
+                              >
+                                {formatBrazilianDate(date)}
+                                {date === selectedDate && (
+                                  <Check className="h-4 w-4 text-primary-500" />
+                                )}
+                              </DropdownMenuItem>
+                            ))
+                          )}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                      
+                      {!selectedClassId && allUniqueDates.length > 0 && selectedDate && (
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          className="px-3 ml-2"
+                          onClick={() => setSelectedDate(null)}
+                        >
+                          <X className="h-3.5 w-3.5 mr-1.5" />
+                          Limpar filtro
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                  
                   {attendanceRecords.length > 0 && (
-                    <div className="flex items-center gap-4 mt-2">
-                      <span className="text-sm text-green-600 flex items-center">
+                    <div className="flex items-center gap-4">
+                      <span className="text-sm text-green-600 flex items-center mt-2">
                         <Check className="h-3.5 w-3.5 mr-1" />
                         Presentes (
-                        {
-                          attendanceRecords.filter((record) => record.present)
-                            .length
-                        }
+                        {attendanceRecords.filter((record) => record.present).length}
                         )
                       </span>
-                      <span className="text-sm text-red-600 flex items-center">
+                      <span className="text-sm text-red-600 flex items-center mt-2">
                         <X className="h-3.5 w-3.5 mr-1" />
                         Ausentes (
-                        {
-                          attendanceRecords.filter((record) => !record.present)
-                            .length
-                        }
+                        {attendanceRecords.filter((record) => !record.present).length}
                         )
                       </span>
                     </div>
@@ -529,7 +589,7 @@ const TeacherRecords: React.FC = () => {
                         <TableHeader>
                           <TableRow>
                             <TableHead>Aluno</TableHead>
-                            <TableHead>Presença</TableHead>
+                            <TableHead>Status</TableHead>
                             <TableHead className="text-right">Ações</TableHead>
                           </TableRow>
                         </TableHeader>
@@ -582,6 +642,64 @@ const TeacherRecords: React.FC = () => {
                   <CardDescription>
                     Registros de atividades realizadas - {formattedSelectedDate}
                   </CardDescription>
+                  <div className="flex items-center justify-between mt-3">
+                    <div className="flex items-center">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            variant="outline"
+                            className="min-w-[220px] flex justify-between items-center text-left"
+                            disabled={allUniqueDates.length === 0}
+                          >
+                            <div className="flex items-center truncate">
+                              <Calendar className="h-4 w-4 mr-2 flex-shrink-0" />
+                              <span className="truncate">
+                                {selectedDate 
+                                  ? formatBrazilianDateExtended(selectedDate)
+                                  : "Selecione uma data"}
+                              </span>
+                            </div>
+                            <Filter className="h-4 w-4 ml-2 flex-shrink-0" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent
+                          align="start"
+                          className="max-h-[300px] overflow-auto"
+                        >
+                          {allUniqueDates.length === 0 ? (
+                            <div className="px-2 py-1.5 text-sm text-muted-foreground">
+                              Nenhum registro encontrado
+                            </div>
+                          ) : (
+                            allUniqueDates.map((date) => (
+                              <DropdownMenuItem
+                                key={date}
+                                onClick={() => setSelectedDate(date)}
+                                className="flex justify-between items-center"
+                              >
+                                {formatBrazilianDate(date)}
+                                {date === selectedDate && (
+                                  <Check className="h-4 w-4 text-primary-500" />
+                                )}
+                              </DropdownMenuItem>
+                            ))
+                          )}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                      
+                      {!selectedClassId && allUniqueDates.length > 0 && selectedDate && (
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          className="px-3 ml-2"
+                          onClick={() => setSelectedDate(null)}
+                        >
+                          <X className="h-3.5 w-3.5 mr-1.5" />
+                          Limpar filtro
+                        </Button>
+                      )}
+                    </div>
+                  </div>
                 </CardHeader>
                 <CardContent>
                   {activitiesLoading || isLoadingClasses ? (
@@ -770,157 +888,86 @@ const TeacherRecords: React.FC = () => {
         </div>
       </main>
 
+      {/* Modais de edição */}
       {/* Modal de edição de presença */}
-      <Dialog
-        open={isEditAttendanceOpen}
-        onOpenChange={setIsEditAttendanceOpen}
-      >
-        <DialogContent className="w-[500px] max-w-full">
+      <Dialog open={isEditAttendanceOpen} onOpenChange={setIsEditAttendanceOpen}>
+        <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
-            <DialogTitle>Editar Registro de Presença</DialogTitle>
+            <DialogTitle>Editar Presença</DialogTitle>
+            <DialogDescription>
+              {selectedAttendanceRecord && (
+                <span>Alterar presença de {selectedAttendanceRecord.studentName}</span>
+              )}
+            </DialogDescription>
           </DialogHeader>
-
-          {selectedAttendanceRecord && (
-            <div className="py-4">
-              <div className="mb-4">
-                <div className="text-sm font-medium mb-1">Aluno</div>
-                <div className="text-base">
-                  {selectedAttendanceRecord.studentName}
-                </div>
-              </div>
-
-              <div className="mb-4">
-                <div className="text-sm font-medium mb-1">Status Atual</div>
-                <div className="text-base">
-                  {selectedAttendanceRecord.present ? (
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                      <Check className="h-3 w-3 mr-1" />
-                      Presente
-                    </span>
-                  ) : (
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                      <X className="h-3 w-3 mr-1" />
-                      Ausente
-                    </span>
-                  )}
-                </div>
-              </div>
-
-              <div className="mb-4">
-                <div className="text-sm font-medium mb-2">Alterar Status</div>
-                <div className="flex flex-col gap-3 sm:flex-row sm:gap-4">
-                  <Button
-                    variant={
-                      selectedAttendanceRecord.present ? "outline" : "default"
-                    }
-                    className={`w-full sm:flex-1 ${
-                      selectedAttendanceRecord.present
-                        ? ""
-                        : "bg-green-600 hover:bg-green-700"
-                    }`}
-                    onClick={() => handleAttendanceUpdate(true)}
-                    disabled={attendanceMutation.isPending}
-                  >
-                    <Check className="h-4 w-4 mr-1" />
-                    Marcar como Presente
-                  </Button>
-                  <Button
-                    variant={
-                      !selectedAttendanceRecord.present ? "outline" : "default"
-                    }
-                    className={`w-full sm:flex-1 ${
-                      !selectedAttendanceRecord.present
-                        ? ""
-                        : "bg-red-600 hover:bg-red-700"
-                    }`}
-                    onClick={() => handleAttendanceUpdate(false)}
-                    disabled={attendanceMutation.isPending}
-                  >
-                    <X className="h-4 w-4 mr-1" />
-                    Marcar como Ausente
-                  </Button>
-                </div>
+          <div className="py-4 space-y-4">
+            <div className="flex flex-col items-center gap-4">
+              <div className="flex w-full justify-between">
+                <Button
+                  onClick={() => handleAttendanceUpdate(true)}
+                  className="flex-1 bg-green-600 hover:bg-green-700 mr-2"
+                  variant="default"
+                >
+                  <Check className="mr-2 h-4 w-4" />
+                  Presente
+                </Button>
+                <Button
+                  onClick={() => handleAttendanceUpdate(false)}
+                  className="flex-1 bg-red-600 hover:bg-red-700"
+                  variant="default"
+                >
+                  <X className="mr-2 h-4 w-4" />
+                  Ausente
+                </Button>
               </div>
             </div>
-          )}
+          </div>
 
-          <DialogFooter className="flex justify-end pt-2">
-            <DialogClose asChild>
-              <Button variant="outline">Cancelar</Button>
-            </DialogClose>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
 
       {/* Modal de edição de atividade missionária */}
       <Dialog open={isEditActivityOpen} onOpenChange={setIsEditActivityOpen}>
-        <DialogContent className="w-[400px] max-w-full">
+        <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
             <DialogTitle>Editar Atividade Missionária</DialogTitle>
-          </DialogHeader>
-
-          {selectedActivity && selectedActivityField && (
-            <div className="py-4">
-              <div className="mb-4">
-                <div className="text-sm font-medium mb-1">Atividade</div>
-                <div className="text-base">
-                  {selectedActivityField === "literaturasDistribuidas" &&
-                    "Literaturas Distribuídas"}
-                  {selectedActivityField === "qtdContatosMissionarios" &&
-                    "Contatos Missionários"}
-                  {selectedActivityField === "estudosBiblicos" &&
-                    "Estudos Bíblicos Ministrados"}
-                  {selectedActivityField === "visitasMissionarias" &&
-                    "Visitas Missionárias"}
-                  {selectedActivityField === "pessoasAuxiliadas" &&
-                    "Pessoas Auxiliadas"}
-                  {selectedActivityField === "pessoasTrazidasIgreja" &&
-                    "Pessoas Trazidas à Igreja"}
-                </div>
-              </div>
-
-              <div className="mb-4">
-                <div className="text-sm font-medium mb-1">Valor Atual</div>
-                <div className="text-base">
-                  {String(
-                    selectedActivity[
-                      selectedActivityField as keyof MissionaryActivityWithClass
-                    ] || 0,
-                  )}
-                </div>
-              </div>
-
-              <div className="mb-4">
-                <div className="text-sm font-medium mb-2">Novo Valor</div>
-                <input
-                  type="number"
-                  min="0"
-                  value={editActivityValue}
-                  onChange={(e) =>
-                    setEditActivityValue(
-                      Math.max(0, parseInt(e.target.value) || 0),
-                    )
+            <DialogDescription>
+              {selectedActivityField && (
+                <span>
+                  Editar {
+                    selectedActivityField === "literaturasDistribuidas" ? "Literaturas Distribuídas" :
+                    selectedActivityField === "qtdContatosMissionarios" ? "Contatos Missionários" :
+                    selectedActivityField === "estudosBiblicos" ? "Estudos Bíblicos" :
+                    selectedActivityField === "visitasMissionarias" ? "Visitas Missionárias" :
+                    selectedActivityField === "pessoasAuxiliadas" ? "Pessoas Auxiliadas" :
+                    selectedActivityField === "pessoasTrazidasIgreja" ? "Pessoas Trazidas à Igreja" :
+                    "Atividade"
                   }
-                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                />
-              </div>
+                </span>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4 space-y-4">
+            <div className="flex flex-col space-y-2">
+              <label htmlFor="activityValue" className="text-sm font-medium">
+                Quantidade
+              </label>
+              <input
+                id="activityValue"
+                type="number"
+                min="0"
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                value={editActivityValue}
+                onChange={(e) => setEditActivityValue(Number(e.target.value))}
+              />
             </div>
-          )}
-
-          <DialogFooter className="flex justify-end pt-2">
-            <Button
-              variant="outline"
-              onClick={() => setIsEditActivityOpen(false)}
-              disabled={activityMutation.isPending}
-              className="mr-2"
-            >
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsEditActivityOpen(false)}>
               Cancelar
             </Button>
-            <Button
-              onClick={handleActivityUpdate}
-              disabled={activityMutation.isPending}
-            >
-              {activityMutation.isPending ? "Salvando..." : "Salvar"}
+            <Button onClick={handleActivityUpdate}>
+              Salvar Alterações
             </Button>
           </DialogFooter>
         </DialogContent>

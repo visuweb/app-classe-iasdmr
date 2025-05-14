@@ -17,7 +17,10 @@ import {
   UserPlus, 
   Pencil, 
   Trash2, 
-  School
+  School,
+  Search,
+  CircleMinus,
+  CircleCheck
 } from 'lucide-react';
 import {
   Card,
@@ -85,9 +88,11 @@ const ClassDetails: React.FC = () => {
   const [isDeleteStudentOpen, setIsDeleteStudentOpen] = useState(false);
   const [studentToDelete, setStudentToDelete] = useState<Student | null>(null);
   const [currentStudentId, setCurrentStudentId] = useState<number | null>(null);
+  const [searchTerm, setSearchTerm] = useState<string>('');
+  const [showInactiveStudents, setShowInactiveStudents] = useState(false);
   
   // Estado da classe
-  const classId = params?.id ? parseInt(params.id, 10) : undefined;
+  const classId = params?.id ? parseInt(params.id, 10) : null;
   
   // Formulário para adicionar aluno
   const studentForm = useForm<z.infer<typeof studentFormSchema>>({
@@ -265,7 +270,7 @@ const ClassDetails: React.FC = () => {
               <div className="space-y-1">
                 <CardTitle className="text-xl flex items-center">
                   <Users className="h-5 w-5 mr-2 text-primary-500" />
-                  Alunos da Classe
+                  Gerenciar Alunos
                 </CardTitle>
                 <CardDescription>
                   Gerencie os alunos inscritos nesta classe
@@ -303,67 +308,129 @@ const ClassDetails: React.FC = () => {
                 </div>
               ) : (
                 // Lista de alunos
-                <div className="rounded border overflow-hidden">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Nome</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead className="w-24 text-right">Ações</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {students.map((student) => (
-                        <TableRow key={student.id} className={student.active ? "" : "opacity-50"}>
-                          <TableCell className="font-medium">{student.name}</TableCell>
-                          <TableCell>
-                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                              student.active 
-                                ? 'bg-green-100 text-green-800' 
-                                : 'bg-gray-100 text-gray-800'
-                            }`}>
-                              {student.active ? 'Ativo' : 'Inativo'}
-                            </span>
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <div className="flex justify-end items-center space-x-2">
-                              <Button 
-                                variant="ghost" 
-                                size="icon" 
-                                className="h-8 w-8 text-blue-600"
-                                onClick={() => {
-                                  studentForm.reset({ 
-                                    name: student.name, 
-                                    classId: classId || 0
-                                  });
-                                  setCurrentStudentId(student.id);
-                                  setIsAddStudentOpen(true);
-                                }}
-                              >
-                                <Pencil className="h-4 w-4" />
-                              </Button>
-                              <Button 
-                                variant="ghost" 
-                                size="icon"
-                                className={`h-8 w-8 ${student.active ? 'text-red-600' : 'text-green-600'}`}
-                                onClick={() => {
-                                  setStudentToDelete(student);
-                                  setIsDeleteStudentOpen(true);
-                                }}
-                              >
-                                {student.active ? (
-                                  <Trash2 className="h-4 w-4" />
-                                ) : (
-                                  <Check className="h-4 w-4" />
-                                )}
-                              </Button>
-                            </div>
-                          </TableCell>
+                <>
+                  <div className="mb-4">
+                    <div className="flex flex-col sm:flex-row justify-between gap-4">
+                      <div className="relative flex-grow">
+                        <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
+                        <Input
+                          type="text"
+                          placeholder="Filtrar por nome do aluno..."
+                          className="pl-9"
+                          value={searchTerm}
+                          onChange={(e) => setSearchTerm(e.target.value)}
+                        />
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Switch
+                          id="show-inactive-students"
+                          checked={showInactiveStudents}
+                          onCheckedChange={setShowInactiveStudents}
+                        />
+                        <label
+                          htmlFor="show-inactive-students"
+                          className="text-sm font-medium leading-none cursor-pointer"
+                        >
+                          Mostrar Inativos
+                        </label>
+                      </div>
+                    </div>
+                  </div>
+                
+                  <div className="rounded border overflow-hidden">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Nome</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead className="w-24 text-right">Ações</TableHead>
                         </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
+                      </TableHeader>
+                      <TableBody>
+                        {students
+                          .filter(student => 
+                            student.name.toLowerCase().includes(searchTerm.toLowerCase()) &&
+                            (showInactiveStudents ? !student.active : student.active)
+                          )
+                          .map((student) => (
+                            <TableRow key={student.id} className={student.active ? "" : "opacity-50"}>
+                              <TableCell className="font-medium">{student.name}</TableCell>
+                              <TableCell>
+                                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                  student.active 
+                                    ? 'bg-green-100 text-green-800' 
+                                    : 'bg-gray-100 text-gray-800'
+                                }`}>
+                                  {student.active ? 'Ativo' : 'Inativo'}
+                                </span>
+                              </TableCell>
+                              <TableCell className="text-right">
+                                <div className="flex justify-end items-center space-x-2">
+                                  <Button 
+                                    variant="ghost" 
+                                    size="icon" 
+                                    className="h-8 w-8 text-blue-600"
+                                    onClick={() => {
+                                      studentForm.reset({ 
+                                        name: student.name, 
+                                        classId: classId || 0
+                                      });
+                                      setCurrentStudentId(student.id);
+                                      setIsAddStudentOpen(true);
+                                    }}
+                                  >
+                                    <Pencil className="h-4 w-4" />
+                                  </Button>
+                                  {student.active ? (
+                                    <Button 
+                                      variant="ghost" 
+                                      size="icon"
+                                      className="h-8 w-8 text-red-600"
+                                      onClick={() => {
+                                        setStudentToDelete(student);
+                                        setIsDeleteStudentOpen(true);
+                                      }}
+                                    >
+                                      <CircleMinus className="h-4 w-4" />
+                                    </Button>
+                                  ) : (
+                                    <Button 
+                                      variant="ghost" 
+                                      size="icon"
+                                      className="h-8 w-8 text-green-600"
+                                      onClick={() => {
+                                        setStudentToDelete(student);
+                                        setIsDeleteStudentOpen(true);
+                                      }}
+                                    >
+                                      <CircleCheck className="h-4 w-4" />
+                                    </Button>
+                                  )}
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                          
+                          {/* Mensagem quando nenhum aluno corresponde aos filtros */}
+                          {students.length > 0 && 
+                           students.filter(student => 
+                             student.name.toLowerCase().includes(searchTerm.toLowerCase()) &&
+                             (showInactiveStudents ? !student.active : student.active)
+                           ).length === 0 && (
+                            <TableRow>
+                              <TableCell colSpan={3} className="text-center py-10">
+                                <div className="flex flex-col items-center justify-center text-gray-500">
+                                  <Users className="h-12 w-12 mb-4 text-gray-300" />
+                                  <h3 className="text-base font-medium mb-2">Nenhum aluno encontrado</h3>
+                                  <p className="text-sm">Tente ajustar o filtro para ver mais resultados</p>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          )}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </>
               )}
             </CardContent>
           </Card>

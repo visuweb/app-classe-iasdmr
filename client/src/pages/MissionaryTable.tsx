@@ -55,7 +55,7 @@ const MissionaryTable: React.FC<MissionaryTableProps> = ({ data }) => {
   
   return (
     <div className="overflow-auto" style={{ maxHeight: '400px' }}>
-      <div className="min-w-max">
+      <div className="min-w-max border border-gray-200 rounded-md overflow-hidden">
         <Table>
           <TableHeader>
             <TableRow className="bg-muted/30">

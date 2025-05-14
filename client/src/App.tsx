@@ -14,6 +14,7 @@ import Wizard from "./pages/Wizard";
 import NotFound from "@/pages/not-found";
 import AuthPage from "@/pages/auth-page";
 import AdminHome from "@/pages/AdminHome";
+import Students from "@/pages/Students";
 import { AuthProvider, useAuth } from "@/hooks/use-auth";
 import { ProtectedRoute } from "@/lib/protected-route";
 import { useEffect } from "react";
@@ -92,6 +93,7 @@ function Router() {
           <TeacherProtectedRoute path="/classes/:id" component={ClassDetails} />
           <TeacherProtectedRoute path="/teacher-records/:classId?" component={TeacherRecords} />
           <AdminProtectedRoute path="/records" component={RecordsList} />
+          <AdminProtectedRoute path="/students" component={Students} />
           <TeacherProtectedRoute path="/wizard" component={Wizard} />
           <AdminProtectedRoute path="/admin" component={AdminHome} />
           <Route path="/auth" component={AuthPage} />

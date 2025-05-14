@@ -53,15 +53,35 @@ export function adjustDateToBRT(dateStr: string | null | undefined): string {
     return dateStr;
   }
   
-  // Para datas com timestamp (formato ISO), extraímos apenas a parte da data
+  // Para datas com timestamp (formato ISO), precisamos ajustar o fuso horário
   if (typeof dateStr === 'string' && dateStr.includes('T')) {
-    return dateStr.split('T')[0];
+    try {
+      // Criar um objeto Date especificando que estamos interpretando uma data UTC
+      const utcDate = new Date(dateStr);
+      
+      // Obter os componentes da data no fuso horário de Brasília (UTC-3)
+      // O getDate() e outros já consideram o fuso horário do navegador
+      const year = utcDate.getFullYear();
+      const month = String(utcDate.getMonth() + 1).padStart(2, '0');
+      const day = String(utcDate.getDate()).padStart(2, '0');
+      
+      // Retornar a data no formato yyyy-MM-dd
+      return `${year}-${month}-${day}`;
+    } catch (e) {
+      console.error('Erro ao ajustar data ISO para BRT:', e);
+      // Em caso de erro, extraímos apenas a parte da data
+      return dateStr.split('T')[0];
+    }
   }
   
   // Para outros formatos, interpretamos a data e retornamos apenas yyyy-MM-dd
   try {
     const date = new Date(dateStr);
-    return format(date, 'yyyy-MM-dd');
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    
+    return `${year}-${month}-${day}`;
   } catch (e) {
     console.error('Erro ao processar data:', e);
     return dateStr; // Em caso de erro, retorna a string original
@@ -147,14 +167,15 @@ export function getCurrentDateBRT(): string {
 export function extractDateFromRecord(recordDate: any, fallbackDate?: string): string {
   // Se for uma string com formato ISO (com 'T')
   if (typeof recordDate === 'string' && recordDate.includes('T')) {
-    return recordDate.split('T')[0];
+    // Usar nossa função melhorada para ajuste de timezone
+    return adjustDateToBRT(recordDate);
   }
   
   // Se for uma string de data normal
   if (typeof recordDate === 'string' && !recordDate.includes('T')) {
     try {
-      const parsedDate = parseISO(recordDate);
-      return format(parsedDate, 'yyyy-MM-dd');
+      // Usar diretamente sem parseISO para evitar ajuste automático de timezone
+      return recordDate;
     } catch (e) {
       return fallbackDate || recordDate;
     }
@@ -162,7 +183,12 @@ export function extractDateFromRecord(recordDate: any, fallbackDate?: string): s
   
   // Se for um objeto Date
   if (recordDate instanceof Date) {
-    return format(recordDate, 'yyyy-MM-dd');
+    // Obter os componentes da data no fuso horário local
+    const year = recordDate.getFullYear();
+    const month = String(recordDate.getMonth() + 1).padStart(2, '0');
+    const day = String(recordDate.getDate()).padStart(2, '0');
+    
+    return `${year}-${month}-${day}`;
   }
   
   // Fallback para o valor atual no formato correto

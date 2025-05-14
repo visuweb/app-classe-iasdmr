@@ -205,6 +205,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get student counts for all classes
+  app.get("/api/class-student-counts", ensureAuthenticated, async (req, res) => {
+    try {
+      const counts = await storage.getStudentCountsByClass();
+      res.json(counts);
+    } catch (error) {
+      res.status(500).json({ message: "Falha ao buscar contagem de alunos por classe" });
+    }
+  });
+
   // Get class by ID
   app.get("/api/classes/:id", ensureAuthenticated, async (req, res) => {
     try {
@@ -288,6 +298,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(students);
     } catch (error) {
       res.status(500).json({ message: "Falha ao buscar alunos" });
+    }
+  });
+
+  // Endpoint para buscar todos os alunos
+  app.get("/api/students", ensureAuthenticated, async (req, res) => {
+    try {
+      const students = await storage.getAllStudents();
+      res.json(students);
+    } catch (error) {
+      res.status(500).json({ message: "Falha ao buscar todos os alunos" });
     }
   });
 

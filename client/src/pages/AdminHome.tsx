@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { formatBrazilianDate } from '@/lib/date-utils';
 import { startOfYear, setMonth, setDate, endOfMonth, format } from "date-fns";
-import { LogOut, School, User, Book, BarChart, Plus, UserPlus, Calendar, Filter, Trash2, Check, Pencil, MinusCircle, Search, CalendarIcon } from 'lucide-react';
+import { LogOut, School, User, Book, BarChart, Plus, UserPlus, Calendar, Filter, Trash2, Check, Pencil, MinusCircle, Search, CalendarIcon, Users } from 'lucide-react';
 import MissionaryTable from './MissionaryTable';
 import {
   Popover,
@@ -80,6 +80,8 @@ import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { Teacher, Class, Student, MissionaryActivity, AttendanceRecord } from '@shared/schema';
+import { useLocation } from 'wouter';
+import { FormControlLabel } from '@/components/ui/form-control-label';
 
 // Definir tipos para ActivityClass e ActivityType para facilitar a tipagem
 type ActivityClass = {
@@ -173,6 +175,12 @@ export default function AdminHome() {
   const [selectedTrimester, setSelectedTrimester] = useState<number | null>(null);
   const [availableDates, setAvailableDates] = useState<string[]>([]);
   
+  // Filtros para alunos
+  const [studentFilter, setStudentFilter] = useState<string>('');
+  const [selectedClassForStudents, setSelectedClassForStudents] = useState<string>('all');
+  
+  const [, setLocation] = useLocation();
+  
   // Determine current trimester
   const getCurrentTrimester = () => {
     const now = new Date();
@@ -233,8 +241,8 @@ export default function AdminHome() {
     // Group records by class
     const classSummary = new Map();
     
-    // Initialize with all classes
-    classes.forEach(classItem => {
+    // Initialize with only active classes
+    classes.filter(classItem => classItem.active).forEach(classItem => {
       if (!classSummary.has(classItem.id)) {
         classSummary.set(classItem.id, {
           classId: classItem.id,
@@ -249,8 +257,8 @@ export default function AdminHome() {
     // Count present/absent for each class
     recordsInTrimester.forEach(record => {
       // Encontrar o classId pelo nome da classe
-      const classObj = classes.find(c => c.name === record.className);
-      if (!classObj) return; // Classe não encontrada
+      const classObj = classes.find(c => c.name === record.className && c.active);
+      if (!classObj) return; // Classe não encontrada ou inativa
       
       const classData = classSummary.get(classObj.id);
       if (classData) {
@@ -413,10 +421,12 @@ export default function AdminHome() {
       { id: 'pessoasTrazidasIgreja', name: 'Pessoas Trazidas à Igreja' }
     ];
     
-    // Filtrar atividades do trimestre
-    const activitiesInTrimester = missionaryActivities.filter(activity => 
-      isDateInTrimester(activity.date, selectedTrimester)
-    );
+    // Filtrar atividades do trimestre apenas de classes ativas
+    const activitiesInTrimester = missionaryActivities.filter(activity => {
+      // Verificar se a classe existe e está ativa
+      const classObj = classes.find(c => c.id === activity.classId);
+      return isDateInTrimester(activity.date, selectedTrimester) && classObj && classObj.active;
+    });
     
     // Verificar se existem atividades no trimestre
     if (activitiesInTrimester.length === 0) {
@@ -429,7 +439,7 @@ export default function AdminHome() {
     // Criar o mapa da classe para seus totais
     const classActivityTotals = new Map();
     
-    // Inicializar todos os totais como zero para todas as classes
+    // Inicializar todos os totais como zero para todas as classes ativas
     activeClasses.forEach(classItem => {
       classActivityTotals.set(classItem.id, {
         id: classItem.id,
@@ -534,7 +544,60 @@ export default function AdminHome() {
     enabled: !!selectedClassId,
   });
 
+  // Buscar professores para cada classe
+  const teachersByClass = useQuery({
+    queryKey: ['/api/classes-teachers'],
+    queryFn: async () => {
+      if (!classes || classes.length === 0) return {};
 
+      // Criar um mapa que armazenará o ID da classe como chave e uma lista de professores como valor
+      const teachersMap: Record<number, { id: number, name: string }[]> = {};
+
+      // Buscar professores para cada classe em paralelo
+      await Promise.all(
+        classes.map(async (classObj) => {
+          try {
+            const res = await apiRequest('GET', `/api/classes/${classObj.id}/teachers`);
+            const teachers = await res.json();
+            teachersMap[classObj.id] = teachers;
+          } catch (error) {
+            teachersMap[classObj.id] = [];
+          }
+        })
+      );
+
+      return teachersMap;
+    },
+    enabled: classes.length > 0,
+  });
+
+  // Remove teacher from class mutation
+  const removeTeacherFromClassMutation = useMutation({
+    mutationFn: async (data: { teacherId: number, classId: number }) => {
+      // Usando formato correto conforme implementado no servidor
+      const res = await apiRequest('DELETE', `/api/teacher-classes/${data.teacherId}/${data.classId}`);
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Professor removido da classe",
+        description: "O professor foi removido da classe com sucesso",
+      });
+      setIsRemoveTeacherFromClassOpen(false);
+      setTeacherToRemove(null);
+      setClassFromRemove(null);
+      // Invalidar as queries relacionadas
+      queryClient.invalidateQueries({ queryKey: ['/api/classes-teachers'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/classes'] });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Erro ao remover professor",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  });
 
   // Create teacher mutation
   const createTeacherMutation = useMutation({
@@ -592,7 +655,7 @@ export default function AdminHome() {
   // Toggle teacher status mutation
   const toggleTeacherStatusMutation = useMutation({
     mutationFn: async (data: { id: number, active: boolean }) => {
-      const res = await apiRequest('PATCH', `/api/teachers/${data.id}`, { active: data.active });
+      const res = await apiRequest('PUT', `/api/teachers/${data.id}`, { active: data.active });
       return res.json();
     },
     onSuccess: () => {
@@ -603,6 +666,10 @@ export default function AdminHome() {
       setIsToggleTeacherOpen(false);
       setTeacherToToggle(null);
       queryClient.invalidateQueries({ queryKey: ['/api/teachers'] });
+      // Forçar atualização do componente
+      setTimeout(() => {
+        queryClient.refetchQueries({ queryKey: ['/api/teachers'] });
+      }, 100);
     },
     onError: (error: Error) => {
       toast({
@@ -640,7 +707,7 @@ export default function AdminHome() {
   // Edit class mutation
   const editClassMutation = useMutation({
     mutationFn: async (data: { id: number, name: string }) => {
-      const res = await apiRequest('PATCH', `/api/classes/${data.id}`, { name: data.name });
+      const res = await apiRequest('PUT', `/api/classes/${data.id}`, { name: data.name });
       return res.json();
     },
     onSuccess: () => {
@@ -651,6 +718,12 @@ export default function AdminHome() {
       setIsEditClassOpen(false);
       setClassToEdit(null);
       queryClient.invalidateQueries({ queryKey: ['/api/classes'] });
+      // Também invalidar queries relacionadas a alunos
+      queryClient.invalidateQueries({ queryKey: ['/api/students'] });
+      // Forçar atualização dos componentes
+      setTimeout(() => {
+        queryClient.refetchQueries({ queryKey: ['/api/classes'] });
+      }, 100);
     },
     onError: (error: Error) => {
       toast({
@@ -664,7 +737,7 @@ export default function AdminHome() {
   // Toggle class status mutation
   const toggleClassStatusMutation = useMutation({
     mutationFn: async (data: { id: number, active: boolean }) => {
-      const res = await apiRequest('PATCH', `/api/classes/${data.id}`, { active: data.active });
+      const res = await apiRequest('PUT', `/api/classes/${data.id}`, { active: data.active });
       return res.json();
     },
     onSuccess: () => {
@@ -675,6 +748,13 @@ export default function AdminHome() {
       setIsToggleClassOpen(false);
       setClassToToggle(null);
       queryClient.invalidateQueries({ queryKey: ['/api/classes'] });
+      // Também invalidar queries relacionadas a alunos e contagens
+      queryClient.invalidateQueries({ queryKey: ['/api/students'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/class-student-counts'] });
+      // Forçar atualização dos componentes
+      setTimeout(() => {
+        queryClient.refetchQueries({ queryKey: ['/api/classes'] });
+      }, 100);
     },
     onError: (error: Error) => {
       toast({
@@ -701,6 +781,10 @@ export default function AdminHome() {
       if (selectedClassId) {
         refetchStudents();
       }
+      // Invalidar a query que busca todos os alunos (usada na aba Alunos)
+      queryClient.invalidateQueries({ queryKey: ['/api/students'] });
+      // Invalidar a query que conta alunos por classe
+      queryClient.invalidateQueries({ queryKey: ['/api/class-student-counts'] });
     },
     onError: (error: Error) => {
       toast({
@@ -714,7 +798,7 @@ export default function AdminHome() {
   // Edit student mutation
   const editStudentMutation = useMutation({
     mutationFn: async (data: { id: number, name: string }) => {
-      const res = await apiRequest('PATCH', `/api/students/${data.id}`, { name: data.name });
+      const res = await apiRequest('PUT', `/api/students/${data.id}`, { name: data.name });
       return res.json();
     },
     onSuccess: () => {
@@ -727,6 +811,14 @@ export default function AdminHome() {
       if (selectedClassId) {
         refetchStudents();
       }
+      // Invalidar a query que busca todos os alunos (usada na aba Alunos)
+      queryClient.invalidateQueries({ queryKey: ['/api/students'] });
+      // Invalidar a query que conta alunos por classe
+      queryClient.invalidateQueries({ queryKey: ['/api/class-student-counts'] });
+      // Forçar atualização do componente
+      setTimeout(() => {
+        queryClient.refetchQueries({ queryKey: ['/api/students'] });
+      }, 100);
     },
     onError: (error: Error) => {
       toast({
@@ -740,7 +832,7 @@ export default function AdminHome() {
   // Toggle student status mutation
   const toggleStudentStatusMutation = useMutation({
     mutationFn: async (data: { id: number, active: boolean }) => {
-      const res = await apiRequest('PATCH', `/api/students/${data.id}`, { active: data.active });
+      const res = await apiRequest('DELETE', `/api/students/${data.id}`);
       return res.json();
     },
     onSuccess: () => {
@@ -753,6 +845,14 @@ export default function AdminHome() {
       if (selectedClassId) {
         refetchStudents();
       }
+      // Invalidar a query que busca todos os alunos (usada na aba Alunos)
+      queryClient.invalidateQueries({ queryKey: ['/api/students'] });
+      // Invalidar a query que conta alunos por classe
+      queryClient.invalidateQueries({ queryKey: ['/api/class-student-counts'] });
+      // Forçar atualização do componente
+      setTimeout(() => {
+        queryClient.refetchQueries({ queryKey: ['/api/students'] });
+      }, 100);
     },
     onError: (error: Error) => {
       toast({
@@ -777,7 +877,14 @@ export default function AdminHome() {
       setIsAssignTeacherOpen(false);
       setSelectedTeacherForAssignment(null);
       setSelectedClassForAssignment(null);
-      // You might want to invalidate some queries here
+      // Invalidar queries relacionadas às classes e suas atribuições de professores
+      queryClient.invalidateQueries({ queryKey: ['/api/classes-teachers'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/classes'] });
+      
+      // Forçar atualização imediata dos dados
+      setTimeout(() => {
+        queryClient.refetchQueries({ queryKey: ['/api/classes-teachers'] });
+      }, 100);
     },
     onError: (error: Error) => {
       toast({
@@ -826,68 +933,145 @@ export default function AdminHome() {
     setIsEditTeacherOpen(true);
   };
 
+  // Filtro de classes
+  const [classFilter, setClassFilter] = useState('');
+  
+  // Filtro de professores
+  const [teacherFilter, setTeacherFilter] = useState('');
+
+  // Estados para controle de exibição de registros inativos
+  const [showInactiveTeachers, setShowInactiveTeachers] = useState(false);
+  const [showInactiveClasses, setShowInactiveClasses] = useState(false);
+  const [showInactiveStudents, setShowInactiveStudents] = useState(false);
+
+  // Fetch class student counts
+  const classStudentCounts = useQuery({
+    queryKey: ['/api/class-student-counts'],
+    queryFn: async () => {
+      if (!classes || classes.length === 0) return {};
+
+      // Criar um mapa que armazenará o ID da classe como chave e a contagem de alunos como valor
+      const countsMap: Record<number, number> = {};
+
+      // Buscar alunos para cada classe em paralelo
+      await Promise.all(
+        classes.map(async (classObj) => {
+          try {
+            const res = await apiRequest('GET', `/api/classes/${classObj.id}/students`);
+            const students = await res.json();
+            countsMap[classObj.id] = students.length;
+          } catch (error) {
+            countsMap[classObj.id] = 0;
+          }
+        })
+      );
+
+      return countsMap;
+    },
+    enabled: classes.length > 0,
+  });
+
+  // Função para navegar para a página de alunos filtrada por classe
+  const goToClassStudents = (classId: number) => {
+    // Atualizar o estado para selecionar a aba de alunos
+    setSelectedTab("students");
+    // Limpar o filtro de nome de aluno
+    setStudentFilter("");
+    // Limpar o filtro de mostrar inativos (sempre mostrar ativos por padrão)
+    setShowInactiveStudents(false);
+    // Aplicar o filtro de classe
+    setSelectedClassForStudents(classId.toString());
+    
+    // Invalidar a query de alunos para garantir que os dados estão atualizados
+    queryClient.invalidateQueries({ queryKey: ['/api/students'] });
+  };
+
+  // Estado para remover professor da classe
+  const [isRemoveTeacherFromClassOpen, setIsRemoveTeacherFromClassOpen] = useState(false);
+  const [teacherToRemove, setTeacherToRemove] = useState<{id: number, name?: string} | null>(null);
+  const [classFromRemove, setClassFromRemove] = useState<{id: number, name?: string} | null>(null);
+
+  const handleRemoveTeacherFromClass = (teacherId: number, classId: number) => {
+    setTeacherToRemove({ id: teacherId, name: teachers.find(t => t.id === teacherId)?.name });
+    setClassFromRemove({ id: classId, name: classes.find(c => c.id === classId)?.name });
+    setIsRemoveTeacherFromClassOpen(true);
+  };
+
   return (
-    <div className="flex flex-col h-screen">
-      {/* Header */}
-      <header className="bg-blue-600 text-white p-4 flex justify-between items-center shadow-md">
-        <h1 className="text-xl md:text-2xl font-bold">CLASSE ALUNOS</h1>
-        <div className="flex items-center space-x-3">
-          <span className="hidden md:inline">Olá, {teacher?.name}</span>
-          <button 
-            onClick={() => logoutMutation.mutate()}
-            className="flex items-center bg-white/10 hover:bg-white/20 rounded px-2 py-1 transition"
-          >
-            <LogOut className="h-4 w-4 mr-1" />
-            <span className="hidden md:inline">Sair</span>
-          </button>
-        </div>
-      </header>
-
-      {/* Main content */}
-      <main className="flex-1 overflow-auto p-4 space-y-6">
+    <div className="container mx-auto p-4">
+      <div className="flex justify-between items-center mb-8">
         <h1 className="text-2xl font-bold">Painel do Administrador</h1>
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm" onClick={() => logoutMutation.mutate()}>
+            <LogOut className="w-4 h-4 mr-2" /> Sair
+          </Button>
+        </div>
+      </div>
 
-        <Tabs 
-          defaultValue="teachers" 
-          value={selectedTab}
-          onValueChange={setSelectedTab}
-          className="space-y-4"
-        >
-          <TabsList className="grid grid-cols-3 w-full max-w-md">
-            <TabsTrigger value="teachers">
-              <User className="h-4 w-4 mr-1 inline" />
-              <span>Professores</span>
-            </TabsTrigger>
-            <TabsTrigger value="classes">
-              <School className="h-4 w-4 mr-1 inline" />
-              <span>Classes</span>
-            </TabsTrigger>
-            <TabsTrigger value="records">
-              <Book className="h-4 w-4 mr-1 inline" />
-              <span>Registros</span>
-            </TabsTrigger>
-          </TabsList>
+      <Tabs
+        value={selectedTab}
+        onValueChange={setSelectedTab}
+        className="w-full"
+      >
+        <TabsList className="grid grid-cols-4 w-full max-w-md">
+          <TabsTrigger value="teachers">
+            <User className="w-4 h-4 mr-2" />
+            Professores
+          </TabsTrigger>
+          <TabsTrigger value="classes">
+            <School className="w-4 h-4 mr-2" />
+            Classes
+          </TabsTrigger>
+          <TabsTrigger value="students">
+            <Users className="w-4 h-4 mr-2" />
+            Alunos
+          </TabsTrigger>
+          <TabsTrigger value="records">
+            <BarChart className="w-4 h-4 mr-2" />
+            Relatórios
+          </TabsTrigger>
+        </TabsList>
 
-          {/* Teachers Tab */}
-          <TabsContent value="teachers">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <div>
-                  <CardTitle>Professores</CardTitle>
-                  <CardDescription>Gerenciar professores e permissões</CardDescription>
+        {/* Teachers Tab */}
+        <TabsContent value="teachers">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <div>
+                <CardTitle>Professores</CardTitle>
+                <CardDescription>Gerenciar professores e permissões</CardDescription>
+              </div>
+              <Button onClick={() => setIsAddTeacherOpen(true)}>
+                <Plus className="h-4 w-4 mr-1" />
+                Adicionar Professor
+              </Button>
+            </CardHeader>
+            <CardContent>
+              {/* Campo de filtro de professores */}
+              <div className="mb-4 flex items-center gap-4">
+                <div className="relative w-auto inline-flex max-w-xs">
+                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Buscar professor por nome..."
+                    className="pl-8"
+                    value={teacherFilter || ''}
+                    onChange={(e) => setTeacherFilter(e.target.value)}
+                  />
                 </div>
-                <Button onClick={() => setIsAddTeacherOpen(true)}>
-                  <Plus className="h-4 w-4 mr-1" />
-                  Adicionar Professor
-                </Button>
-              </CardHeader>
-              <CardContent>
-                {teachersLoading ? (
-                  <div className="text-center py-4">Carregando professores...</div>
-                ) : teachers.length === 0 ? (
-                  <div className="text-center py-4">Nenhum professor encontrado.</div>
-                ) : (
-                  <ScrollArea className="h-[400px]">
+                <div className="flex items-center gap-2">
+                  <Switch
+                    id="inactive-teachers"
+                    checked={showInactiveTeachers}
+                    onCheckedChange={setShowInactiveTeachers}
+                  />
+                  <Label htmlFor="inactive-teachers">Mostrar Inativos</Label>
+                </div>
+              </div>
+              
+              {teachersLoading ? (
+                <div className="text-center py-4">Carregando professores...</div>
+              ) : (
+                <ScrollArea className="h-[400px]">
+                  <div className="border border-gray-200 rounded-md overflow-hidden">
                     <Table>
                       <TableHeader>
                         <TableRow>
@@ -899,7 +1083,18 @@ export default function AdminHome() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {teachers.map((teacher) => (
+                        {teachers
+                          .filter(teacher => {
+                            // Filtro por nome
+                            const nameMatch = !teacherFilter || 
+                              teacher.name.toLowerCase().includes(teacherFilter.toLowerCase());
+                            
+                            // Filtro por status
+                            const statusMatch = showInactiveTeachers ? !teacher.active : teacher.active;
+                            
+                            return nameMatch && statusMatch;
+                          })
+                          .map((teacher) => (
                           <TableRow key={teacher.id} className={!teacher.active ? "opacity-60" : ""}>
                             <TableCell className="font-medium">{teacher.name}</TableCell>
                             <TableCell>{teacher.cpf}</TableCell>
@@ -935,153 +1130,334 @@ export default function AdminHome() {
                         ))}
                       </TableBody>
                     </Table>
-                  </ScrollArea>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
+                  </div>
+                </ScrollArea>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
 
-          {/* Classes Tab */}
-          <TabsContent value="classes">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <div>
-                  <CardTitle>Classes</CardTitle>
-                  <CardDescription>Gerenciar classes e alunos</CardDescription>
+        {/* Classes Tab */}
+        <TabsContent value="classes">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <div>
+                <CardTitle>Classes</CardTitle>
+                <CardDescription>Gerenciar classes e alunos</CardDescription>
+              </div>
+              <div className="space-x-2">
+                <Button onClick={() => setIsAddClassOpen(true)}>
+                  <Plus className="h-4 w-4 mr-1" />
+                  Adicionar Classe
+                </Button>
+                <Button 
+                  variant="outline" 
+                  onClick={() => setIsAssignTeacherOpen(true)}
+                  disabled={classes.length === 0 || teachers.length === 0}
+                >
+                  <UserPlus className="h-4 w-4 mr-1" />
+                  Atribuir Professor
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {/* Filtro de classes */}
+              <div className="mb-4 flex items-center gap-4">
+                <div className="relative w-auto inline-flex max-w-xs">
+                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Filtrar classes..."
+                    className="pl-8"
+                    value={classFilter || ''}
+                    onChange={(e) => setClassFilter(e.target.value)}
+                  />
                 </div>
-                <div className="space-x-2">
-                  <Button onClick={() => setIsAddClassOpen(true)}>
-                    <Plus className="h-4 w-4 mr-1" />
-                    Adicionar Classe
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    onClick={() => setIsAssignTeacherOpen(true)}
-                    disabled={classes.length === 0 || teachers.length === 0}
-                  >
-                    <UserPlus className="h-4 w-4 mr-1" />
-                    Atribuir Professor
-                  </Button>
+                <div className="flex items-center gap-2">
+                  <Switch
+                    id="inactive-classes"
+                    checked={showInactiveClasses}
+                    onCheckedChange={setShowInactiveClasses}
+                  />
+                  <Label htmlFor="inactive-classes">Mostrar Inativos</Label>
                 </div>
-              </CardHeader>
-              <CardContent>
-                <Tabs defaultValue="classes" className="w-full">
-                  <TabsList className="grid grid-cols-2 w-full max-w-md mb-4">
-                    <TabsTrigger value="classes">
-                      <School className="h-4 w-4 mr-1 inline" />
-                      <span>Classes</span>
-                    </TabsTrigger>
-                    <TabsTrigger value="students" disabled={!selectedClassId}>
-                      <User className="h-4 w-4 mr-1 inline" />
-                      <span>Alunos</span>
-                    </TabsTrigger>
-                  </TabsList>
+              </div>
 
-                  <TabsContent value="classes">
-                    {classesLoading ? (
-                      <div className="text-center py-4">Carregando classes...</div>
-                    ) : classes.length === 0 ? (
-                      <div className="text-center py-4">Nenhuma classe encontrada.</div>
-                    ) : (
-                      <ScrollArea className="h-[300px]">
-                        <Table>
-                          <TableHeader>
-                            <TableRow>
-                              <TableHead>Nome da Classe</TableHead>
-                              <TableHead>Status</TableHead>
-                              <TableHead className="text-right">Ações</TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {classes.map((classObj) => (
-                              <TableRow 
-                                key={classObj.id} 
-                                className={cn(
-                                  !classObj.active ? "opacity-60" : "",
-                                  selectedClassId === classObj.id ? "bg-muted" : ""
+              {classesLoading ? (
+                <div className="text-center py-4">Carregando classes...</div>
+              ) : classes.filter(classObj => {
+                  // Filtro por nome
+                  const nameMatch = !classFilter || 
+                    classObj.name.toLowerCase().includes(classFilter.toLowerCase());
+                  
+                  // Filtro por status
+                  const statusMatch = showInactiveClasses ? !classObj.active : classObj.active;
+                  
+                  return nameMatch && statusMatch;
+                }).length === 0 ? (
+                <div className="p-6 text-center">
+                  <School className="h-12 w-12 mx-auto mb-4 text-gray-400" />
+                  <h3 className="text-lg font-medium mb-1">Nenhuma classe encontrada</h3>
+                  <p className="text-sm text-muted-foreground">
+                    {classFilter 
+                      ? 'Tente ajustar os filtros para ver mais resultados' 
+                      : 'Nenhuma classe foi cadastrada no sistema ainda'}
+                  </p>
+                </div>
+              ) : (
+                <ScrollArea className="h-[400px]">
+                  <div className="border border-gray-200 rounded-md overflow-hidden">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Nome da Classe</TableHead>
+                          <TableHead>Professor(es)</TableHead>
+                          <TableHead>Qtd Alunos</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead className="text-right">Ações</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {classes
+                          .filter(classObj => {
+                            // Filtro por nome
+                            const nameMatch = !classFilter || 
+                              classObj.name.toLowerCase().includes(classFilter.toLowerCase());
+                            
+                            // Filtro por status
+                            const statusMatch = showInactiveClasses ? !classObj.active : classObj.active;
+                            
+                            return nameMatch && statusMatch;
+                          })
+                          .map((classObj) => {
+                          // Usar o resultado da query de professores por classe no lugar de classIds
+                          const classTeachers: {id: number, name: string}[] = 
+                            teachersByClass.data && 
+                            teachersByClass.data[classObj.id] ? 
+                            teachersByClass.data[classObj.id] : [];
+                          
+                          return (
+                            <TableRow 
+                              key={classObj.id} 
+                              className={cn(
+                                !classObj.active ? "opacity-60" : "",
+                                selectedClassId === classObj.id ? "bg-muted" : ""
+                              )}
+                              onClick={() => setSelectedClassId(classObj.id)}
+                            >
+                              <TableCell className="font-medium">{classObj.name}</TableCell>
+                              <TableCell>
+                                {teachersLoading ? (
+                                  <div className="h-4 w-12 animate-pulse bg-muted rounded"></div>
+                                ) : classTeachers.length > 0 ? (
+                                  <div className="space-y-1">
+                                    {classTeachers.map((t: {id: number, name: string}) => (
+                                      <div key={t.id} className="flex items-center">
+                                        <span>{t.name}</span>
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          className="h-6 w-6 p-0 ml-2"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleRemoveTeacherFromClass(t.id, classObj.id);
+                                          }}
+                                        >
+                                          <Trash2 className="h-4 w-4 text-red-500" />
+                                        </Button>
+                                      </div>
+                                    ))}
+                                  </div>
+                                ) : (
+                                  <span className="text-muted-foreground">Nenhum</span>
                                 )}
-                                onClick={() => setSelectedClassId(classObj.id)}
-                              >
-                                <TableCell className="font-medium">{classObj.name}</TableCell>
-                                <TableCell>
-                                  <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                                    classObj.active ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
-                                  }`}>
-                                    {classObj.active ? "Ativa" : "Inativa"}
-                                  </span>
-                                </TableCell>
-                                <TableCell className="text-right space-x-1">
-                                  <Button 
-                                    variant="ghost" 
-                                    size="sm"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleEditClass(classObj);
-                                    }}
-                                  >
-                                    <Pencil className="h-4 w-4" />
-                                  </Button>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      toggleClassStatus(classObj);
-                                    }}
-                                  >
-                                    {classObj.active ? (
-                                      <MinusCircle className="h-4 w-4 text-red-500" />
-                                    ) : (
-                                      <Check className="h-4 w-4 text-green-500" />
-                                    )}
-                                  </Button>
-                                </TableCell>
-                              </TableRow>
-                            ))}
-                          </TableBody>
-                        </Table>
-                      </ScrollArea>
-                    )}
-                  </TabsContent>
+                              </TableCell>
+                              <TableCell>
+                                {/* Contador de alunos */}
+                                {classStudentCounts.isLoading ? (
+                                  <div className="h-4 w-8 animate-pulse bg-muted rounded"></div>
+                                ) : (
+                                  classStudentCounts.data?.[classObj.id] || 0
+                                )}
+                              </TableCell>
+                              <TableCell>
+                                <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                  classObj.active ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
+                                }`}>
+                                  {classObj.active ? "Ativa" : "Inativa"}
+                                </span>
+                              </TableCell>
+                              <TableCell className="text-right space-x-1">
+                                <Button 
+                                  variant="ghost" 
+                                  size="sm"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleEditClass(classObj);
+                                  }}
+                                >
+                                  <Pencil className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    toggleClassStatus(classObj);
+                                  }}
+                                >
+                                  {classObj.active ? (
+                                    <MinusCircle className="h-4 w-4 text-red-500" />
+                                  ) : (
+                                    <Check className="h-4 w-4 text-green-500" />
+                                  )}
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    goToClassStudents(classObj.id);
+                                  }}
+                                >
+                                  <Users className="h-4 w-4 text-blue-500" />
+                                </Button>
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </ScrollArea>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
 
-                  <TabsContent value="students">
-                    {!selectedClassId ? (
-                      <div className="text-center py-4">Selecione uma classe para ver os alunos.</div>
-                    ) : (
-                      <div className="space-y-4">
-                        <div className="flex justify-between items-center">
-                          <h3 className="font-semibold">
-                            Alunos da {classes.find(c => c.id === selectedClassId)?.name}
-                          </h3>
-                          <Button onClick={() => setIsAddStudentOpen(true)}>
-                            <Plus className="h-4 w-4 mr-1" />
-                            Adicionar Aluno
-                          </Button>
-                        </div>
-                        
-                        {studentsLoading ? (
-                          <div className="text-center py-4">Carregando alunos...</div>
-                        ) : students.length === 0 ? (
-                          <div className="text-center py-4">Nenhum aluno encontrado.</div>
-                        ) : (
-                          <ScrollArea className="h-[300px]">
-                            <Table>
-                              <TableHeader>
-                                <TableRow>
-                                  <TableHead>Nome</TableHead>
-                                  <TableHead>Status</TableHead>
-                                  <TableHead className="text-right">Ações</TableHead>
-                                </TableRow>
-                              </TableHeader>
-                              <TableBody>
-                                {students.map((student) => (
-                                  <TableRow key={student.id} className={!student.active ? "opacity-60" : ""}>
+        {/* Students Tab */}
+        <TabsContent value="students">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <div>
+                <CardTitle>Alunos</CardTitle>
+                <CardDescription>Gerenciar todos os alunos cadastrados</CardDescription>
+              </div>
+              <Button 
+                onClick={() => setIsAddStudentOpen(true)}
+                disabled={classes.length === 0}
+              >
+                <Plus className="h-4 w-4 mr-1" />
+                Adicionar Aluno
+              </Button>
+            </CardHeader>
+            <CardContent>
+              {/* Filtros de alunos */}
+              <div className="mb-4 flex flex-wrap items-center gap-4">
+                <div className="relative w-auto inline-flex max-w-xs">
+                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    type="text"
+                    placeholder="Buscar por nome..."
+                    value={studentFilter}
+                    onChange={(e) => setStudentFilter(e.target.value)}
+                    className="pl-8"
+                  />
+                </div>
+                <Select
+                  value={selectedClassForStudents}
+                  onValueChange={setSelectedClassForStudents}
+                >
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue placeholder="Filtrar por classe" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todas as classes</SelectItem>
+                    {classes.map((classObj) => (
+                      <SelectItem key={classObj.id} value={classObj.id.toString()}>
+                        {classObj.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <div className="flex items-center gap-2">
+                  <Switch
+                    id="inactive-students"
+                    checked={showInactiveStudents}
+                    onCheckedChange={setShowInactiveStudents}
+                  />
+                  <Label htmlFor="inactive-students">Mostrar Inativos</Label>
+                </div>
+              </div>
+
+              {/* Query para buscar todos os alunos */}
+              {(() => {
+                // Usar useQuery aqui dentro para buscar todos os alunos
+                const { 
+                  data: allStudents = [], 
+                  isLoading: allStudentsLoading,
+                } = useQuery<(Student & { className?: string })[]>({
+                  queryKey: ['/api/students'],
+                  enabled: selectedTab === "students",
+                });
+                
+                // Filtrar alunos
+                const filteredStudents = allStudents.filter(student => {
+                  const nameMatches = student.name.toLowerCase().includes(studentFilter.toLowerCase());
+                  const classMatches = selectedClassForStudents === 'all' || student.classId.toString() === selectedClassForStudents;
+                  
+                  // Encontrar a classe do aluno
+                  const studentClass = classes.find(c => c.id === student.classId);
+                  
+                  // Verificar se a classe está ativa
+                  const isClassActive = studentClass?.active || false;
+                  
+                  // Status efetivo do aluno (inativo se a classe for inativa)
+                  const effectiveStatus = isClassActive ? student.active : false;
+                  
+                  // Condição para mostrar com base no status efetivo
+                  const statusMatches = showInactiveStudents ? !effectiveStatus : effectiveStatus;
+                  
+                  return nameMatches && classMatches && statusMatches;
+                });
+
+                return (
+                  <>
+                    {allStudentsLoading ? (
+                      <div className="text-center py-4">Carregando alunos...</div>
+                    ) : filteredStudents.length > 0 ? (
+                      <ScrollArea className="h-[400px]">
+                        <div className="border border-gray-200 rounded-md overflow-hidden">
+                          <Table>
+                            <TableHeader>
+                              <TableRow>
+                                <TableHead>Nome</TableHead>
+                                <TableHead>Classe</TableHead>
+                                <TableHead>Status</TableHead>
+                                <TableHead className="text-right">Ações</TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {filteredStudents.map((student) => {
+                                // Encontrar a classe do aluno para exibir o nome
+                                const studentClass = classes.find(c => c.id === student.classId);
+                                
+                                // Verificar se a classe está ativa
+                                const isClassActive = studentClass?.active || false;
+                                
+                                // Status efetivo do aluno (inativo se a classe for inativa)
+                                const effectiveStatus = isClassActive ? student.active : false;
+                                
+                                return (
+                                  <TableRow key={student.id} className={!effectiveStatus ? "opacity-60" : ""}>
                                     <TableCell className="font-medium">{student.name}</TableCell>
                                     <TableCell>
+                                      {studentClass?.name || student.className || 'Classe não encontrada'}
+                                    </TableCell>
+                                    <TableCell>
                                       <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                                        student.active ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
+                                        effectiveStatus ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
                                       }`}>
-                                        {student.active ? "Ativo" : "Inativo"}
+                                        {effectiveStatus ? "Ativo" : "Inativo"}
                                       </span>
                                     </TableCell>
                                     <TableCell className="text-right space-x-1">
@@ -1097,7 +1473,7 @@ export default function AdminHome() {
                                         size="sm"
                                         onClick={() => toggleStudentStatus(student)}
                                       >
-                                        {student.active ? (
+                                        {effectiveStatus ? (
                                           <MinusCircle className="h-4 w-4 text-red-500" />
                                         ) : (
                                           <Check className="h-4 w-4 text-green-500" />
@@ -1105,151 +1481,163 @@ export default function AdminHome() {
                                       </Button>
                                     </TableCell>
                                   </TableRow>
-                                ))}
-                              </TableBody>
-                            </Table>
-                          </ScrollArea>
-                        )}
+                                );
+                              })}
+                            </TableBody>
+                          </Table>
+                        </div>
+                      </ScrollArea>
+                    ) : (
+                      <div className="p-6 text-center">
+                        <Users className="h-12 w-12 mx-auto mb-4 text-gray-400" />
+                        <h3 className="text-lg font-medium mb-1">Nenhum aluno encontrado</h3>
+                        <p className="text-sm text-muted-foreground">
+                          {studentFilter || selectedClassForStudents !== 'all' 
+                            ? 'Tente ajustar os filtros para ver mais resultados' 
+                            : 'Nenhum aluno foi cadastrado no sistema ainda'}
+                        </p>
                       </div>
                     )}
-                  </TabsContent>
-                </Tabs>
-              </CardContent>
-            </Card>
-          </TabsContent>
+                  </>
+                );
+              })()}
+            </CardContent>
+          </Card>
+        </TabsContent>
 
-          {/* Records Tab */}
-          <TabsContent value="records">
-            <Card>
-              <CardHeader className="pb-2">
-                <div>
-                  <CardTitle>Registros</CardTitle>
-                  <CardDescription>Visualizar registros de frequência e atividades missionárias</CardDescription>
-                </div>
-              </CardHeader>
-              <CardContent>
-                {/* Filters now appear above the tabs */}
-                <div className="flex flex-wrap gap-2 mb-4">
-                  <div className="flex-1 min-w-[200px]">
-                    <div className="text-sm font-semibold mb-1 text-gray-500">Classe</div>
-                    <Select
-                      value={selectedClassForReports?.toString() || "all_classes"}
-                      onValueChange={(value) => setSelectedClassForReports(value !== "all_classes" ? parseInt(value) : null)}
-                    >
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Filtrar por Classe" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all_classes">Todas as Classes</SelectItem>
-                        {classes.filter(c => c.active).map((classObj) => (
-                          <SelectItem key={classObj.id} value={classObj.id.toString()}>
-                            {classObj.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  
-                  <div className="flex-1 min-w-[180px]">
-                    <div className="text-sm font-semibold mb-1 text-gray-500">Data</div>
-                    <Select
-                      value={selectedDateForReports || "all_dates"}
-                      onValueChange={(value) => {
-                        setSelectedDateForReports(value !== "all_dates" ? value : null);
-                        // Reset trimester when a specific date is selected
-                        if (value !== "all_dates") {
-                          setSelectedTrimester(null);
-                        }
-                      }}
-                    >
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Filtrar por Data" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all_dates">Todas as Datas</SelectItem>
-                        {availableDates.map((date) => (
-                          <SelectItem key={date} value={date}>
-                            {formatBrazilianDate(date)}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  
-                  <div className="flex-1 min-w-[180px]">
-                    <div className="text-sm font-semibold mb-1 text-gray-500">Trimestre</div>
-                    <Select
-                      value={selectedTrimester?.toString() || "all_trimesters"}
-                      onValueChange={(value) => {
-                        setSelectedTrimester(value !== "all_trimesters" ? parseInt(value) : null);
-                        // Reset specific date when a trimester is selected
-                        if (value !== "all_trimesters") {
-                          setSelectedDateForReports(null);
-                        }
-                      }}
-                    >
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Filtrar por Trimestre" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all_trimesters">Todos os Trimestres</SelectItem>
-                        <SelectItem value="1">1º Trimestre</SelectItem>
-                        <SelectItem value="2">2º Trimestre</SelectItem>
-                        <SelectItem value="3">3º Trimestre</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
+        {/* Records Tab */}
+        <TabsContent value="records">
+          <Card>
+            <CardHeader className="pb-2">
+              <div>
+                <CardTitle>Registros</CardTitle>
+                <CardDescription>Visualizar registros de frequência e atividades missionárias</CardDescription>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {/* Filters now appear above the tabs */}
+              <div className="flex flex-wrap gap-2 mb-4">
+                <div className="flex-1 min-w-[200px]">
+                  <div className="text-sm font-semibold mb-1 text-gray-500">Classe</div>
+                  <Select
+                    value={selectedClassForReports?.toString() || "all_classes"}
+                    onValueChange={(value) => setSelectedClassForReports(value !== "all_classes" ? parseInt(value) : null)}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Filtrar por Classe" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all_classes">Todas as Classes</SelectItem>
+                      {classes.filter(c => c.active).map((classObj) => (
+                        <SelectItem key={classObj.id} value={classObj.id.toString()}>
+                          {classObj.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 
-                <Tabs defaultValue="attendance" className="w-full">
-                  <TabsList className="grid grid-cols-2 w-full max-w-md mb-4">
-                    <TabsTrigger value="attendance">
-                      <User className="h-4 w-4 mr-1 inline" />
-                      <span>Registros de Presença</span>
-                    </TabsTrigger>
-                    <TabsTrigger value="activities">
-                      <BarChart className="h-4 w-4 mr-1 inline" />
-                      <span>Atividades Missionárias</span>
-                    </TabsTrigger>
-                  </TabsList>
+                <div className="flex-1 min-w-[180px]">
+                  <div className="text-sm font-semibold mb-1 text-gray-500">Data</div>
+                  <Select
+                    value={selectedDateForReports || "all_dates"}
+                    onValueChange={(value) => {
+                      setSelectedDateForReports(value !== "all_dates" ? value : null);
+                      // Reset trimester when a specific date is selected
+                      if (value !== "all_dates") {
+                        setSelectedTrimester(null);
+                      }
+                    }}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Filtrar por Data" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all_dates">Todas as Datas</SelectItem>
+                      {availableDates.map((date) => (
+                        <SelectItem key={date} value={date}>
+                          {formatBrazilianDate(date)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div className="flex-1 min-w-[180px]">
+                  <div className="text-sm font-semibold mb-1 text-gray-500">Trimestre</div>
+                  <Select
+                    value={selectedTrimester?.toString() || "all_trimesters"}
+                    onValueChange={(value) => {
+                      setSelectedTrimester(value !== "all_trimesters" ? parseInt(value) : null);
+                      // Reset specific date when a trimester is selected
+                      if (value !== "all_trimesters") {
+                        setSelectedDateForReports(null);
+                      }
+                    }}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Filtrar por Trimestre" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all_trimesters">Todos os Trimestres</SelectItem>
+                      <SelectItem value="1">1º Trimestre</SelectItem>
+                      <SelectItem value="2">2º Trimestre</SelectItem>
+                      <SelectItem value="3">3º Trimestre</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              
+              <Tabs defaultValue="attendance" className="w-full">
+                <TabsList className="grid grid-cols-2 w-full max-w-md mb-4">
+                  <TabsTrigger value="attendance">
+                    <User className="h-4 w-4 mr-1 inline" />
+                    <span>Registros de Presença</span>
+                  </TabsTrigger>
+                  <TabsTrigger value="activities">
+                    <BarChart className="h-4 w-4 mr-1 inline" />
+                    <span>Atividades Missionárias</span>
+                  </TabsTrigger>
+                </TabsList>
 
-                  {/* Attendance Tab */}
-                  <TabsContent value="attendance">
-                    <div className="pb-4">
-                      <h3 className="text-lg font-medium">
-                        Registros de Presença
-                      </h3>
-                      <div className="text-sm text-muted-foreground flex flex-wrap gap-2">
-                        <span>
-                          {selectedClassForReports 
-                            ? `Classe: ${classes.find(c => c.id === selectedClassForReports)?.name || ''}` 
-                            : 'Todas as Classes'}
-                        </span>
-                        {selectedDateForReports && <span>| Data: {formatBrazilianDate(selectedDateForReports)}</span>}
-                        {selectedTrimester && <span>| Trimestre: {selectedTrimester}º Trimestre</span>}
-                      </div>
+                {/* Attendance Tab */}
+                <TabsContent value="attendance">
+                  <div className="pb-4">
+                    <h3 className="text-lg font-medium">
+                      Registros de Presença
+                    </h3>
+                    <div className="text-sm text-muted-foreground flex flex-wrap gap-2">
+                      <span>
+                        {selectedClassForReports 
+                          ? `Classe: ${classes.find(c => c.id === selectedClassForReports)?.name || ''}` 
+                          : 'Todas as Classes'}
+                      </span>
+                      {selectedDateForReports && <span>| Data: {formatBrazilianDate(selectedDateForReports)}</span>}
+                      {selectedTrimester && <span>| Trimestre: {selectedTrimester}º Trimestre</span>}
                     </div>
-                    
-                    {/* Condição de carregamento */}
-                    {attendanceLoading && (
-                      <div className="text-center py-4">Carregando registros de presença...</div>
-                    )}
-                    
-                    {/* Condição de nenhum registro */}
-                    {!attendanceLoading && attendanceRecords.length === 0 && (
-                      <div className="text-center py-4">Nenhum registro de presença encontrado.</div>
-                    )}
-                    
-                    {/* Visualização por trimestre sem registros */}
-                    {!attendanceLoading && attendanceRecords.length > 0 && selectedTrimester && getAttendanceByClassAndTrimester().length === 0 && (
-                      <div className="text-center py-4">
-                        Nenhum registro de presença encontrado para o trimestre selecionado.
-                      </div>
-                    )}
-                    
-                    {/* Visualização por trimestre com registros */}
-                    {!attendanceLoading && attendanceRecords.length > 0 && selectedTrimester && getAttendanceByClassAndTrimester().length > 0 && (
-                      <ScrollArea className="h-[400px]">
+                  </div>
+                  
+                  {/* Condição de carregamento */}
+                  {attendanceLoading && (
+                    <div className="text-center py-4">Carregando registros de presença...</div>
+                  )}
+                  
+                  {/* Condição de nenhum registro */}
+                  {!attendanceLoading && attendanceRecords.length === 0 && (
+                    <div className="text-center py-4">Nenhum registro de presença encontrado.</div>
+                  )}
+                  
+                  {/* Visualização por trimestre sem registros */}
+                  {!attendanceLoading && attendanceRecords.length > 0 && selectedTrimester && getAttendanceByClassAndTrimester().length === 0 && (
+                    <div className="text-center py-4">
+                      Nenhum registro de presença encontrado para o trimestre selecionado.
+                    </div>
+                  )}
+                  
+                  {/* Visualização por trimestre com registros */}
+                  {!attendanceLoading && attendanceRecords.length > 0 && selectedTrimester && getAttendanceByClassAndTrimester().length > 0 && (
+                    <ScrollArea className="h-[400px]">
+                      <div className="border border-gray-200 rounded-md overflow-hidden">
                         <Table>
                           <TableHeader>
                             <TableRow>
@@ -1271,12 +1659,14 @@ export default function AdminHome() {
                             ))}
                           </TableBody>
                         </Table>
-                      </ScrollArea>
-                    )}
-                    
-                    {/* Visualização padrão (sem trimestre selecionado) */}
-                    {!attendanceLoading && attendanceRecords.length > 0 && !selectedTrimester && (
-                      <ScrollArea className="h-[400px]">
+                      </div>
+                    </ScrollArea>
+                  )}
+                  
+                  {/* Visualização padrão (sem trimestre selecionado) */}
+                  {!attendanceLoading && attendanceRecords.length > 0 && !selectedTrimester && (
+                    <ScrollArea className="h-[400px]">
+                      <div className="border border-gray-200 rounded-md overflow-hidden">
                         <Table>
                           <TableHeader>
                             <TableRow>
@@ -1290,6 +1680,13 @@ export default function AdminHome() {
                             {attendanceRecords
                               .filter(record => {
                                 let matchesFilters = true;
+                                
+                                // Verificar se a classe existe e está ativa
+                                const classObj = classes.find(c => c.name === record.className);
+                                const isClassActive = classObj && classObj.active;
+                                
+                                if (!isClassActive) return false;
+                                
                                 if (selectedClassForReports) {
                                   // Precisamos comparar pelo nome da classe, já que não temos o classId diretamente
                                   const selectedClassName = classes.find(c => c.id === selectedClassForReports)?.name;
@@ -1320,37 +1717,39 @@ export default function AdminHome() {
                               ))}
                           </TableBody>
                         </Table>
-                      </ScrollArea>
-                    )}
-                  </TabsContent>
-                  
-                  {/* Missionary Activities Tab */}
-                  <TabsContent value="activities">
-                    <div className="pb-4">
-                      <h3 className="text-lg font-medium">
-                        Atividades Missionárias
-                      </h3>
-                      <div className="text-sm text-muted-foreground flex flex-wrap gap-2">
-                        <span>
-                          {selectedClassForReports
-                            ? `Classe: ${classes.find(c => c.id === selectedClassForReports)?.name || ''}`
-                            : 'Todas as Classes'}
-                        </span>
-                        {selectedDateForReports && <span>| Data: {formatBrazilianDate(selectedDateForReports)}</span>}
-                        {selectedTrimester && <span>| Trimestre: {selectedTrimester}º Trimestre</span>}
                       </div>
+                    </ScrollArea>
+                  )}
+                </TabsContent>
+                
+                {/* Missionary Activities Tab */}
+                <TabsContent value="activities">
+                  <div className="pb-4">
+                    <h3 className="text-lg font-medium">
+                      Atividades Missionárias
+                    </h3>
+                    <div className="text-sm text-muted-foreground flex flex-wrap gap-2">
+                      <span>
+                        {selectedClassForReports
+                          ? `Classe: ${classes.find(c => c.id === selectedClassForReports)?.name || ''}`
+                          : 'Todas as Classes'}
+                      </span>
+                      {selectedDateForReports && <span>| Data: {formatBrazilianDate(selectedDateForReports)}</span>}
+                      {selectedTrimester && <span>| Trimestre: {selectedTrimester}º Trimestre</span>}
                     </div>
-                    
-                    {activitiesLoading ? (
-                      <div className="text-center py-4">Carregando registros de atividades...</div>
-                    ) : missionaryActivities.length === 0 ? (
-                      <div className="text-center py-4">Nenhum registro de atividade missionária encontrado.</div>
-                    ) : selectedTrimester ? (
-                      /* Nova visualização em grid com uma coluna para cada classe quando filtrado por trimestre */
-                      <MissionaryTable data={getActivitiesGridData()} />
-                    ) : (
-                      /* Visualização normal quando não filtrado por trimestre */
-                      <ScrollArea className="h-[400px]">
+                  </div>
+                  
+                  {activitiesLoading ? (
+                    <div className="text-center py-4">Carregando registros de atividades...</div>
+                  ) : missionaryActivities.length === 0 ? (
+                    <div className="text-center py-4">Nenhum registro de atividade missionária encontrado.</div>
+                  ) : selectedTrimester ? (
+                    /* Nova visualização em grid com uma coluna para cada classe quando filtrado por trimestre */
+                    <MissionaryTable data={getActivitiesGridData()} />
+                  ) : (
+                    /* Visualização normal quando não filtrado por trimestre */
+                    <ScrollArea className="h-[400px]">
+                      <div className="border border-gray-200 rounded-md overflow-hidden">
                         <Table>
                           <TableHeader>
                             <TableRow>
@@ -1369,6 +1768,13 @@ export default function AdminHome() {
                             {missionaryActivities
                               .filter(activity => {
                                 let matchesFilters = true;
+                                
+                                // Verificar se a classe existe e está ativa
+                                const classObj = classes.find(c => c.id === activity.classId);
+                                const isClassActive = classObj && classObj.active;
+                                
+                                if (!isClassActive) return false;
+                                
                                 if (selectedClassForReports) {
                                   matchesFilters = matchesFilters && activity.classId === selectedClassForReports;
                                 }
@@ -1392,84 +1798,17 @@ export default function AdminHome() {
                               ))}
                           </TableBody>
                         </Table>
-                      </ScrollArea>
-                    )}
-                  </TabsContent>
-                </Tabs>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
-      </main>
+                      </div>
+                    </ScrollArea>
+                  )}
+                </TabsContent>
+              </Tabs>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
 
-      {/* Add Teacher Dialog */}
-      <Dialog open={isAddTeacherOpen} onOpenChange={setIsAddTeacherOpen}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>Adicionar Novo Professor</DialogTitle>
-            <DialogDescription>
-              Preencha as informações do novo professor abaixo.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="name" className="text-right">
-                Nome
-              </Label>
-              <Input
-                id="name"
-                value={newTeacherData.name}
-                onChange={(e) => setNewTeacherData({ ...newTeacherData, name: e.target.value })}
-                className="col-span-3"
-              />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="cpf" className="text-right">
-                CPF
-              </Label>
-              <Input
-                id="cpf"
-                value={newTeacherData.cpf}
-                onChange={(e) => setNewTeacherData({ ...newTeacherData, cpf: e.target.value })}
-                className="col-span-3"
-              />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="password" className="text-right">
-                Senha
-              </Label>
-              <Input
-                id="password"
-                type="password"
-                value={newTeacherData.password}
-                onChange={(e) => setNewTeacherData({ ...newTeacherData, password: e.target.value })}
-                className="col-span-3"
-              />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="isAdmin" className="text-right">
-                Administrador
-              </Label>
-              <Switch
-                id="isAdmin"
-                checked={newTeacherData.isAdmin}
-                onCheckedChange={(checked) => setNewTeacherData({ ...newTeacherData, isAdmin: checked })}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button
-              type="submit"
-              onClick={() => createTeacherMutation.mutate(newTeacherData)}
-              disabled={createTeacherMutation.isPending}
-            >
-              {createTeacherMutation.isPending ? "Salvando..." : "Salvar"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Edit Teacher Dialog */}
+      {/* Modais para professores */}
       <Dialog open={isEditTeacherOpen} onOpenChange={setIsEditTeacherOpen}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
@@ -1480,49 +1819,54 @@ export default function AdminHome() {
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="edit-name" className="text-right">
+              <Label htmlFor="editTeacherName" className="text-right">
                 Nome
               </Label>
               <Input
-                id="edit-name"
+                id="editTeacherName"
                 value={editTeacherData.name}
-                onChange={(e) => setEditTeacherData({ ...editTeacherData, name: e.target.value })}
+                onChange={(e) => setEditTeacherData({...editTeacherData, name: e.target.value})}
                 className="col-span-3"
               />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="edit-cpf" className="text-right">
+              <Label htmlFor="editTeacherCPF" className="text-right">
                 CPF
               </Label>
               <Input
-                id="edit-cpf"
+                id="editTeacherCPF"
                 value={editTeacherData.cpf}
-                onChange={(e) => setEditTeacherData({ ...editTeacherData, cpf: e.target.value })}
+                onChange={(e) => setEditTeacherData({...editTeacherData, cpf: e.target.value})}
                 className="col-span-3"
               />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="edit-password" className="text-right">
+              <Label htmlFor="editTeacherPassword" className="text-right">
                 Nova Senha
               </Label>
               <Input
-                id="edit-password"
+                id="editTeacherPassword"
                 type="password"
                 value={editTeacherData.password}
-                onChange={(e) => setEditTeacherData({ ...editTeacherData, password: e.target.value })}
+                onChange={(e) => setEditTeacherData({...editTeacherData, password: e.target.value})}
                 className="col-span-3"
-                placeholder="Deixe em branco para manter a senha atual"
+                placeholder="Deixe em branco para manter a atual"
               />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="edit-isAdmin" className="text-right">
+              <Label htmlFor="editTeacherIsAdmin" className="text-right">
                 Administrador
               </Label>
-              <Switch
-                id="edit-isAdmin"
-                checked={editTeacherData.isAdmin}
-                onCheckedChange={(checked) => setEditTeacherData({ ...editTeacherData, isAdmin: checked })}
-              />
+              <div className="flex items-center space-x-2 col-span-3">
+                <Switch
+                  id="editTeacherIsAdmin"
+                  checked={editTeacherData.isAdmin}
+                  onCheckedChange={(checked) => setEditTeacherData({...editTeacherData, isAdmin: checked})}
+                />
+                <Label htmlFor="editTeacherIsAdmin">
+                  {editTeacherData.isAdmin ? "Sim" : "Não"}
+                </Label>
+              </div>
             </div>
           </div>
           <DialogFooter>
@@ -1530,14 +1874,23 @@ export default function AdminHome() {
               type="submit"
               onClick={() => {
                 if (teacherToEdit) {
-                  const updateData: Partial<Teacher> = { ...editTeacherData };
-                  if (!updateData.password) {
-                    delete updateData.password;
+                  const updateData: Partial<Teacher> = {
+                    name: editTeacherData.name,
+                    cpf: editTeacherData.cpf,
+                    isAdmin: editTeacherData.isAdmin,
+                  };
+                  
+                  if (editTeacherData.password) {
+                    updateData.password = editTeacherData.password;
                   }
-                  editTeacherMutation.mutate({ id: teacherToEdit.id, updateData });
+                  
+                  editTeacherMutation.mutate({
+                    id: teacherToEdit.id,
+                    updateData
+                  });
                 }
               }}
-              disabled={editTeacherMutation.isPending}
+              disabled={editTeacherMutation.isPending || !editTeacherData.name || !editTeacherData.cpf}
             >
               {editTeacherMutation.isPending ? "Salvando..." : "Salvar"}
             </Button>
@@ -1545,7 +1898,6 @@ export default function AdminHome() {
         </DialogContent>
       </Dialog>
 
-      {/* Toggle Teacher Status Dialog */}
       <AlertDialog open={isToggleTeacherOpen} onOpenChange={setIsToggleTeacherOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -1554,8 +1906,8 @@ export default function AdminHome() {
             </AlertDialogTitle>
             <AlertDialogDescription>
               {teacherToToggle?.active 
-                ? `Tem certeza que deseja desativar o professor "${teacherToToggle?.name}"? Professores desativados não poderão mais acessar o sistema.`
-                : `Tem certeza que deseja ativar o professor "${teacherToToggle?.name}"? Professores ativos podem acessar o sistema.`
+                ? `Tem certeza que deseja desativar o professor "${teacherToToggle?.name}"?`
+                : `Tem certeza que deseja ativar o professor "${teacherToToggle?.name}"?`
               }
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -1577,41 +1929,7 @@ export default function AdminHome() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Add Class Dialog */}
-      <Dialog open={isAddClassOpen} onOpenChange={setIsAddClassOpen}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>Adicionar Nova Classe</DialogTitle>
-            <DialogDescription>
-              Insira o nome da nova classe abaixo.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="className" className="text-right">
-                Nome
-              </Label>
-              <Input
-                id="className"
-                value={newClassName}
-                onChange={(e) => setNewClassName(e.target.value)}
-                className="col-span-3"
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button
-              type="submit"
-              onClick={() => createClassMutation.mutate(newClassName)}
-              disabled={createClassMutation.isPending || !newClassName.trim()}
-            >
-              {createClassMutation.isPending ? "Salvando..." : "Salvar"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Edit Class Dialog */}
+      {/* Modais para classes */}
       <Dialog open={isEditClassOpen} onOpenChange={setIsEditClassOpen}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
@@ -1652,7 +1970,6 @@ export default function AdminHome() {
         </DialogContent>
       </Dialog>
 
-      {/* Toggle Class Status Dialog */}
       <AlertDialog open={isToggleClassOpen} onOpenChange={setIsToggleClassOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -1661,8 +1978,8 @@ export default function AdminHome() {
             </AlertDialogTitle>
             <AlertDialogDescription>
               {classToToggle?.active 
-                ? `Tem certeza que deseja desativar a classe "${classToToggle?.name}"? Classes desativadas não aparecerão nas listas de seleção.`
-                : `Tem certeza que deseja ativar a classe "${classToToggle?.name}"? Classes ativas aparecerão nas listas de seleção.`
+                ? `Tem certeza que deseja desativar a classe "${classToToggle?.name}"?`
+                : `Tem certeza que deseja ativar a classe "${classToToggle?.name}"?`
               }
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -1684,80 +2001,7 @@ export default function AdminHome() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Add Student Dialog */}
-      <Dialog open={isAddStudentOpen} onOpenChange={setIsAddStudentOpen}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>Adicionar Novo Aluno</DialogTitle>
-            <DialogDescription>
-              Insira o nome do novo aluno para a classe {classes.find(c => c.id === selectedClassId)?.name}.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="studentName" className="text-right">
-                Nome
-              </Label>
-              <Input
-                id="studentName"
-                value={newStudentName}
-                onChange={(e) => setNewStudentName(e.target.value)}
-                className="col-span-3"
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button
-              type="submit"
-              onClick={() => {
-                if (selectedClassId) {
-                  createStudentMutation.mutate({
-                    name: newStudentName,
-                    classId: selectedClassId
-                  });
-                }
-              }}
-              disabled={createStudentMutation.isPending || !newStudentName.trim() || !selectedClassId}
-            >
-              {createStudentMutation.isPending ? "Salvando..." : "Salvar"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Toggle Student Status Dialog */}
-      <AlertDialog open={isToggleStudentOpen} onOpenChange={setIsToggleStudentOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>
-              {studentToToggle?.active ? "Desativar Aluno" : "Ativar Aluno"}
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              {studentToToggle?.active 
-                ? `Tem certeza que deseja desativar o aluno "${studentToToggle?.name}"? Alunos desativados não aparecerão nas listas de chamada.`
-                : `Tem certeza que deseja ativar o aluno "${studentToToggle?.name}"? Alunos ativos aparecerão nas listas de chamada.`
-              }
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => {
-                if (studentToToggle) {
-                  toggleStudentStatusMutation.mutate({
-                    id: studentToToggle.id,
-                    active: !studentToToggle.active
-                  });
-                }
-              }}
-            >
-              {studentToToggle?.active ? "Desativar" : "Ativar"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      {/* Edit Student Dialog */}
+      {/* Modais para alunos */}
       <Dialog open={isEditStudentOpen} onOpenChange={setIsEditStudentOpen}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
@@ -1798,57 +2042,264 @@ export default function AdminHome() {
         </DialogContent>
       </Dialog>
 
-      {/* Assign Teacher to Class Dialog */}
+      <AlertDialog open={isToggleStudentOpen} onOpenChange={setIsToggleStudentOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {studentToToggle?.active ? "Desativar Aluno" : "Ativar Aluno"}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {studentToToggle?.active 
+                ? `Tem certeza que deseja desativar o aluno "${studentToToggle?.name}"? Alunos desativados não aparecerão nas listas de chamada.`
+                : `Tem certeza que deseja ativar o aluno "${studentToToggle?.name}"? Alunos ativos aparecerão nas listas de chamada.`
+              }
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (studentToToggle) {
+                  toggleStudentStatusMutation.mutate({
+                    id: studentToToggle.id,
+                    active: !studentToToggle.active
+                  });
+                }
+              }}
+            >
+              {studentToToggle?.active ? "Desativar" : "Ativar"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Modal para adicionar aluno */}
+      <Dialog open={isAddStudentOpen} onOpenChange={setIsAddStudentOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Adicionar Aluno</DialogTitle>
+            <DialogDescription>
+              Preencha as informações abaixo para adicionar um novo aluno.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="newStudentName" className="text-right">
+                Nome
+              </Label>
+              <Input
+                id="newStudentName"
+                value={newStudentName}
+                onChange={(e) => setNewStudentName(e.target.value)}
+                className="col-span-3"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="newStudentClass" className="text-right">
+                Classe
+              </Label>
+              <Select
+                value={selectedClassId?.toString() || undefined}
+                onValueChange={(value) => setSelectedClassId(parseInt(value))}
+              >
+                <SelectTrigger className="col-span-3">
+                  <SelectValue placeholder="Selecione uma classe" />
+                </SelectTrigger>
+                <SelectContent>
+                  {classes.filter(c => c.active).map((classObj) => (
+                    <SelectItem key={classObj.id} value={classObj.id.toString()}>
+                      {classObj.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              type="submit"
+              onClick={() => {
+                if (selectedClassId) {
+                  createStudentMutation.mutate({
+                    name: newStudentName,
+                    classId: selectedClassId
+                  });
+                }
+              }}
+              disabled={
+                createStudentMutation.isPending || 
+                !newStudentName.trim() || 
+                !selectedClassId
+              }
+            >
+              {createStudentMutation.isPending ? "Adicionando..." : "Adicionar"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal para adicionar classe */}
+      <Dialog open={isAddClassOpen} onOpenChange={setIsAddClassOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Adicionar Classe</DialogTitle>
+            <DialogDescription>
+              Digite o nome da nova classe abaixo.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="newClassName" className="text-right">
+                Nome
+              </Label>
+              <Input
+                id="newClassName"
+                value={newClassName}
+                onChange={(e) => setNewClassName(e.target.value)}
+                className="col-span-3"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              type="submit"
+              onClick={() => {
+                createClassMutation.mutate(newClassName);
+              }}
+              disabled={createClassMutation.isPending || !newClassName.trim()}
+            >
+              {createClassMutation.isPending ? "Adicionando..." : "Adicionar"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal para adicionar professor */}
+      <Dialog open={isAddTeacherOpen} onOpenChange={setIsAddTeacherOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Adicionar Professor</DialogTitle>
+            <DialogDescription>
+              Preencha as informações abaixo para adicionar um novo professor.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="newTeacherName" className="text-right">
+                Nome
+              </Label>
+              <Input
+                id="newTeacherName"
+                value={newTeacherData.name}
+                onChange={(e) => setNewTeacherData({...newTeacherData, name: e.target.value})}
+                className="col-span-3"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="newTeacherCPF" className="text-right">
+                CPF
+              </Label>
+              <Input
+                id="newTeacherCPF"
+                value={newTeacherData.cpf}
+                onChange={(e) => setNewTeacherData({...newTeacherData, cpf: e.target.value})}
+                className="col-span-3"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="newTeacherPassword" className="text-right">
+                Senha
+              </Label>
+              <Input
+                id="newTeacherPassword"
+                type="password"
+                value={newTeacherData.password}
+                onChange={(e) => setNewTeacherData({...newTeacherData, password: e.target.value})}
+                className="col-span-3"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="newTeacherIsAdmin" className="text-right">
+                Administrador
+              </Label>
+              <div className="flex items-center space-x-2 col-span-3">
+                <Switch
+                  id="newTeacherIsAdmin"
+                  checked={newTeacherData.isAdmin}
+                  onCheckedChange={(checked) => setNewTeacherData({...newTeacherData, isAdmin: checked})}
+                />
+                <Label htmlFor="newTeacherIsAdmin">
+                  {newTeacherData.isAdmin ? "Sim" : "Não"}
+                </Label>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              type="submit"
+              onClick={() => {
+                createTeacherMutation.mutate(newTeacherData);
+              }}
+              disabled={
+                createTeacherMutation.isPending || 
+                !newTeacherData.name.trim() || 
+                !newTeacherData.cpf.trim() || 
+                !newTeacherData.password
+              }
+            >
+              {createTeacherMutation.isPending ? "Adicionando..." : "Adicionar"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal para atribuir professor a uma classe */}
       <Dialog open={isAssignTeacherOpen} onOpenChange={setIsAssignTeacherOpen}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
-            <DialogTitle>Atribuir Professor à Classe</DialogTitle>
+            <DialogTitle>Atribuir Professor a uma Classe</DialogTitle>
             <DialogDescription>
               Selecione o professor e a classe para fazer a atribuição.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="teacherSelect" className="text-right">
+              <Label htmlFor="assignTeacher" className="text-right">
                 Professor
               </Label>
               <Select
-                value={selectedTeacherForAssignment?.toString() || ""}
+                value={selectedTeacherForAssignment?.toString() || undefined}
                 onValueChange={(value) => setSelectedTeacherForAssignment(parseInt(value))}
               >
-                <SelectTrigger className="col-span-3" id="teacherSelect">
+                <SelectTrigger className="col-span-3">
                   <SelectValue placeholder="Selecione um professor" />
                 </SelectTrigger>
                 <SelectContent>
-                  {teachers
-                    .filter(t => t.active)
-                    .map((teacher) => (
-                      <SelectItem key={teacher.id} value={teacher.id.toString()}>
-                        {teacher.name}
-                      </SelectItem>
-                    ))}
+                  {teachers.filter(t => t.active).map((teacher) => (
+                    <SelectItem key={teacher.id} value={teacher.id.toString()}>
+                      {teacher.name}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="classSelect" className="text-right">
+              <Label htmlFor="assignClass" className="text-right">
                 Classe
               </Label>
               <Select
-                value={selectedClassForAssignment?.toString() || ""}
+                value={selectedClassForAssignment?.toString() || undefined}
                 onValueChange={(value) => setSelectedClassForAssignment(parseInt(value))}
               >
-                <SelectTrigger className="col-span-3" id="classSelect">
+                <SelectTrigger className="col-span-3">
                   <SelectValue placeholder="Selecione uma classe" />
                 </SelectTrigger>
                 <SelectContent>
-                  {classes
-                    .filter(c => c.active)
-                    .map((classObj) => (
-                      <SelectItem key={classObj.id} value={classObj.id.toString()}>
-                        {classObj.name}
-                      </SelectItem>
-                    ))}
+                  {classes.filter(c => c.active).map((classObj) => (
+                    <SelectItem key={classObj.id} value={classObj.id.toString()}>
+                      {classObj.name}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -1875,6 +2326,36 @@ export default function AdminHome() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Modal para remover professor da classe */}
+      <AlertDialog open={isRemoveTeacherFromClassOpen} onOpenChange={setIsRemoveTeacherFromClassOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              Remover Professor da Classe
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja remover o professor "{teacherToRemove?.name}" 
+              da classe "{classFromRemove?.name}"?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (teacherToRemove && classFromRemove) {
+                  removeTeacherFromClassMutation.mutate({
+                    teacherId: teacherToRemove.id,
+                    classId: classFromRemove.id
+                  });
+                }
+              }}
+            >
+              Remover
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

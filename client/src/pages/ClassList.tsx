@@ -44,7 +44,8 @@ import {
   ClipboardList,
   FileText,
   CheckSquare,
-  Pencil
+  Pencil,
+  User
 } from 'lucide-react';
 import { Class, insertClassSchema } from '@shared/schema';
 import Header from '@/components/Header';
@@ -183,6 +184,7 @@ const ClassList: React.FC = () => {
     }
   }, [classes]);
 
+  // Função para navegar para o wizard
   const goToWizard = async (classObj: Class) => {
     // Determinar se estamos editando ou iniciando um novo registro
     const hasExistingRecords = await checkTodayRecords(classObj.id);
@@ -192,6 +194,38 @@ const ClassList: React.FC = () => {
     setLocation(`/wizard?classId=${classObj.id}&className=${encodeURIComponent(classObj.name)}&isEditing=${hasExistingRecords}`);
   };
 
+  // Navegar para a página de alunos filtrada por classe
+  const goToClassStudents = (classId: number) => {
+    setLocation(`/students?classId=${classId}`);
+  };
+  
+  // Buscar professores para cada classe
+  const classTeachers = useQuery({
+    queryKey: ['/api/classes-teachers'],
+    queryFn: async () => {
+      if (!classes || classes.length === 0) return {};
+
+      // Criar um mapa que armazenará o ID da classe como chave e uma lista de professores como valor
+      const teachersMap: Record<number, { id: number, name: string }[]> = {};
+
+      // Buscar professores para cada classe em paralelo
+      await Promise.all(
+        classes.map(async (classObj) => {
+          try {
+            const res = await apiRequest('GET', `/api/classes/${classObj.id}/teachers`);
+            const teachers = await res.json();
+            teachersMap[classObj.id] = teachers;
+          } catch (error) {
+            teachersMap[classObj.id] = [];
+          }
+        })
+      );
+
+      return teachersMap;
+    },
+    enabled: classes.length > 0,
+  });
+  
   // Render class list
   const renderClasses = () => {
     const isMobile = useIsMobile();
@@ -243,50 +277,60 @@ const ClassList: React.FC = () => {
                 )}
               </div>
             </div>
-
           </div>
 
-          <div className="flex items-center justify-between mt-4 pt-3 border-t border-gray-100">
-            <div className="flex space-x-2">
+          <div className="flex flex-col mt-4 pt-3 border-t border-gray-100">
+            <div className="flex flex-wrap gap-2">
               <Button 
-                variant="outline" 
+                variant={classesTodayRecords[classObj.id] ? "outline" : "default"}
                 size="sm" 
-                className="flex items-center"
+                onClick={() => goToWizard(classObj)}
+                className={classesTodayRecords[classObj.id] ? "border-orange-500 text-orange-600 hover:bg-orange-50" : "bg-green-600 hover:bg-green-700 text-white"}
+              >
+                <ClipboardList className="h-4 w-4 mr-2" />
+                {classesTodayRecords[classObj.id] ? 'Editar Chamada' : 'Fazer Chamada'}
+              </Button>
+              
+              <Button 
+                variant="outline"
+                size="sm" 
                 onClick={() => setLocation(`/classes/${classObj.id}`)}
               >
-                <PenSquare className="h-3.5 w-3.5 mr-1.5" />
-                {isMobile ? "Editar" : "Gerenciar"}
+                <PenSquare className="h-4 w-4 mr-2" />
+                Gerenciar Alunos
               </Button>
+              
               <Button 
-                variant="outline" 
+                variant="outline"
                 size="sm" 
-                className="flex items-center"
-                onClick={() => setLocation(`/teacher-records/${classObj.id}`)}
+                onClick={() => {
+                  // Redireciona com base no papel do usuário
+                  console.log("Botão Registros clicado, isAdmin:", teacher?.isAdmin);
+                  
+                  // Usar encodeURIComponent para garantir que o ID seja corretamente codificado na URL
+                  const classIdParam = encodeURIComponent(classObj.id.toString());
+                  
+                  if (teacher?.isAdmin) {
+                    // Para admin, usar setLocation em vez de window.location.href
+                    console.log("Admin: Redirecionando para /records");
+                    setLocation(`/records?classId=${classIdParam}`);
+                  } else {
+                    // Para professores, usar setLocation com invalidação explícita de cache
+                    console.log("Professor: Redirecionando para /teacher-records");
+                    
+                    // Invalidar as queries antes da navegação
+                    queryClient.invalidateQueries({ queryKey: ['/api/attendance'] });
+                    queryClient.invalidateQueries({ queryKey: ['/api/missionary-activities'] });
+                    
+                    // Usar setLocation
+                    setLocation(`/teacher-records/${classIdParam}`);
+                  }
+                }}
               >
                 <FileText className="h-4 w-4 mr-2" />
-                {isMobile ? "Registros" : "Ver Registros"}
-              </Button>
-              <Button 
-                variant={classesTodayRecords[classObj.id] ? "default" : "default"}
-                size="sm" 
-                className={`flex items-center ${classesTodayRecords[classObj.id] 
-                  ? "bg-orange-500 hover:bg-orange-600 text-white border-orange-500" 
-                  : "bg-blue-600 hover:bg-blue-700 text-white"}`}
-                onClick={() => goToWizard(classObj)}
-              >
-                {classesTodayRecords[classObj.id] 
-                  ? <Pencil className="h-4 w-4 mr-2" /> 
-                  : <CheckSquare className="h-4 w-4 mr-2" />
-                }
-                {isMobile 
-                  ? "Chamada" 
-                  : classesTodayRecords[classObj.id] 
-                    ? "Editar Chamada" 
-                    : "Iniciar Chamada"
-                }
+                Registros
               </Button>
             </div>
-
           </div>
         </div>
       </Card>

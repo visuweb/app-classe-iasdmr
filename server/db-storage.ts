@@ -328,6 +328,26 @@ export class DatabaseStorage implements IStorage {
       .where(eq(students.classId, classId));
   }
   
+  async getAllStudents(): Promise<(Student & { className: string | undefined })[]> {
+    // Buscar todos os alunos com o nome da classe
+    const results = await db.select({
+      id: students.id,
+      name: students.name,
+      classId: students.classId,
+      active: students.active,
+      createdAt: students.createdAt,
+      className: classes.name
+    })
+    .from(students)
+    .leftJoin(classes, eq(students.classId, classes.id));
+    
+    // Converter null para undefined no className para satisfazer o tipo
+    return results.map(student => ({
+      ...student,
+      className: student.className || undefined
+    }));
+  }
+  
   async getStudent(id: number): Promise<Student | undefined> {
     const results = await db.select().from(students).where(eq(students.id, id)).limit(1);
     return results.length > 0 ? results[0] : undefined;
@@ -755,5 +775,24 @@ export class DatabaseStorage implements IStorage {
     } catch (error) {
       console.error("Error seeding test data:", error);
     }
+  }
+
+  async getStudentCountsByClass(): Promise<Record<number, number>> {
+    // Agrupar por classId e contar os alunos
+    const counts = await db
+      .select({
+        classId: students.classId,
+        count: sql<number>`count(*)::int`
+      })
+      .from(students)
+      .groupBy(students.classId);
+    
+    // Converter para um objeto onde a chave é o classId e o valor é a contagem
+    const result: Record<number, number> = {};
+    counts.forEach(item => {
+      result[item.classId] = item.count;
+    });
+    
+    return result;
   }
 }

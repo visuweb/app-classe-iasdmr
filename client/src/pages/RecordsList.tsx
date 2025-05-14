@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
+import { useRoute } from 'wouter';
 import {
   Card,
   CardContent,
@@ -82,6 +83,7 @@ import { apiRequest, queryClient } from '@/lib/queryClient';
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
+import { formatBrazilianDateExtended } from '@/lib/date-utils';
 
 type AttendanceRecordWithStudent = AttendanceRecord & { 
   studentName: string; 
@@ -107,6 +109,30 @@ type MissionaryActivityEditFormValues = z.infer<typeof missionaryActivityEditSch
 const RecordsList: React.FC = () => {
   const { toast } = useToast();
   const [selectedClassId, setSelectedClassId] = useState<string>('');
+  const [route] = useRoute('/');
+  
+  // Carregar o classId da URL, se presente
+  useEffect(() => {
+    // Usar diretamente o window.location para garantir que temos o valor mais atualizado
+    const queryParams = new URLSearchParams(window.location.search);
+    const classIdFromURL = queryParams.get('classId');
+    console.log("RecordsList - URL classId:", classIdFromURL);
+    
+    if (classIdFromURL) {
+      console.log("RecordsList - Setting classId:", classIdFromURL);
+      setSelectedClassId(classIdFromURL);
+      
+      // Logo após definir, verificar se foi definido corretamente
+      setTimeout(() => {
+        console.log("RecordsList - Verificação do classId:", selectedClassId);
+      }, 0);
+    }
+  }, []);
+  
+  // Log quando o selectedClassId mudar
+  useEffect(() => {
+    console.log("RecordsList - selectedClassId changed:", selectedClassId);
+  }, [selectedClassId]);
   
   // Estado para filtro de data
   const [selectedMonth, setSelectedMonth] = useState<Date>(new Date());
@@ -281,7 +307,7 @@ const RecordsList: React.FC = () => {
   const isLoadingActivities = isLoadingAllActivities;
   
   const formatDate = (dateString: string) => {
-    return format(new Date(dateString), "dd 'de' MMMM, yyyy", { locale: ptBR });
+    return formatBrazilianDateExtended(dateString);
   };
   
   // Mutação para atualizar presença
@@ -1080,49 +1106,57 @@ const RecordsList: React.FC = () => {
       {/* Mostrar grid quando o filtro de trimestre estiver selecionado (independente da classe) */}
       {selectedTrimester ? (
         <div>
-          <Tabs defaultValue="attendance">
-            <TabsList className="grid w-full grid-cols-2 mb-6">
-              <TabsTrigger value="attendance" className="flex items-center">
-                <ClipboardList className="h-4 w-4 mr-2" />
-                Registro de Presença
-              </TabsTrigger>
-              <TabsTrigger value="activities" className="flex items-center">
-                <BarChart3 className="h-4 w-4 mr-2" />
-                Atividades Missionárias
-              </TabsTrigger>
-            </TabsList>
-            
-            <TabsContent value="attendance" className="space-y-4">
-              {renderAttendanceGrid()}
-            </TabsContent>
-            
-            <TabsContent value="activities" className="space-y-4">
-              {renderMissionaryActivities()}
-            </TabsContent>
-          </Tabs>
+          <Card className="shadow-sm rounded-lg border">
+            <CardContent className="p-6">
+              <Tabs defaultValue="attendance">
+                <TabsList className="grid w-full grid-cols-2 mb-6">
+                  <TabsTrigger value="attendance" className="flex items-center">
+                    <ClipboardList className="h-4 w-4 mr-2" />
+                    Registro de Presença
+                  </TabsTrigger>
+                  <TabsTrigger value="activities" className="flex items-center">
+                    <BarChart3 className="h-4 w-4 mr-2" />
+                    Atividades Missionárias
+                  </TabsTrigger>
+                </TabsList>
+                
+                <TabsContent value="attendance" className="space-y-4">
+                  {renderAttendanceGrid()}
+                </TabsContent>
+                
+                <TabsContent value="activities" className="space-y-4">
+                  {renderMissionaryActivities()}
+                </TabsContent>
+              </Tabs>
+            </CardContent>
+          </Card>
         </div>
       ) : (
         selectedClassId && (
-          <Tabs defaultValue="attendance">
-            <TabsList className="grid w-full grid-cols-2 mb-6">
-              <TabsTrigger value="attendance" className="flex items-center">
-                <ClipboardList className="h-4 w-4 mr-2" />
-                Registro de Presença
-              </TabsTrigger>
-              <TabsTrigger value="activities" className="flex items-center">
-                <BarChart3 className="h-4 w-4 mr-2" />
-                Atividades Missionárias
-              </TabsTrigger>
-            </TabsList>
-            
-            <TabsContent value="attendance" className="space-y-4">
-              {renderAttendanceRecords()}
-            </TabsContent>
-            
-            <TabsContent value="activities" className="space-y-4">
-              {renderMissionaryActivities()}
-            </TabsContent>
-          </Tabs>
+          <Card className="shadow-sm rounded-lg border">
+            <CardContent className="p-6">
+              <Tabs defaultValue="attendance">
+                <TabsList className="grid w-full grid-cols-2 mb-6">
+                  <TabsTrigger value="attendance" className="flex items-center">
+                    <ClipboardList className="h-4 w-4 mr-2" />
+                    Registro de Presença
+                  </TabsTrigger>
+                  <TabsTrigger value="activities" className="flex items-center">
+                    <BarChart3 className="h-4 w-4 mr-2" />
+                    Atividades Missionárias
+                  </TabsTrigger>
+                </TabsList>
+                
+                <TabsContent value="attendance" className="space-y-4">
+                  {renderAttendanceRecords()}
+                </TabsContent>
+                
+                <TabsContent value="activities" className="space-y-4">
+                  {renderMissionaryActivities()}
+                </TabsContent>
+              </Tabs>
+            </CardContent>
+          </Card>
         )
       )}
       
