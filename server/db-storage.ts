@@ -89,8 +89,37 @@ export class DatabaseStorage implements IStorage {
   }
   
   async getTeacherByCpf(cpf: string): Promise<Teacher | undefined> {
-    const results = await db.select().from(teachers).where(eq(teachers.cpf, cpf)).limit(1);
-    return results.length > 0 ? results[0] : undefined;
+    try {
+      // Garantir que o CPF é uma string e remover qualquer espaço em branco
+      const cpfClean = String(cpf).trim();
+      console.log(`Buscando professor pelo CPF: "${cpfClean}"`);
+      
+      // Primeira tentativa: consulta direta
+      const results = await db.select().from(teachers).where(eq(teachers.cpf, cpfClean)).limit(1);
+      
+      if (results.length > 0) {
+        console.log(`Professor encontrado pelo CPF: "${cpfClean}"`);
+        return results[0];
+      }
+
+      // Se não encontrou, tenta remover a formatação (pontos, traços)
+      if (/[^\d]/.test(cpfClean)) {
+        const cpfNumeric = cpfClean.replace(/\D/g, '');
+        console.log(`Tentando buscar novamente com CPF numérico: "${cpfNumeric}"`);
+        
+        const results2 = await db.select().from(teachers).where(eq(teachers.cpf, cpfNumeric)).limit(1);
+        if (results2.length > 0) {
+          console.log(`Professor encontrado pelo CPF numérico: "${cpfNumeric}"`);
+          return results2[0];
+        }
+      }
+      
+      console.log(`Nenhum professor encontrado para o CPF: "${cpfClean}"`);
+      return undefined;
+    } catch (error) {
+      console.error(`Erro ao buscar professor pelo CPF "${cpf}":`, error);
+      throw error;
+    }
   }
   
   async getAllTeachers(): Promise<Teacher[]> {

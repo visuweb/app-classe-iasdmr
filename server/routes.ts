@@ -13,7 +13,8 @@ import {
   Teacher,
   attendanceRecords,
   students,
-  missionaryActivities
+  missionaryActivities,
+  teachers
 } from "@shared/schema";
 import { setupAuth } from "./auth";
 import { scrypt, randomBytes, timingSafeEqual } from "crypto";
@@ -850,6 +851,248 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(updatedActivity);
     } catch (error: any) {
       res.status(500).json({ message: error.message || "Falha ao atualizar atividade missionária" });
+    }
+  });
+
+  // Verificar se um CPF existe
+  app.get("/api/teachers/check-cpf/:cpf", async (req, res) => {
+    try {
+      const { cpf } = req.params;
+      console.log(`Verificando CPF: "${cpf}"`);
+      
+      // Garantir que o CPF está sendo tratado como string
+      const cpfString = String(cpf).trim();
+      console.log(`CPF formatado para consulta: "${cpfString}"`);
+      
+      // Verificar direto no banco usando o query builder do Drizzle para evitar erros de tipo
+      try {
+        const result = await db.select({ id: teachers.id })
+          .from(teachers)
+          .where(eq(teachers.cpf, cpfString))
+          .limit(1);
+        
+        console.log('Resultado da query direta:', JSON.stringify(result));
+        
+        // Verificar se o resultado contém registros
+        if (result && result.length > 0) {
+          console.log('Encontrado registro via query direta:', result[0]);
+          return res.json({ exists: true });
+        }
+      } catch (dbError) {
+        console.error('Erro na consulta direta ao banco:', dbError);
+      }
+      
+      // Seguir com o método normal se a consulta direta não retornou resultados
+      const teacher = await storage.getTeacherByCpf(cpfString);
+      console.log('Resultado do getTeacherByCpf:', teacher ? 'Encontrado' : 'Não encontrado');
+      
+      // Responder apenas se o CPF existe, sem enviar dados do professor
+      res.json({ exists: !!teacher });
+    } catch (error) {
+      console.error("Erro detalhado ao verificar CPF:", error);
+      res.status(500).json({ 
+        message: "Erro ao verificar CPF", 
+        error: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
+
+  // Endpoint para buscar professor por CPF (usado no reset de senha)
+  app.get("/api/search-teacher-by-cpf", async (req, res) => {
+    try {
+      const { cpf } = req.query;
+      
+      if (!cpf) {
+        return res.status(400).json({ message: "CPF é obrigatório" });
+      }
+      
+      // Garantir que o CPF está sendo tratado como string
+      const cpfString = String(cpf).trim();
+      console.log(`Buscando professor com CPF: "${cpfString}"`);
+      
+      // Buscar o professor pelo CPF
+      const teacher = await storage.getTeacherByCpf(cpfString);
+      
+      if (!teacher) {
+        return res.status(404).json({ message: "Professor não encontrado" });
+      }
+      
+      // Retornar apenas o ID e o CPF por segurança
+      res.json({ 
+        id: teacher.id,
+        cpf: teacher.cpf
+      });
+    } catch (error) {
+      console.error("Erro ao buscar professor por CPF:", error);
+      res.status(500).json({ 
+        message: "Erro ao buscar professor", 
+        error: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
+  
+  // Endpoint para reset direto de senha (usado no fluxo de esqueci a senha)
+  app.post("/api/direct-reset-password", async (req, res) => {
+    try {
+      const { id, password, active } = req.body;
+      
+      if (!id || !password) {
+        return res.status(400).json({ message: "ID do professor e senha são obrigatórios" });
+      }
+      
+      // Verificar se o professor existe
+      const teacherId = Number(id);
+      if (isNaN(teacherId)) {
+        return res.status(400).json({ message: "ID de professor inválido" });
+      }
+      
+      const teacher = await storage.getTeacherById(teacherId);
+      if (!teacher) {
+        return res.status(404).json({ message: "Professor não encontrado" });
+      }
+      
+      console.log(`Atualizando professor ID ${teacherId}: senha e status active=${active === false ? 'false' : 'true'}`);
+      
+      // Atualizar a senha e o status
+      const updateData = {
+        password,
+        active: active === false ? false : teacher.active // Garantir que seja boolean
+      };
+      
+      // Usar a mesma função que o admin usa para atualizar
+      const updatedTeacher = await storage.updateTeacher(teacherId, updateData);
+      
+      if (!updatedTeacher) {
+        return res.status(500).json({ message: "Erro ao atualizar professor" });
+      }
+      
+      // Enviar notificação via webhook
+      try {
+        const webhookUrl = "https://wb-n8n.jonesguidini.com/webhook/iasdmrclass-notificar-mudar-senha";
+        console.log(`Enviando notificação para webhook com CPF: ${teacher.cpf}`);
+        
+        const response = await fetch(webhookUrl, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ cpf: teacher.cpf }),
+        });
+        
+        if (!response.ok) {
+          console.error("Erro ao enviar notificação para o webhook:", await response.text());
+        } else {
+          console.log("Notificação enviada com sucesso para o webhook");
+        }
+      } catch (webhookError) {
+        console.error("Erro ao enviar notificação para o webhook:", webhookError);
+        // Não falhar a requisição se o webhook falhar
+      }
+      
+      // Retornar sucesso
+      res.json({ 
+        message: "Senha atualizada com sucesso",
+        active: updatedTeacher.active
+      });
+    } catch (error) {
+      console.error("Erro ao atualizar senha:", error);
+      res.status(500).json({ 
+        message: "Erro ao atualizar senha", 
+        error: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
+
+  // Redefinir senha (endpoint original)
+  app.post("/api/reset-password", async (req, res) => {
+    try {
+      const { cpf, newPassword } = req.body;
+      
+      if (!cpf || !newPassword) {
+        return res.status(400).json({ message: "CPF e nova senha são obrigatórios" });
+      }
+      
+      // Buscar professor pelo CPF
+      const teacher = await storage.getTeacherByCpf(cpf);
+      
+      if (!teacher) {
+        return res.status(404).json({ message: "Professor não encontrado" });
+      }
+      
+      // Atualizar a senha e definir usuário como inativo
+      const updatedTeacher = await storage.updateTeacher(teacher.id, {
+        password: newPassword,
+        active: false
+      });
+      
+      if (!updatedTeacher) {
+        return res.status(500).json({ message: "Erro ao atualizar senha" });
+      }
+      
+      // Enviar notificação para o webhook
+      try {
+        const webhookUrl = "https://wb-n8n.jonesguidini.com/webhook/iasdmrclass-notificar-mudar-senha";
+        console.log(`Enviando notificação para webhook com CPF: ${cpf}`);
+        
+        const response = await fetch(webhookUrl, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ cpf }),
+        });
+        
+        if (!response.ok) {
+          console.error("Erro ao enviar notificação para o webhook:", await response.text());
+        } else {
+          console.log("Notificação enviada com sucesso para o webhook");
+        }
+      } catch (webhookError) {
+        console.error("Erro ao enviar notificação para o webhook:", webhookError);
+        // Não falhar a requisição se o webhook falhar
+      }
+      
+      // Responder com sucesso e incluir o status 'active' na resposta
+      res.json({ 
+        message: "Senha redefinida com sucesso",
+        active: updatedTeacher.active 
+      });
+    } catch (error) {
+      console.error("Erro ao redefinir senha:", error);
+      res.status(500).json({ message: "Erro ao redefinir senha" });
+    }
+  });
+
+  // Verificar status de um professor
+  app.get("/api/teacher-status", async (req, res) => {
+    try {
+      const { id } = req.query;
+      
+      if (!id) {
+        return res.status(400).json({ message: "ID do professor é obrigatório" });
+      }
+      
+      const teacherId = Number(id);
+      if (isNaN(teacherId)) {
+        return res.status(400).json({ message: "ID de professor inválido" });
+      }
+      
+      const teacher = await storage.getTeacherById(teacherId);
+      
+      if (!teacher) {
+        return res.status(404).json({ message: "Professor não encontrado" });
+      }
+      
+      // Retornar apenas o status do professor
+      res.json({ 
+        active: teacher.active
+      });
+    } catch (error) {
+      console.error("Erro ao verificar status do professor:", error);
+      res.status(500).json({ 
+        message: "Erro ao verificar status do professor", 
+        error: error instanceof Error ? error.message : String(error)
+      });
     }
   });
 

@@ -8,13 +8,18 @@ async function throwIfResNotOk(res: Response) {
     try {
       const textResponse = await res.text();
       if (textResponse) {
-        // Verificar se é um JSON antes de tentar fazer o parse
-        try {
-          const jsonResponse = JSON.parse(textResponse);
-          errorText = jsonResponse.message || textResponse;
-        } catch {
-          // Se não for um JSON válido, use o texto como está
-          errorText = textResponse;
+        // Verificar se parece ser HTML (começa com <!DOCTYPE ou <html)
+        if (textResponse.trim().startsWith('<!DOCTYPE') || textResponse.trim().startsWith('<html')) {
+          errorText = "Erro de conexão: o servidor retornou HTML em vez de JSON";
+        } else {
+          // Verificar se é um JSON antes de tentar fazer o parse
+          try {
+            const jsonResponse = JSON.parse(textResponse);
+            errorText = jsonResponse.message || textResponse;
+          } catch {
+            // Se não for um JSON válido, use o texto como está
+            errorText = textResponse;
+          }
         }
       }
     } catch {
@@ -30,15 +35,38 @@ export async function apiRequest(
   url: string,
   data?: unknown | undefined,
 ): Promise<Response> {
-  const res = await fetch(url, {
-    method,
-    headers: data ? { "Content-Type": "application/json" } : {},
-    body: data ? JSON.stringify(data) : undefined,
-    credentials: "include",
-  });
+  try {
+    // Garantir que a URL está formatada corretamente
+    const cleanUrl = url.startsWith('/') ? url : `/${url}`;
+    
+    const res = await fetch(cleanUrl, {
+      method,
+      headers: data ? { "Content-Type": "application/json" } : {},
+      body: data ? JSON.stringify(data) : undefined,
+      credentials: "include",
+    });
 
-  await throwIfResNotOk(res);
-  return res;
+    // Para verificar o CPF, vamos tratar especialmente - só queremos saber se existe
+    if (cleanUrl.includes('/api/teachers/check-cpf/') && method === 'GET') {
+      if (res.status === 200) {
+        return new Response(JSON.stringify({ exists: true }), {
+          status: 200,
+          headers: {'Content-Type': 'application/json'}
+        });
+      } else if (res.status === 404) {
+        return new Response(JSON.stringify({ exists: false }), {
+          status: 200,
+          headers: {'Content-Type': 'application/json'}
+        });
+      }
+    }
+
+    await throwIfResNotOk(res);
+    return res;
+  } catch (error) {
+    console.error(`Erro na requisição ${method} ${url}:`, error);
+    throw error;
+  }
 }
 
 type UnauthorizedBehavior = "returnNull" | "throw";
