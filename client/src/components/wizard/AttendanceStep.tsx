@@ -26,7 +26,16 @@ const AttendanceStep: React.FC<AttendanceStepProps> = ({ isActive }) => {
   if (!isActive) return null;
   
   const currentStudent = students[currentStudentIndex];
-  const formattedDate = format(wizardDate, "dd 'de' MMMM, yyyy", { locale: ptBR });
+  const formattedDate = format(
+    new Date(
+      wizardDate.getFullYear(),
+      wizardDate.getMonth(),
+      wizardDate.getDate(),
+      12
+    ), 
+    "dd 'de' MMMM, yyyy", 
+    { locale: ptBR }
+  );
   
   const handleMarkPresent = () => {
     if (currentStudent) {

@@ -1,0 +1,58 @@
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes contentShow {
+  from { opacity: 0; transform: translate(-50%, -48%) scale(0.96); }
+  to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
+
+.fade-in {
+  animation: fadeIn 200ms cubic-bezier(0.16, 1, 0.3, 1);
+  transition: opacity 200ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.scale-in {
+  animation: scaleIn 200ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.content-show {
+  animation: contentShow 200ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Estilos para o Radix UI Dialog */
+[data-radix-popper-content-wrapper] {
+  z-index: 50 !important;
+}
+
+/* Melhoria no overlay do Dialog */
+[data-radix-dialog-overlay] {
+  background-color: rgba(0, 0, 0, 0.5) !important;
+  backdrop-filter: blur(1px);
+  transition: opacity 250ms cubic-bezier(0.16, 1, 0.3, 1);
+  animation: fadeIn 250ms cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: opacity;
+}
+
+/* Melhoria na visualização do conteúdo do Dialog */
+[data-radix-dialog-content] {
+  transform-origin: center center;
+  animation: scaleIn 200ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Overlay para o modal de sucesso personalizado */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(1px);
+  z-index: 40;
+  animation: fadeIn 250ms cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: opacity;
+} 

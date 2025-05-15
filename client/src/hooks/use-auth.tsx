@@ -52,11 +52,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       queryClient.invalidateQueries({ queryKey: ["/api/teacher/classes"] });
     },
     onError: (error: Error) => {
-      toast({
-        title: "Falha ao entrar",
-        description: error.message,
-        variant: "destructive",
-      });
+      // Toast removido para evitar duplicação com a mensagem no formulário
     },
   });
 

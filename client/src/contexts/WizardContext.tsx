@@ -75,7 +75,16 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   const [currentActivityIndex, setCurrentActivityIndex] = useState(0);
   // Usar a data atual ajustada ao fuso horário de Brasília
   const currentDateBRT = getCurrentDateBRT();
-  const [wizardDate, setWizardDate] = useState<Date>(new Date(currentDateBRT));
+  const [wizardDate, setWizardDate] = useState<Date>(() => {
+    // Criar uma nova data com o meio-dia para evitar problemas de timezone
+    const today = new Date(currentDateBRT);
+    return new Date(
+      today.getFullYear(),
+      today.getMonth(),
+      today.getDate(),
+      12, 0, 0
+    );
+  });
   const [isEditingExistingRecords, setIsEditingExistingRecords] = useState(false);
   
   // Calculator state
@@ -118,11 +127,24 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
               // Usar a primeira data encontrada para carregar os registros
               targetDate = recordsData.datesFound[0];
               console.log(`Encontrada data com registros existentes: ${targetDate}`);
-              setWizardDate(new Date(targetDate));
+              // Ajuste para garantir que a data seja corretamente definida para o fuso horário local
+              // Usando meio-dia para evitar problemas com timezone
+              const dateParts = targetDate.split('-').map(part => parseInt(part, 10));
+              const adjustedDate = new Date(dateParts[0], dateParts[1] - 1, dateParts[2], 12, 0, 0);
+              console.log(`Data ajustada para o wizard: ${adjustedDate}`);
+              setWizardDate(adjustedDate);
             } else {
               // Se não encontrou registros, usar a data de hoje
               const today = new Date();
+              // Configurar para meio-dia para evitar problemas de timezone
+              const adjustedToday = new Date(
+                today.getFullYear(),
+                today.getMonth(),
+                today.getDate(),
+                12, 0, 0
+              );
               targetDate = today.toISOString().split('T')[0]; // yyyy-mm-dd
+              setWizardDate(adjustedToday);
             }
             
             if (!targetDate) {

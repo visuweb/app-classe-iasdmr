@@ -14,6 +14,9 @@ import { useAuth } from '@/hooks/use-auth';
 import { apiRequest } from '@/lib/queryClient';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
+// Adicionar estilos CSS 
+import './auth-page.css';
+
 // Login form schema
 const loginSchema = z.object({
   cpf: z.string().min(1, 'CPF é obrigatório'),
@@ -98,11 +101,6 @@ const AuthPage = () => {
     } else {
       console.log("Tentativa de avançar com CPF inválido bloqueada");
       setCpfValidationMessage('Você precisa informar um CPF válido para continuar');
-      toast({
-        title: 'CPF Inválido',
-        description: 'Você precisa informar um CPF válido para continuar',
-        variant: 'destructive',
-      });
     }
   };
   
@@ -136,7 +134,13 @@ const AuthPage = () => {
     setLoginError('');
     loginMutation.mutate(values, {
       onError: (error: Error) => {
-        setLoginError(error.message);
+        // Verificar se o erro contém informação sobre usuário desativado
+        if (error.message.includes('desativ') || error.message.toLowerCase().includes('inactive') || 
+            error.message.toLowerCase().includes('not active') || error.message.toLowerCase().includes('disabled')) {
+          setLoginError('Usuário desativado ou inválido. Falar com o administrador.');
+        } else {
+          setLoginError('Login ou Senha informado incorreto');
+        }
       },
       onSuccess: () => {
         toast({
@@ -145,6 +149,39 @@ const AuthPage = () => {
         });
       }
     });
+  };
+
+  // Função utilitária para enviar notificação ao webhook
+  const notifyWebhook = async (cpf: string) => {
+    try {
+      console.log('Enviando notificação para o webhook...');
+      
+      // Endpoint do webhook
+      const webhookUrl = 'https://wb-n8n.jonesguidini.com/webhook/iasdmrclass-notificar-mudar-senha';
+      
+      // Enviar requisição para o webhook
+      const webhookResponse = await fetch(webhookUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify({
+          cpf: cpf
+        })
+      });
+      
+      if (webhookResponse.ok) {
+        console.log('Notificação enviada com sucesso!');
+        return true;
+      } else {
+        console.warn(`Falha ao enviar notificação para o webhook: ${webhookResponse.status}`);
+        return false;
+      }
+    } catch (webhookError) {
+      console.error('Erro ao enviar notificação:', webhookError);
+      return false;
+    }
   };
 
   // Handler for forgot password form submission
@@ -215,21 +252,11 @@ const AuthPage = () => {
         console.log('❌ CPF NÃO encontrado na base ou resposta inválida');
         setIsCpfValid(false);
         setCpfValidationMessage('CPF não encontrado na base de dados!');
-        toast({
-          title: 'CPF não encontrado',
-          description: 'Este CPF não está registrado como professor no sistema.',
-          variant: 'destructive',
-        });
       }
     } catch (error: any) {
       console.error('Erro na verificação de CPF:', error);
       setIsCpfValid(false);
       setCpfValidationMessage(`Erro ao verificar CPF: ${error.message || 'Falha na conexão'}`);
-      toast({
-        title: 'Erro ao verificar CPF',
-        description: `Falha ao verificar o CPF: ${error.message || 'Erro de conexão com o servidor'}`,
-        variant: 'destructive',
-      });
     } finally {
       setIsSubmitting(false);
     }
@@ -359,9 +386,14 @@ const AuthPage = () => {
       }
       
       // Se chegou aqui, foi sucesso
-      setResetSuccess(true);
-      setNewPassword('');
-      setConfirmPassword('');
+      if (successful) {
+        // Notificar o webhook externo sobre a alteração de senha
+        await notifyWebhook(cpfToReset);
+        
+        setResetSuccess(true);
+        setNewPassword('');
+        setConfirmPassword('');
+      }
     
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Ocorreu um erro desconhecido';
@@ -532,218 +564,231 @@ const AuthPage = () => {
       <Dialog 
         open={forgotPasswordOpen} 
         onOpenChange={(open) => {
-          // Só permitir fechar o modal se não estiver processando ou se for sucesso
+          // Só permitir fechar o modal se não estiver processando
           if (!isSubmitting && (!resetSuccess || open === true)) {
             handleDialogClose();
           }
         }}
       >
-        <DialogContent className="sm:max-w-md" onEscapeKeyDown={(e) => isSubmitting && e.preventDefault()}>
-          <DialogHeader>
-            <DialogTitle>
-              {resetSuccess ? 'Senha Alterada com Sucesso' : 'Recuperação de Senha'}
-            </DialogTitle>
-            <DialogDescription>
-              {resetSuccess 
-                ? 'Sua senha foi alterada com sucesso.' 
-                : resetPasswordStep === 'cpf' 
+        {resetSuccess ? (
+          // Modal de Sucesso sem botão X
+          <>
+            {/* Overlay escurecido com fade */}
+            <div className="fixed inset-0 bg-black/50 backdrop-blur-sm fade-in" />
+            
+            <div className="fixed inset-0 flex items-center justify-center z-50 p-4">
+              <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-md scale-in">
+                {/* Conteúdo do modal de sucesso */}
+                <div className="space-y-6 py-4">
+                  <div className="flex flex-col items-center text-center space-y-4">
+                    <div className="bg-green-50 rounded-full p-3">
+                      <CheckCircle className="h-12 w-12 text-green-500" />
+                    </div>
+                    <p className="text-gray-500">
+                      Sua conta foi temporariamente desativada. Você receberá um link no seu WhatsApp para reativar sua conta com a nova senha.
+                    </p>
+                    <p className="text-sm text-amber-600 font-medium">
+                      Importante: Você não conseguirá acessar o sistema até clicar no link que será enviado.
+                    </p>
+                  </div>
+                  <div className="flex justify-center">
+                    <Button 
+                      type="button" 
+                      onClick={handleCloseAfterSuccess}
+                      className="w-full"
+                    >
+                      Fechar
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </>
+        ) : (
+          // Modal regular para os outros casos
+          <DialogContent 
+            className="sm:max-w-md content-show"
+            onEscapeKeyDown={(e) => isSubmitting && e.preventDefault()}
+          >
+            <DialogHeader>
+              <DialogTitle>
+                Recuperação de Senha
+              </DialogTitle>
+              <DialogDescription>
+                {resetPasswordStep === 'cpf' 
                   ? 'Informe seu CPF para iniciar a recuperação de senha.' 
                   : 'Digite sua nova senha.'}
-            </DialogDescription>
-          </DialogHeader>
+              </DialogDescription>
+            </DialogHeader>
 
-          {resetSuccess ? (
-            // Tela de sucesso
-            <div className="space-y-6 py-4">
-              <div className="flex flex-col items-center text-center space-y-4">
-                <div className="bg-green-50 rounded-full p-3">
-                  <CheckCircle className="h-12 w-12 text-green-500" />
-                </div>
-                <div className="text-lg font-medium">Solicitação enviada com sucesso!</div>
-                <p className="text-gray-500">
-                  Sua conta foi temporariamente desativada. Você receberá um link no seu WhatsApp para reativar sua conta com a nova senha.
-                </p>
-                <p className="text-sm text-amber-600 font-medium">
-                  Importante: Você não conseguirá acessar o sistema até clicar no link que será enviado.
-                </p>
-              </div>
-              <DialogFooter>
-                <Button 
-                  type="button" 
-                  onClick={handleCloseAfterSuccess}
-                  className="w-full"
-                >
-                  Fechar
-                </Button>
-              </DialogFooter>
-            </div>
-          ) : resetPasswordStep === 'cpf' ? (
-            <Form {...forgotPasswordForm}>
-              <form onSubmit={forgotPasswordForm.handleSubmit(onForgotPasswordSubmit)} className="space-y-4">
-                <FormField
-                  control={forgotPasswordForm.control}
-                  name="cpf"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>CPF</FormLabel>
-                      <FormControl>
-                        <Input 
-                          placeholder="Digite seu CPF" 
-                          {...field} 
-                          onChange={(e) => {
-                            field.onChange(e);
-                            setCpfFieldTouched(true);
-                            setCpfValidationMessage('');
-                          }}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
+            {resetPasswordStep === 'cpf' ? (
+              <Form {...forgotPasswordForm}>
+                <form onSubmit={forgotPasswordForm.handleSubmit(onForgotPasswordSubmit)} className="space-y-4">
+                  <FormField
+                    control={forgotPasswordForm.control}
+                    name="cpf"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>CPF</FormLabel>
+                        <FormControl>
+                          <Input 
+                            placeholder="Digite seu CPF" 
+                            {...field} 
+                            onChange={(e) => {
+                              field.onChange(e);
+                              setCpfFieldTouched(true);
+                              setCpfValidationMessage('');
+                            }}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  {cpfValidationMessage && (
+                    <Alert variant="destructive">
+                      <AlertDescription>{cpfValidationMessage}</AlertDescription>
+                    </Alert>
                   )}
-                />
+                  
+                  <DialogFooter className="gap-2 sm:gap-0">
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      onClick={handleDialogClose}
+                    >
+                      Cancelar
+                    </Button>
+                    <Button 
+                      type="submit"
+                      disabled={isSubmitting}
+                    >
+                      {isSubmitting ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Verificando...
+                        </>
+                      ) : (
+                        'Continuar'
+                      )}
+                    </Button>
+                  </DialogFooter>
+                </form>
+              </Form>
+            ) : (
+              // Form implementado manualmente para evitar problemas
+              <form onSubmit={handleNewPasswordSubmit} className="space-y-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium" htmlFor="password">Nova Senha</label>
+                  <div className="relative">
+                    <input
+                      id="password"
+                      type={showPassword ? "text" : "password"}
+                      placeholder="Digite sua nova senha"
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      className="w-full h-10 rounded-md px-3 py-2 border border-input bg-transparent text-sm"
+                      autoComplete="new-password"
+                      required
+                      minLength={6}
+                    />
+                    <button
+                      type="button"
+                      className="absolute right-0 top-0 h-full px-3 py-2 text-gray-500 bg-transparent"
+                      onClick={() => setShowPassword(!showPassword)}
+                      tabIndex={-1}
+                    >
+                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      <span className="sr-only">
+                        {showPassword ? "Ocultar senha" : "Mostrar senha"}
+                      </span>
+                    </button>
+                  </div>
+                </div>
                 
-                {cpfValidationMessage && (
+                <div className="space-y-2">
+                  <label className="text-sm font-medium" htmlFor="confirmPassword">Confirmar Senha</label>
+                  <div className="relative">
+                    <input
+                      id="confirmPassword"
+                      type={showConfirmPassword ? "text" : "password"}
+                      placeholder="Confirme sua nova senha"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      className="w-full h-10 rounded-md px-3 py-2 border border-input bg-transparent text-sm"
+                      autoComplete="new-password"
+                      required
+                      minLength={6}
+                    />
+                    <button
+                      type="button"
+                      className="absolute right-0 top-0 h-full px-3 py-2 text-gray-500 bg-transparent"
+                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      tabIndex={-1}
+                    >
+                      {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      <span className="sr-only">
+                        {showConfirmPassword ? "Ocultar senha" : "Mostrar senha"}
+                      </span>
+                    </button>
+                  </div>
+                </div>
+                
+                {passwordError && (
                   <Alert variant="destructive">
-                    <AlertDescription>{cpfValidationMessage}</AlertDescription>
+                    <AlertDescription>{passwordError}</AlertDescription>
                   </Alert>
                 )}
+                
+                {resetError && (
+                  <Alert variant="destructive">
+                    <AlertDescription>{resetError}</AlertDescription>
+                  </Alert>
+                )}
+                
+                <div className="bg-amber-50 p-3 rounded-md border border-amber-200">
+                  <div className="flex items-start">
+                    <AlertCircle className="text-amber-500 h-5 w-5 mt-0.5 mr-2" />
+                    <div className="text-sm text-amber-800">
+                      <p className="font-medium mb-1">Importante:</p>
+                      <p>Ao redefinir sua senha, os seguintes passos ocorrerão:</p>
+                      <ol className="list-decimal ml-4 mt-1 space-y-1">
+                        <li>Sua senha será alterada para a nova senha informada</li>
+                        <li>Sua conta será temporariamente <strong>desativada</strong></li>
+                        <li>Você receberá um link por <strong>WhatsApp</strong> para reativar sua conta</li>
+                        <li>Você precisará clicar neste link para poder entrar novamente no sistema</li>
+                      </ol>
+                    </div>
+                  </div>
+                </div>
                 
                 <DialogFooter className="gap-2 sm:gap-0">
                   <Button 
                     type="button" 
                     variant="outline" 
-                    onClick={handleDialogClose}
+                    onClick={() => handleStepChange('cpf')}
                   >
-                    Cancelar
+                    Voltar
                   </Button>
                   <Button 
                     type="submit"
-                    disabled={isSubmitting}
+                    disabled={isSubmitting || !newPassword || !confirmPassword}
                   >
                     {isSubmitting ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Verificando...
+                        Processando...
                       </>
                     ) : (
-                      'Continuar'
+                      'Redefinir Senha'
                     )}
                   </Button>
                 </DialogFooter>
               </form>
-            </Form>
-          ) : (
-            // Form implementado manualmente para evitar problemas
-            <form onSubmit={handleNewPasswordSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <label className="text-sm font-medium" htmlFor="password">Nova Senha</label>
-                <div className="relative">
-                  <input
-                    id="password"
-                    type={showPassword ? "text" : "password"}
-                    placeholder="Digite sua nova senha"
-                    value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
-                    className="w-full h-10 rounded-md px-3 py-2 border border-input bg-transparent text-sm"
-                    autoComplete="new-password"
-                    required
-                    minLength={6}
-                  />
-                  <button
-                    type="button"
-                    className="absolute right-0 top-0 h-full px-3 py-2 text-gray-500 bg-transparent"
-                    onClick={() => setShowPassword(!showPassword)}
-                    tabIndex={-1}
-                  >
-                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                    <span className="sr-only">
-                      {showPassword ? "Ocultar senha" : "Mostrar senha"}
-                    </span>
-                  </button>
-                </div>
-              </div>
-              
-              <div className="space-y-2">
-                <label className="text-sm font-medium" htmlFor="confirmPassword">Confirmar Senha</label>
-                <div className="relative">
-                  <input
-                    id="confirmPassword"
-                    type={showConfirmPassword ? "text" : "password"}
-                    placeholder="Confirme sua nova senha"
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    className="w-full h-10 rounded-md px-3 py-2 border border-input bg-transparent text-sm"
-                    autoComplete="new-password"
-                    required
-                    minLength={6}
-                  />
-                  <button
-                    type="button"
-                    className="absolute right-0 top-0 h-full px-3 py-2 text-gray-500 bg-transparent"
-                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    tabIndex={-1}
-                  >
-                    {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                    <span className="sr-only">
-                      {showConfirmPassword ? "Ocultar senha" : "Mostrar senha"}
-                    </span>
-                  </button>
-                </div>
-              </div>
-              
-              {passwordError && (
-                <Alert variant="destructive">
-                  <AlertDescription>{passwordError}</AlertDescription>
-                </Alert>
-              )}
-              
-              {resetError && (
-                <Alert variant="destructive">
-                  <AlertDescription>{resetError}</AlertDescription>
-                </Alert>
-              )}
-              
-              <div className="bg-amber-50 p-3 rounded-md border border-amber-200">
-                <div className="flex items-start">
-                  <AlertCircle className="text-amber-500 h-5 w-5 mt-0.5 mr-2" />
-                  <div className="text-sm text-amber-800">
-                    <p className="font-medium mb-1">Importante:</p>
-                    <p>Ao redefinir sua senha, os seguintes passos ocorrerão:</p>
-                    <ol className="list-decimal ml-4 mt-1 space-y-1">
-                      <li>Sua senha será alterada para a nova senha informada</li>
-                      <li>Sua conta será temporariamente <strong>desativada</strong></li>
-                      <li>Você receberá um link por <strong>WhatsApp</strong> para reativar sua conta</li>
-                      <li>Você precisará clicar neste link para poder entrar novamente no sistema</li>
-                    </ol>
-                  </div>
-                </div>
-              </div>
-              
-              <DialogFooter className="gap-2 sm:gap-0">
-                <Button 
-                  type="button" 
-                  variant="outline" 
-                  onClick={() => handleStepChange('cpf')}
-                >
-                  Voltar
-                </Button>
-                <Button 
-                  type="submit"
-                  disabled={isSubmitting || !newPassword || !confirmPassword}
-                >
-                  {isSubmitting ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Processando...
-                    </>
-                  ) : (
-                    'Redefinir Senha'
-                  )}
-                </Button>
-              </DialogFooter>
-            </form>
-          )}
-        </DialogContent>
+            )}
+          </DialogContent>
+        )}
       </Dialog>
     </div>
   );
