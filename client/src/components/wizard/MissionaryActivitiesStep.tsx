@@ -48,6 +48,7 @@ const MissionaryActivitiesStep: React.FC<MissionaryActivitiesStepProps> = ({ isA
   
   const handleOpenCalculator = () => {
     if (currentActivity) {
+      console.log(`Abrindo calculadora para ${currentActivity.id}`);
       openCalculator(currentActivity.id as MissionaryActivityType);
     }
   };
@@ -137,9 +138,8 @@ const MissionaryActivitiesStep: React.FC<MissionaryActivitiesStepProps> = ({ isA
                   <Button 
                     variant="default" 
                     size="icon"
-                    className="bg-gray-400 cursor-not-allowed"
-                    disabled
-                    title="Calculadora temporariamente desativada"
+                    onClick={handleOpenCalculator}
+                    disabled="true"
                   >
                     <Calculator className="h-5 w-5" />
                   </Button>
