@@ -249,7 +249,8 @@ export default function AdminHome() {
           className: classItem.name,
           presentCount: 0,
           absentCount: 0,
-          totalRecords: 0
+          totalRecords: 0,
+          visitorCount: 0 // Adicionando contador de visitantes
         });
       }
     });
@@ -271,13 +272,35 @@ export default function AdminHome() {
       }
     });
     
+    // Contar visitantes por classe durante o trimestre
+    if (missionaryActivities.length > 0) {
+      // Obter o intervalo de datas do trimestre
+      const { start, end } = getTrimesterDateRange(selectedTrimester);
+      
+      // Filtrar atividades missionárias do trimestre
+      const activitiesInTrimester = missionaryActivities.filter(activity => {
+        const activityDate = new Date(activity.date);
+        return activityDate >= start && activityDate <= end;
+      });
+      
+      // Somar visitantes para cada classe
+      activitiesInTrimester.forEach(activity => {
+        if (activity.classId && classSummary.has(activity.classId)) {
+          const classData = classSummary.get(activity.classId);
+          classData.visitorCount += (activity.visitantes || 0);
+        }
+      });
+    }
+    
     // Calculate totals
     let totalPresent = 0;
     let totalAbsent = 0;
+    let totalVisitors = 0;
     
     classSummary.forEach(summary => {
       totalPresent += summary.presentCount;
       totalAbsent += summary.absentCount;
+      totalVisitors += summary.visitorCount;
     });
     
     // Add a "total" row
@@ -286,7 +309,8 @@ export default function AdminHome() {
       className: 'Total',
       presentCount: totalPresent,
       absentCount: totalAbsent,
-      totalRecords: totalPresent + totalAbsent
+      totalRecords: totalPresent + totalAbsent,
+      visitorCount: totalVisitors // Adicionando total de visitantes
     });
     
     // Convert to array and filter if a specific class is selected
@@ -1644,6 +1668,7 @@ export default function AdminHome() {
                               <TableHead>Classe</TableHead>
                               <TableHead className="text-center">Quantidade Presença</TableHead>
                               <TableHead className="text-center">Quantidade Ausência</TableHead>
+                              <TableHead className="text-center">Visitantes</TableHead>
                             </TableRow>
                           </TableHeader>
                           <TableBody>
@@ -1655,6 +1680,7 @@ export default function AdminHome() {
                                 <TableCell className="font-medium">{summary.className}</TableCell>
                                 <TableCell className="text-center">{summary.presentCount}</TableCell>
                                 <TableCell className="text-center">{summary.absentCount}</TableCell>
+                                <TableCell className="text-center">{summary.visitorCount}</TableCell>
                               </TableRow>
                             ))}
                           </TableBody>
@@ -1755,13 +1781,12 @@ export default function AdminHome() {
                             <TableRow>
                               <TableHead>Data</TableHead>
                               <TableHead>Classe</TableHead>
-                              <TableHead className="text-right">Lit. Distribuídas</TableHead>
-                              <TableHead className="text-right">Contatos Missionários</TableHead>
-                              <TableHead className="text-right">Est. Bíblicos</TableHead>
-                              <TableHead className="text-right">Ministrados</TableHead>
-                              <TableHead className="text-right">Visitas</TableHead>
-                              <TableHead className="text-right">Auxiliadas</TableHead>
-                              <TableHead className="text-right">Trazidas à Igreja</TableHead>
+                              <TableHead className="text-center">Lit. Distribuídas</TableHead>
+                              <TableHead className="text-center">Contatos Missionários</TableHead>
+                              <TableHead className="text-center">Est. Bíblicos Ministrados</TableHead>
+                              <TableHead className="text-center">Visitas</TableHead>
+                              <TableHead className="text-center">Auxiliadas</TableHead>
+                              <TableHead className="text-center">Trazidas à Igreja</TableHead>
                             </TableRow>
                           </TableHeader>
                           <TableBody>
@@ -1787,13 +1812,12 @@ export default function AdminHome() {
                                 <TableRow key={activity.id}>
                                   <TableCell>{formatBrazilianDate(activity.date)}</TableCell>
                                   <TableCell>{classes.find(c => c.id === activity.classId)?.name}</TableCell>
-                                  <TableCell className="text-right">{activity.literaturasDistribuidas || 0}</TableCell>
-                                  <TableCell className="text-right">{activity.qtdContatosMissionarios || 0}</TableCell>
-                                  <TableCell className="text-right">{activity.estudosBiblicos || 0}</TableCell>
-                                  <TableCell className="text-right">{activity.ministrados || 0}</TableCell>
-                                  <TableCell className="text-right">{activity.visitasMissionarias || 0}</TableCell>
-                                  <TableCell className="text-right">{activity.pessoasAuxiliadas || 0}</TableCell>
-                                  <TableCell className="text-right">{activity.pessoasTrazidasIgreja || 0}</TableCell>
+                                  <TableCell className="text-center">{activity.literaturasDistribuidas || 0}</TableCell>
+                                  <TableCell className="text-center">{activity.qtdContatosMissionarios || 0}</TableCell>
+                                  <TableCell className="text-center">{activity.estudosBiblicos || 0}</TableCell>
+                                  <TableCell className="text-center">{activity.visitasMissionarias || 0}</TableCell>
+                                  <TableCell className="text-center">{activity.pessoasAuxiliadas || 0}</TableCell>
+                                  <TableCell className="text-center">{activity.pessoasTrazidasIgreja || 0}</TableCell>
                                 </TableRow>
                               ))}
                           </TableBody>
