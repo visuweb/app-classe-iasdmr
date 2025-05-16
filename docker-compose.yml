@@ -5,29 +5,19 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    platform: linux/arm64
+    container_name: classe-iasdmr-app
+    restart: unless-stopped
     ports:
       - "3000:3000"
     environment:
       - NODE_ENV=production
-      - DATABASE_URL=${DATABASE_URL}
-      - SESSION_SECRET=${SESSION_SECRET}
-    restart: always
-    depends_on:
-      - db
-
-  db:
-    image: postgres:16-alpine
-    platform: linux/arm64
-    ports:
-      - "5432:5432"
-    environment:
-      - POSTGRES_USER=${POSTGRES_USER:-postgres}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres}
-      - POSTGRES_DB=${POSTGRES_DB:-classe_alunos}
+    # Se você precisar de um banco de dados, adicione aqui
+    # depends_on:
+    #   - mongodb
     volumes:
-      - postgres_data:/var/lib/postgresql/data
-    restart: always
+      - app-data:/app/data
 
+# Definição de volumes para persistência de dados
 volumes:
-  postgres_data:
+  app-data:
+    driver: local
