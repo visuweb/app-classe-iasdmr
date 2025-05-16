@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { formatBrazilianDate } from '@/lib/date-utils';
 import { startOfYear, setMonth, setDate, endOfMonth, format } from "date-fns";
-import { LogOut, School, User, Book, BarChart, Plus, UserPlus, Calendar, Filter, Trash2, Check, Pencil, MinusCircle, Search, CalendarIcon, Users } from 'lucide-react';
+import { LogOut, School, User, Book, BarChart, Plus, UserPlus, Calendar, Filter, Trash2, Check, Pencil, MinusCircle, Search, CalendarIcon, Users, X } from 'lucide-react';
 import MissionaryTable from './MissionaryTable';
 import {
   Popover,
@@ -82,6 +82,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Teacher, Class, Student, MissionaryActivity, AttendanceRecord } from '@shared/schema';
 import { useLocation } from 'wouter';
 import { FormControlLabel } from '@/components/ui/form-control-label';
+import AttendanceDetailsList from './AttendanceDetailsList';
 
 // Definir tipos para ActivityClass e ActivityType para facilitar a tipagem
 type ActivityClass = {
@@ -1691,60 +1692,13 @@ export default function AdminHome() {
                   
                   {/* Visualização padrão (sem trimestre selecionado) */}
                   {!attendanceLoading && attendanceRecords.length > 0 && !selectedTrimester && (
-                    <ScrollArea className="h-[400px]">
-                      <div className="border border-gray-200 rounded-md overflow-hidden">
-                        <Table>
-                          <TableHeader>
-                            <TableRow>
-                              <TableHead>Data</TableHead>
-                              <TableHead>Classe</TableHead>
-                              <TableHead>Aluno</TableHead>
-                              <TableHead className="text-center">Presente</TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {attendanceRecords
-                              .filter(record => {
-                                let matchesFilters = true;
-                                
-                                // Verificar se a classe existe e está ativa
-                                const classObj = classes.find(c => c.name === record.className);
-                                const isClassActive = classObj && classObj.active;
-                                
-                                if (!isClassActive) return false;
-                                
-                                if (selectedClassForReports) {
-                                  // Precisamos comparar pelo nome da classe, já que não temos o classId diretamente
-                                  const selectedClassName = classes.find(c => c.id === selectedClassForReports)?.name;
-                                  matchesFilters = matchesFilters && record.className === selectedClassName;
-                                }
-                                if (selectedDateForReports) {
-                                  matchesFilters = matchesFilters && record.date === selectedDateForReports;
-                                }
-                                return matchesFilters;
-                              })
-                              .map((record) => (
-                                <TableRow key={record.id}>
-                                  <TableCell>{formatBrazilianDate(record.date)}</TableCell>
-                                  <TableCell>{record.className}</TableCell>
-                                  <TableCell>{record.studentName}</TableCell>
-                                  <TableCell className="text-center">
-                                    {record.present ? (
-                                      <div className="flex justify-center">
-                                        <Check className="h-5 w-5 text-green-500" />
-                                      </div>
-                                    ) : (
-                                      <div className="flex justify-center">
-                                        <MinusCircle className="h-5 w-5 text-red-500" />
-                                      </div>
-                                    )}
-                                  </TableCell>
-                                </TableRow>
-                              ))}
-                          </TableBody>
-                        </Table>
-                      </div>
-                    </ScrollArea>
+                    <AttendanceDetailsList 
+                      attendanceRecords={attendanceRecords}
+                      missionaryActivities={missionaryActivities}
+                      classes={classes}
+                      selectedClassForReports={selectedClassForReports}
+                      selectedDateForReports={selectedDateForReports}
+                    />
                   )}
                 </TabsContent>
                 
