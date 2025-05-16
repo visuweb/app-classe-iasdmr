@@ -63,7 +63,8 @@ const CompletionStep: React.FC<CompletionStepProps> = ({ isActive }) => {
     visitasMissionarias: 'Visitas Missionárias',
     estudosBiblicos: 'Estudos Bíblicos Ministrados',
     pessoasAuxiliadas: 'Pessoas Auxiliadas',
-    pessoasTrazidasIgreja: 'Pessoas Trazidas à Igreja'
+    pessoasTrazidasIgreja: 'Pessoas Trazidas à Igreja',
+    visitantes: 'Visitantes'
   };
   
   const handleViewRecords = () => {
@@ -102,6 +103,9 @@ const CompletionStep: React.FC<CompletionStepProps> = ({ isActive }) => {
               
               <div className="text-left text-gray-500">Alunos ausentes:</div>
               <div className="text-right font-medium text-gray-800">{studentsAbsent}</div>
+              
+              <div className="text-left text-gray-500">Visitantes:</div>
+              <div className="text-right font-medium text-gray-800">{missionaryActivities.visitantes || 0}</div>
             </div>
           </div>
           
@@ -109,7 +113,9 @@ const CompletionStep: React.FC<CompletionStepProps> = ({ isActive }) => {
           <div className="mb-3">
             <h5 className="text-sm font-medium text-gray-700 mb-1 text-left">Atividades Missionárias</h5>
             <div className="grid grid-cols-2 gap-2 text-sm">
-              {Object.entries(activityLabels).map(([key, label]) => {
+              {Object.entries(activityLabels)
+                .filter(([key]) => key !== 'visitantes')
+                .map(([key, label]) => {
                 // Obter o valor da atividade, tratando nulos como zero
                 const value = missionaryActivities[key as keyof typeof missionaryActivities] || 0;
                 

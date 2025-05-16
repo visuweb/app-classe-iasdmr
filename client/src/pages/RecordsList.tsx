@@ -438,7 +438,8 @@ const RecordsList: React.FC = () => {
       className: string, 
       presentCount: number, 
       absentCount: number,
-      totalCount: number
+      totalCount: number,
+      visitorCount: number // Adicionado para contar visitantes
     }>();
     
     // Se temos uma classe específica selecionada, apenas inicializamos ela
@@ -452,7 +453,8 @@ const RecordsList: React.FC = () => {
           className: classItem.name,
           presentCount: 0,
           absentCount: 0,
-          totalCount: 0
+          totalCount: 0,
+          visitorCount: 0
         });
       }
     } else {
@@ -463,7 +465,8 @@ const RecordsList: React.FC = () => {
           className: classItem.name,
           presentCount: 0,
           absentCount: 0,
-          totalCount: 0
+          totalCount: 0,
+          visitorCount: 0
         });
       });
     }
@@ -499,6 +502,22 @@ const RecordsList: React.FC = () => {
       }
     });
     
+    // Processar atividades missionárias para contar visitantes
+    missionaryActivities.forEach(activity => {
+      const activityDate = new Date(activity.date);
+      
+      // Verificar se está dentro do período do trimestre
+      if (activityDate >= start && activityDate <= end) {
+        // Se temos um classId válido e ele existe no mapa, atualizamos os visitantes
+        if (activity.classId && classTotals.has(activity.classId)) {
+          const classSummary = classTotals.get(activity.classId)!;
+          
+          // Somar visitantes
+          classSummary.visitorCount += (activity.visitantes || 0);
+        }
+      }
+    });
+    
     // Convertemos o mapa para um array e filtramos classes sem registros
     const gridData = Array.from(classTotals.values())
       .filter(summary => summary.totalCount > 0);
@@ -509,7 +528,8 @@ const RecordsList: React.FC = () => {
       className: 'Total Geral',
       presentCount: gridData.reduce((sum, item) => sum + item.presentCount, 0),
       absentCount: gridData.reduce((sum, item) => sum + item.absentCount, 0),
-      totalCount: gridData.reduce((sum, item) => sum + item.totalCount, 0)
+      totalCount: gridData.reduce((sum, item) => sum + item.totalCount, 0),
+      visitorCount: gridData.reduce((sum, item) => sum + item.visitorCount, 0)
     };
     
     return {
@@ -523,80 +543,83 @@ const RecordsList: React.FC = () => {
   
   // Renderizar a grid de presença por trimestre
   const renderAttendanceGrid = () => {
-    if (!selectedTrimester || !attendanceGridData) {
+    const gridData = getAttendanceGridData();
+    
+    if (!gridData) {
       return (
         <div className="text-center py-8">
-          <ChartBar className="h-12 w-12 mx-auto mb-4 text-gray-400" />
-          <p className="text-gray-500">Selecione um trimestre para visualizar o resumo por classe</p>
+          <ClipboardList className="h-12 w-12 mx-auto mb-4 text-gray-400" />
+          <p className="text-gray-500">Carregando dados do trimestre...</p>
         </div>
       );
     }
     
-    if (attendanceGridData.classes.length === 0) {
+    if (gridData.classes.length === 0) {
       return (
         <div className="text-center py-8">
-          <ChartBar className="h-12 w-12 mx-auto mb-4 text-gray-400" />
-          <p className="text-gray-500">Não há registros de presença para o trimestre selecionado</p>
+          <ClipboardList className="h-12 w-12 mx-auto mb-4 text-gray-400" />
+          <p className="text-gray-500">Não há registros de presença no trimestre selecionado.</p>
         </div>
       );
     }
     
     return (
-      <div className="space-y-6">
-        <Card>
-          <CardHeader className="pb-2">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center">
-                <CalendarRange className="h-5 w-5 mr-2 text-primary-500" />
-                <CardTitle>Resumo de Presença - {selectedTrimester}º Trimestre {new Date().getFullYear()}</CardTitle>
-              </div>
+      <Card>
+        <CardHeader className="pb-2">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center">
+              <CalendarRange className="h-5 w-5 mr-2 text-primary-500" />
+              <CardTitle>Resumo de Presença - {selectedTrimester}º Trimestre {new Date().getFullYear()}</CardTitle>
             </div>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Classe</TableHead>
-                  <TableHead className="text-center">Quantidade Presença</TableHead>
-                  <TableHead className="text-center">Quantidade Ausência</TableHead>
-                  <TableHead></TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {attendanceGridData.classes.map((classData) => {                    
-                  return (
-                    <TableRow key={classData.id}>
-                      <TableCell className="font-medium">{classData.className}</TableCell>
-                      <TableCell className="text-center text-green-600 font-medium">{classData.presentCount}</TableCell>
-                      <TableCell className="text-center text-red-600 font-medium">{classData.absentCount}</TableCell>
-                      <TableCell className="text-right">
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          onClick={() => setSelectedClassId(classData.id.toString())}
-                        >
-                          <Search className="h-3.5 w-3.5 mr-1" />
-                          <span className="text-xs">Detalhes</span>
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-                
-                {/* Linha com totais gerais */}
-                <TableRow className="bg-muted/50 font-bold">
-                  <TableCell className="font-bold">{attendanceGridData.totals.className}</TableCell>
-                  <TableCell className="text-center text-green-600 font-bold">{attendanceGridData.totals.presentCount}</TableCell>
-                  <TableCell className="text-center text-red-600 font-bold">{attendanceGridData.totals.absentCount}</TableCell>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Classe</TableHead>
+                <TableHead className="text-center">Quantidade Presença</TableHead>
+                <TableHead className="text-center">Quantidade Ausência</TableHead>
+                <TableHead className="text-center">Visitantes</TableHead>
+                <TableHead></TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {gridData.classes.map((classData) => (
+                <TableRow key={classData.id}>
+                  <TableCell>{classData.className}</TableCell>
+                  <TableCell className="text-center font-medium text-green-700">{classData.presentCount}</TableCell>
+                  <TableCell className="text-center font-medium text-red-700">{classData.absentCount}</TableCell>
+                  <TableCell className="text-center font-medium text-blue-700">{classData.visitorCount}</TableCell>
                   <TableCell className="text-right">
-                    {/* Célula vazia para manter o alinhamento */}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setSelectedClassId(classData.id.toString());
+                        setSelectedTrimester(null);
+                      }}
+                      className="h-8 px-2"
+                    >
+                      <Search className="h-3.5 w-3.5 mr-1" />
+                      <span className="text-xs">Detalhes</span>
+                    </Button>
                   </TableCell>
                 </TableRow>
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-      </div>
+              ))}
+              
+              {/* Linha de totais */}
+              <TableRow className="bg-gray-50 font-semibold">
+                <TableCell>{gridData.totals.className}</TableCell>
+                <TableCell className="text-center font-medium text-green-700">{gridData.totals.presentCount}</TableCell>
+                <TableCell className="text-center font-medium text-red-700">{gridData.totals.absentCount}</TableCell>
+                <TableCell className="text-center font-medium text-blue-700">{gridData.totals.visitorCount}</TableCell>
+                <TableCell></TableCell>
+              </TableRow>
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
     );
   };
   
@@ -631,9 +654,23 @@ const RecordsList: React.FC = () => {
       return acc;
     }, {} as Record<string, AttendanceRecordWithStudent[]>);
     
+    // Função para obter visitantes por data
+    const getVisitorCountForDate = (date: string): number => {
+      if (!missionaryActivities || missionaryActivities.length === 0) return 0;
+      
+      // Encontrar atividade missionária para a data e classe selecionada
+      const activity = missionaryActivities.find(
+        act => act.date.toString() === date && 
+              (selectedClassId ? act.classId === parseInt(selectedClassId, 10) : true)
+      );
+      
+      return activity?.visitantes || 0;
+    };
+    
     return Object.entries(recordsByDate).map(([date, records]) => {
       const presentCount = getPresentStudentsCount(records);
       const absentCount = getAbsentStudentsCount(records);
+      const visitorCount = getVisitorCountForDate(date);
       
       return (
         <Card key={date} className="mb-4">
@@ -648,6 +685,22 @@ const RecordsList: React.FC = () => {
               <span className="text-green-600 font-medium">Presentes ({presentCount})</span>
               <span className="text-red-600 font-medium">Ausentes ({absentCount})</span>
             </div>
+            
+            {/* Exibição de visitantes */}
+            {visitorCount > 0 && (
+              <div className="mt-3 bg-blue-50 rounded-md p-2 border border-blue-100 flex items-center">
+                <div className="bg-blue-100 rounded-full p-1.5 mr-2">
+                  <Users2 className="h-4 w-4 text-blue-600" />
+                </div>
+                <div>
+                  <span className="text-blue-800 font-medium">Visitantes: {visitorCount}</span>
+                  <p className="text-xs text-blue-600">
+                    {visitorCount === 1 ? 'Um visitante registrado nesta data' : 
+                    `${visitorCount} visitantes registrados nesta data`}
+                  </p>
+                </div>
+              </div>
+            )}
           </CardHeader>
           <CardContent>
             <Table>
@@ -844,6 +897,22 @@ const RecordsList: React.FC = () => {
                               </TableRow>
                               
                               <TableRow>
+                                <TableCell>Visitantes</TableCell>
+                                <TableCell className="text-center">{activity.visitantes}</TableCell>
+                                <TableCell className="text-right">
+                                  <Button 
+                                    variant="ghost" 
+                                    size="sm"
+                                    onClick={() => handleEditMissionaryActivity(activity, 'visitantes', 'Visitantes')}
+                                    className="h-8 px-2"
+                                  >
+                                    <Pencil className="h-3.5 w-3.5 mr-1" />
+                                    <span className="text-xs">Editar</span>
+                                  </Button>
+                                </TableCell>
+                              </TableRow>
+                              
+                              <TableRow>
                                 <TableCell>Pessoas Trazidas à Igreja</TableCell>
                                 <TableCell className="text-center">{activity.pessoasTrazidasIgreja}</TableCell>
                                 <TableCell className="text-right">
@@ -963,6 +1032,22 @@ const RecordsList: React.FC = () => {
                     variant="ghost" 
                     size="sm"
                     onClick={() => handleEditMissionaryActivity(activity, 'pessoasAuxiliadas', 'Pessoas Auxiliadas')}
+                    className="h-8 px-2"
+                  >
+                    <Pencil className="h-3.5 w-3.5 mr-1" />
+                    <span className="text-xs">Editar</span>
+                  </Button>
+                </TableCell>
+              </TableRow>
+              
+              <TableRow>
+                <TableCell>Visitantes</TableCell>
+                <TableCell className="text-center">{activity.visitantes}</TableCell>
+                <TableCell className="text-right">
+                  <Button 
+                    variant="ghost" 
+                    size="sm"
+                    onClick={() => handleEditMissionaryActivity(activity, 'visitantes', 'Visitantes')}
                     className="h-8 px-2"
                   >
                     <Pencil className="h-3.5 w-3.5 mr-1" />

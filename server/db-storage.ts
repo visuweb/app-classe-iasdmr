@@ -587,6 +587,7 @@ export class DatabaseStorage implements IStorage {
           ministrados: missionaryActivities.ministrados,
           pessoasAuxiliadas: missionaryActivities.pessoasAuxiliadas,
           pessoasTrazidasIgreja: missionaryActivities.pessoasTrazidasIgreja,
+          visitantes: missionaryActivities.visitantes,
           recordDate: missionaryActivities.recordDate,
           className: classes.name
         })
@@ -618,6 +619,7 @@ export class DatabaseStorage implements IStorage {
           ministrados: missionaryActivities.ministrados,
           pessoasAuxiliadas: missionaryActivities.pessoasAuxiliadas,
           pessoasTrazidasIgreja: missionaryActivities.pessoasTrazidasIgreja,
+          visitantes: missionaryActivities.visitantes,
           recordDate: missionaryActivities.recordDate,
           className: classes.name
         })
@@ -677,6 +679,7 @@ export class DatabaseStorage implements IStorage {
       ministrados: data.ministrados ?? 0,
       pessoasAuxiliadas: data.pessoasAuxiliadas ?? 0,
       pessoasTrazidasIgreja: data.pessoasTrazidasIgreja ?? 0,
+      visitantes: data.visitantes ?? 0,
       recordDate: new Date()
     }).returning();
     

@@ -61,6 +61,7 @@ export const missionaryActivities = pgTable("missionary_activities", {
   ministrados: integer("ministrados").default(0),
   pessoasAuxiliadas: integer("pessoas_auxiliadas").default(0),
   pessoasTrazidasIgreja: integer("pessoas_trazidas_igreja").default(0),
+  visitantes: integer("visitantes").default(0),
   recordDate: timestamp("record_date").defaultNow().notNull(),
 });
 
@@ -105,6 +106,7 @@ export const insertMissionaryActivitySchema = createInsertSchema(missionaryActiv
   ministrados: true,
   pessoasAuxiliadas: true,
   pessoasTrazidasIgreja: true,
+  visitantes: true,
 });
 
 // Types
@@ -133,6 +135,7 @@ export const missionaryActivityDefinitions = [
   { id: "visitasMissionarias", label: "Visitas Missionárias" },
   { id: "estudosBiblicos", label: "Estudos Bíblicos Ministrados" },
   { id: "pessoasAuxiliadas", label: "Pessoas Auxiliadas" },
+  { id: "visitantes", label: "Visitantes" },
   { id: "pessoasTrazidasIgreja", label: "Pessoas Trazidas à Igreja" }
 ] as const;
 

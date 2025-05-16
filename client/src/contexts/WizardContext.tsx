@@ -65,7 +65,7 @@ const WizardContext = createContext<WizardContextType | undefined>(undefined);
 
 export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [currentStep, setCurrentStep] = useState(1);
-  const [totalSteps] = useState(3);
+  const [totalSteps] = useState(4);
   const [currentClassId, setClassId] = useState<number | null>(null);
   const [currentClassName, setClassName] = useState('');
   const [students, setStudents] = useState<Student[]>([]);
@@ -441,10 +441,15 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   
   // Método para avançar para a próxima atividade manualmente
   const advanceToNextActivity = () => {
-    if (currentActivityIndex < missionaryActivityDefinitions.length - 1) {
+    // Verificar se estamos no passo de atividades missionárias (passo 3)
+    if (currentStep === 3) {
+      // Se estiver no passo de atividades missionárias, avança para o resumo
+      nextStep();
+    } else if (currentActivityIndex < missionaryActivityDefinitions.length - 1) {
+      // Comportamento padrão: avança para a próxima atividade
       setCurrentActivityIndex(currentActivityIndex + 1);
     } else {
-      // When all activities are processed, move to next step
+      // Quando todas as atividades são processadas, avança para o próximo passo
       nextStep();
     }
   };
@@ -807,6 +812,15 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         completeActivities[fieldName] = value;
       });
       
+      // Garantir explicitamente que o campo de visitantes seja incluído
+      if (missionaryActivities.visitantes !== undefined) {
+        console.log('Valor de visitantes a ser salvo:', missionaryActivities.visitantes);
+        completeActivities.visitantes = missionaryActivities.visitantes;
+      } else {
+        console.log('Campo visitantes não encontrado no estado, usando valor 0.');
+        completeActivities.visitantes = 0;
+      }
+      
       console.log('Submetendo atividades missionárias completas:', completeActivities);
       
       // Submit missionary activities
@@ -830,6 +844,14 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
             }
           }
         });
+        
+        // Garantir que o valor de visitantes seja capturado do servidor, se disponível
+        if (missionaryData.visitantes !== undefined) {
+          const visitantesValue = parseInt(missionaryData.visitantes, 10);
+          if (!isNaN(visitantesValue)) {
+            serverActivities.visitantes = visitantesValue;
+          }
+        }
         
         console.log('Atualizando estado local com valores do servidor:', serverActivities);
         if (Object.keys(serverActivities).length > 0) {

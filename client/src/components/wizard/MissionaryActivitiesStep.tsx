@@ -27,7 +27,14 @@ const MissionaryActivitiesStep: React.FC<MissionaryActivitiesStepProps> = ({ isA
   
   if (!isActive) return null;
   
-  const currentActivity = missionaryActivityDefinitions[currentActivityIndex];
+  // Filtrar as atividades missionárias para remover o campo "visitantes"
+  const filteredActivityDefinitions = missionaryActivityDefinitions.filter(
+    activity => activity.id !== 'visitantes'
+  );
+  
+  // Usar o índice atual apenas se for válido após a filtragem
+  const safeActivityIndex = Math.min(currentActivityIndex, filteredActivityDefinitions.length - 1);
+  const currentActivity = filteredActivityDefinitions[safeActivityIndex];
   
   const handleContinue = () => {
     if (currentActivity) {
@@ -39,7 +46,12 @@ const MissionaryActivitiesStep: React.FC<MissionaryActivitiesStepProps> = ({ isA
       console.log(`Salvando atividade ${activityId} com valor ${value}`);
       
       // Avança para a próxima atividade manualmente
-      advanceToNextActivity();
+      if (safeActivityIndex < filteredActivityDefinitions.length - 1) {
+        setCurrentActivityIndex(safeActivityIndex + 1);
+      } else {
+        // Se for a última atividade, avança para o próximo passo
+        advanceToNextActivity();
+      }
       
       // Para debug: mostrar valores atuais
       console.log('Valores atuais das atividades:', missionaryActivities);
@@ -95,7 +107,7 @@ const MissionaryActivitiesStep: React.FC<MissionaryActivitiesStepProps> = ({ isA
                   <p className="text-xs text-gray-500">Total da semana</p>
                 </div>
                 <span className="text-xs font-medium rounded-full bg-blue-100 text-blue-800 px-2.5 py-0.5">
-                  {currentActivityIndex + 1}/{missionaryActivityDefinitions.length}
+                  {safeActivityIndex + 1}/{filteredActivityDefinitions.length}
                 </span>
               </div>
               
@@ -139,7 +151,7 @@ const MissionaryActivitiesStep: React.FC<MissionaryActivitiesStepProps> = ({ isA
                     variant="default" 
                     size="icon"
                     onClick={handleOpenCalculator}
-                    disabled="true"
+                    disabled={true}
                   >
                     <Calculator className="h-5 w-5" />
                   </Button>
@@ -150,23 +162,23 @@ const MissionaryActivitiesStep: React.FC<MissionaryActivitiesStepProps> = ({ isA
               </div>
               
               <div className="flex gap-2">
-                {/* Botão VOLTAR - deve voltar para a tela de presença se for a primeira atividade missionária */}
-                {currentActivityIndex === 0 ? (
+                {/* Botão VOLTAR - deve voltar para o passo de visitantes se for a primeira atividade missionária */}
+                {safeActivityIndex === 0 ? (
                   <Button 
                     variant="outline" 
                     className="flex-1"
                     onClick={() => {
-                      // Voltar para a última tela de chamada (passo anterior do wizard)
+                      // Voltar para o passo anterior (Visitantes)
                       previousStep();
                     }}
                   >
-                    VOLTAR PARA CHAMADA
+                    VOLTAR PARA VISITANTES
                   </Button>
                 ) : (
                   <Button 
                     variant="outline" 
                     className="flex-1"
-                    onClick={() => setCurrentActivityIndex(currentActivityIndex - 1)}
+                    onClick={() => setCurrentActivityIndex(safeActivityIndex - 1)}
                   >
                     VOLTAR
                   </Button>
@@ -176,7 +188,7 @@ const MissionaryActivitiesStep: React.FC<MissionaryActivitiesStepProps> = ({ isA
                   className="flex-1"
                   onClick={handleContinue}
                 >
-                  {currentActivityIndex < missionaryActivityDefinitions.length - 1 ? 'PRÓXIMO' : 'FINALIZAR'}
+                  {safeActivityIndex < filteredActivityDefinitions.length - 1 ? 'PRÓXIMO' : 'FINALIZAR'}
                 </Button>
               </div>
             </motion.div>

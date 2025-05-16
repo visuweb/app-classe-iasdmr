@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { useLocation, useRoute, useLocation as useNavigate } from 'wouter';
 import { WizardProvider, useWizard } from '@/contexts/WizardContext';
 import AttendanceStep from '@/components/wizard/AttendanceStep';
+import VisitorsStep from '@/components/wizard/VisitorsStep';
 import MissionaryActivitiesStep from '@/components/wizard/MissionaryActivitiesStep';
 import CompletionStep from '@/components/wizard/CompletionStep';
 import Calculator from '@/components/Calculator';
@@ -72,8 +73,9 @@ const WizardContent: React.FC = () => {
       <div className="min-h-[calc(100vh-180px)] relative">
         {/* Step components */}
         <AttendanceStep isActive={currentStep === 1} />
-        <MissionaryActivitiesStep isActive={currentStep === 2} />
-        <CompletionStep isActive={currentStep === 3} />
+        <VisitorsStep isActive={currentStep === 2} />
+        <MissionaryActivitiesStep isActive={currentStep === 3} />
+        <CompletionStep isActive={currentStep === 4} />
         
         {/* Calculator modal */}
         <Calculator />

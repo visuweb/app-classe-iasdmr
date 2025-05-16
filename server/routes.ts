@@ -824,7 +824,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         'estudosBiblicos', 
         'ministrados',
         'pessoasAuxiliadas',
-        'pessoasTrazidasIgreja'
+        'pessoasTrazidasIgreja',
+        'visitantes'
       ];
       
       // Verificar quais campos foram enviados
