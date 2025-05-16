@@ -8,6 +8,7 @@ import { formatBrazilianDate } from '@/lib/date-utils';
 import { startOfYear, setMonth, setDate, endOfMonth, format } from "date-fns";
 import { LogOut, School, User, Book, BarChart, Plus, UserPlus, Calendar, Filter, Trash2, Check, Pencil, MinusCircle, Search, CalendarIcon, Users, X } from 'lucide-react';
 import MissionaryTable from './MissionaryTable';
+import Header from '@/components/Header';
 import {
   Popover,
   PopoverContent,
@@ -1023,1317 +1024,1311 @@ export default function AdminHome() {
   };
 
   return (
-    <div className="container mx-auto p-4">
-      <div className="flex justify-between items-center mb-8">
-        <h1 className="text-2xl font-bold">Painel do Administrador</h1>
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={() => logoutMutation.mutate()}>
-            <LogOut className="w-4 h-4 mr-2" /> Sair
-          </Button>
-        </div>
-      </div>
+    <div className="flex flex-col min-h-screen bg-gray-50">
+      <Header />
+      <main className="container mx-auto p-4">
+        <Tabs
+          value={selectedTab}
+          onValueChange={setSelectedTab}
+          className="w-full"
+        >
+          <TabsList className="grid grid-cols-4 w-full max-w-md">
+            <TabsTrigger value="teachers">
+              <User className="w-4 h-4 mr-2" />
+              Professores
+            </TabsTrigger>
+            <TabsTrigger value="classes">
+              <School className="w-4 h-4 mr-2" />
+              Classes
+            </TabsTrigger>
+            <TabsTrigger value="students">
+              <Users className="w-4 h-4 mr-2" />
+              Alunos
+            </TabsTrigger>
+            <TabsTrigger value="records">
+              <BarChart className="w-4 h-4 mr-2" />
+              Relatórios
+            </TabsTrigger>
+          </TabsList>
 
-      <Tabs
-        value={selectedTab}
-        onValueChange={setSelectedTab}
-        className="w-full"
-      >
-        <TabsList className="grid grid-cols-4 w-full max-w-md">
-          <TabsTrigger value="teachers">
-            <User className="w-4 h-4 mr-2" />
-            Professores
-          </TabsTrigger>
-          <TabsTrigger value="classes">
-            <School className="w-4 h-4 mr-2" />
-            Classes
-          </TabsTrigger>
-          <TabsTrigger value="students">
-            <Users className="w-4 h-4 mr-2" />
-            Alunos
-          </TabsTrigger>
-          <TabsTrigger value="records">
-            <BarChart className="w-4 h-4 mr-2" />
-            Relatórios
-          </TabsTrigger>
-        </TabsList>
-
-        {/* Teachers Tab */}
-        <TabsContent value="teachers">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <div>
-                <CardTitle>Professores</CardTitle>
-                <CardDescription>Gerenciar professores e permissões</CardDescription>
-              </div>
-              <Button onClick={() => setIsAddTeacherOpen(true)}>
-                <Plus className="h-4 w-4 mr-1" />
-                Adicionar Professor
-              </Button>
-            </CardHeader>
-            <CardContent>
-              {/* Campo de filtro de professores */}
-              <div className="mb-4 flex items-center gap-4">
-                <div className="relative w-auto inline-flex max-w-xs">
-                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Buscar professor por nome..."
-                    className="pl-8"
-                    value={teacherFilter || ''}
-                    onChange={(e) => setTeacherFilter(e.target.value)}
-                  />
+          {/* Teachers Tab */}
+          <TabsContent value="teachers">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <div>
+                  <CardTitle>Professores</CardTitle>
+                  <CardDescription>Gerenciar professores e permissões</CardDescription>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Switch
-                    id="inactive-teachers"
-                    checked={showInactiveTeachers}
-                    onCheckedChange={setShowInactiveTeachers}
-                  />
-                  <Label htmlFor="inactive-teachers">Mostrar Inativos</Label>
-                </div>
-              </div>
-              
-              {teachersLoading ? (
-                <div className="text-center py-4">Carregando professores...</div>
-              ) : (
-                <ScrollArea className="h-[400px]">
-                  <div className="border border-gray-200 rounded-md overflow-hidden">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Nome</TableHead>
-                          <TableHead>CPF</TableHead>
-                          <TableHead>Tipo</TableHead>
-                          <TableHead>Status</TableHead>
-                          <TableHead className="text-right">Ações</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {teachers
-                          .filter(teacher => {
-                            // Filtro por nome
-                            const nameMatch = !teacherFilter || 
-                              teacher.name.toLowerCase().includes(teacherFilter.toLowerCase());
-                            
-                            // Filtro por status
-                            const statusMatch = showInactiveTeachers ? !teacher.active : teacher.active;
-                            
-                            return nameMatch && statusMatch;
-                          })
-                          .map((teacher) => (
-                          <TableRow key={teacher.id} className={!teacher.active ? "opacity-60" : ""}>
-                            <TableCell className="font-medium">{teacher.name}</TableCell>
-                            <TableCell>{teacher.cpf}</TableCell>
-                            <TableCell>{teacher.isAdmin ? "Administrador" : "Professor"}</TableCell>
-                            <TableCell>
-                              <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                                teacher.active ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
-                              }`}>
-                                {teacher.active ? "Ativo" : "Inativo"}
-                              </span>
-                            </TableCell>
-                            <TableCell className="text-right space-x-1">
-                              <Button 
-                                variant="ghost" 
-                                size="sm"
-                                onClick={() => handleEditTeacher(teacher)}
-                              >
-                                <Pencil className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => toggleTeacherStatus(teacher)}
-                              >
-                                {teacher.active ? (
-                                  <MinusCircle className="h-4 w-4 text-red-500" />
-                                ) : (
-                                  <Check className="h-4 w-4 text-green-500" />
-                                )}
-                              </Button>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
-                </ScrollArea>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Classes Tab */}
-        <TabsContent value="classes">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <div>
-                <CardTitle>Classes</CardTitle>
-                <CardDescription>Gerenciar classes e alunos</CardDescription>
-              </div>
-              <div className="space-x-2">
-                <Button onClick={() => setIsAddClassOpen(true)}>
+                <Button onClick={() => setIsAddTeacherOpen(true)}>
                   <Plus className="h-4 w-4 mr-1" />
-                  Adicionar Classe
+                  Adicionar Professor
                 </Button>
-                <Button 
-                  variant="outline" 
-                  onClick={() => setIsAssignTeacherOpen(true)}
-                  disabled={classes.length === 0 || teachers.length === 0}
-                >
-                  <UserPlus className="h-4 w-4 mr-1" />
-                  Atribuir Professor
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              {/* Filtro de classes */}
-              <div className="mb-4 flex items-center gap-4">
-                <div className="relative w-auto inline-flex max-w-xs">
-                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Filtrar classes..."
-                    className="pl-8"
-                    value={classFilter || ''}
-                    onChange={(e) => setClassFilter(e.target.value)}
-                  />
+              </CardHeader>
+              <CardContent>
+                {/* Campo de filtro de professores */}
+                <div className="mb-4 flex items-center gap-4">
+                  <div className="relative w-auto inline-flex max-w-xs">
+                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Buscar professor por nome..."
+                      className="pl-8"
+                      value={teacherFilter || ''}
+                      onChange={(e) => setTeacherFilter(e.target.value)}
+                    />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Switch
+                      id="inactive-teachers"
+                      checked={showInactiveTeachers}
+                      onCheckedChange={setShowInactiveTeachers}
+                    />
+                    <Label htmlFor="inactive-teachers">Mostrar Inativos</Label>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Switch
-                    id="inactive-classes"
-                    checked={showInactiveClasses}
-                    onCheckedChange={setShowInactiveClasses}
-                  />
-                  <Label htmlFor="inactive-classes">Mostrar Inativos</Label>
-                </div>
-              </div>
-
-              {classesLoading ? (
-                <div className="text-center py-4">Carregando classes...</div>
-              ) : classes.filter(classObj => {
-                  // Filtro por nome
-                  const nameMatch = !classFilter || 
-                    classObj.name.toLowerCase().includes(classFilter.toLowerCase());
-                  
-                  // Filtro por status
-                  const statusMatch = showInactiveClasses ? !classObj.active : classObj.active;
-                  
-                  return nameMatch && statusMatch;
-                }).length === 0 ? (
-                <div className="p-6 text-center">
-                  <School className="h-12 w-12 mx-auto mb-4 text-gray-400" />
-                  <h3 className="text-lg font-medium mb-1">Nenhuma classe encontrada</h3>
-                  <p className="text-sm text-muted-foreground">
-                    {classFilter 
-                      ? 'Tente ajustar os filtros para ver mais resultados' 
-                      : 'Nenhuma classe foi cadastrada no sistema ainda'}
-                  </p>
-                </div>
-              ) : (
-                <ScrollArea className="h-[400px]">
-                  <div className="border border-gray-200 rounded-md overflow-hidden">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Nome da Classe</TableHead>
-                          <TableHead>Professor(es)</TableHead>
-                          <TableHead>Qtd Alunos</TableHead>
-                          <TableHead>Status</TableHead>
-                          <TableHead className="text-right">Ações</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {classes
-                          .filter(classObj => {
-                            // Filtro por nome
-                            const nameMatch = !classFilter || 
-                              classObj.name.toLowerCase().includes(classFilter.toLowerCase());
-                            
-                            // Filtro por status
-                            const statusMatch = showInactiveClasses ? !classObj.active : classObj.active;
-                            
-                            return nameMatch && statusMatch;
-                          })
-                          .map((classObj) => {
-                          // Usar o resultado da query de professores por classe no lugar de classIds
-                          const classTeachers: {id: number, name: string}[] = 
-                            teachersByClass.data && 
-                            teachersByClass.data[classObj.id] ? 
-                            teachersByClass.data[classObj.id] : [];
-                          
-                          return (
-                            <TableRow 
-                              key={classObj.id} 
-                              className={cn(
-                                !classObj.active ? "opacity-60" : "",
-                                selectedClassId === classObj.id ? "bg-muted" : ""
-                              )}
-                              onClick={() => setSelectedClassId(classObj.id)}
-                            >
-                              <TableCell className="font-medium">{classObj.name}</TableCell>
-                              <TableCell>
-                                {teachersLoading ? (
-                                  <div className="h-4 w-12 animate-pulse bg-muted rounded"></div>
-                                ) : classTeachers.length > 0 ? (
-                                  <div className="space-y-1">
-                                    {classTeachers.map((t: {id: number, name: string}) => (
-                                      <div key={t.id} className="flex items-center">
-                                        <span>{t.name}</span>
-                                        <Button
-                                          variant="ghost"
-                                          size="sm"
-                                          className="h-6 w-6 p-0 ml-2"
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            handleRemoveTeacherFromClass(t.id, classObj.id);
-                                          }}
-                                        >
-                                          <Trash2 className="h-4 w-4 text-red-500" />
-                                        </Button>
-                                      </div>
-                                    ))}
-                                  </div>
-                                ) : (
-                                  <span className="text-muted-foreground">Nenhum</span>
-                                )}
-                              </TableCell>
-                              <TableCell>
-                                {/* Contador de alunos */}
-                                {classStudentCounts.isLoading ? (
-                                  <div className="h-4 w-8 animate-pulse bg-muted rounded"></div>
-                                ) : (
-                                  classStudentCounts.data?.[classObj.id] || 0
-                                )}
-                              </TableCell>
+                
+                {teachersLoading ? (
+                  <div className="text-center py-4">Carregando professores...</div>
+                ) : (
+                  <ScrollArea className="h-[400px]">
+                    <div className="border border-gray-200 rounded-md overflow-hidden">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Nome</TableHead>
+                            <TableHead>CPF</TableHead>
+                            <TableHead>Tipo</TableHead>
+                            <TableHead>Status</TableHead>
+                            <TableHead className="text-right">Ações</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {teachers
+                            .filter(teacher => {
+                              // Filtro por nome
+                              const nameMatch = !teacherFilter || 
+                                teacher.name.toLowerCase().includes(teacherFilter.toLowerCase());
+                              
+                              // Filtro por status
+                              const statusMatch = showInactiveTeachers ? !teacher.active : teacher.active;
+                              
+                              return nameMatch && statusMatch;
+                            })
+                            .map((teacher) => (
+                            <TableRow key={teacher.id} className={!teacher.active ? "opacity-60" : ""}>
+                              <TableCell className="font-medium">{teacher.name}</TableCell>
+                              <TableCell>{teacher.cpf}</TableCell>
+                              <TableCell>{teacher.isAdmin ? "Administrador" : "Professor"}</TableCell>
                               <TableCell>
                                 <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                                  classObj.active ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
+                                  teacher.active ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
                                 }`}>
-                                  {classObj.active ? "Ativa" : "Inativa"}
+                                  {teacher.active ? "Ativo" : "Inativo"}
                                 </span>
                               </TableCell>
                               <TableCell className="text-right space-x-1">
                                 <Button 
                                   variant="ghost" 
                                   size="sm"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleEditClass(classObj);
-                                  }}
+                                  onClick={() => handleEditTeacher(teacher)}
                                 >
                                   <Pencil className="h-4 w-4" />
                                 </Button>
                                 <Button
                                   variant="ghost"
                                   size="sm"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    toggleClassStatus(classObj);
-                                  }}
+                                  onClick={() => toggleTeacherStatus(teacher)}
                                 >
-                                  {classObj.active ? (
+                                  {teacher.active ? (
                                     <MinusCircle className="h-4 w-4 text-red-500" />
                                   ) : (
                                     <Check className="h-4 w-4 text-green-500" />
                                   )}
                                 </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    goToClassStudents(classObj.id);
-                                  }}
-                                >
-                                  <Users className="h-4 w-4 text-blue-500" />
-                                </Button>
                               </TableCell>
                             </TableRow>
-                          );
-                        })}
-                      </TableBody>
-                    </Table>
-                  </div>
-                </ScrollArea>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </ScrollArea>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
 
-        {/* Students Tab */}
-        <TabsContent value="students">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <div>
-                <CardTitle>Alunos</CardTitle>
-                <CardDescription>Gerenciar todos os alunos cadastrados</CardDescription>
-              </div>
-              <Button 
-                onClick={() => setIsAddStudentOpen(true)}
-                disabled={classes.length === 0}
-              >
-                <Plus className="h-4 w-4 mr-1" />
-                Adicionar Aluno
-              </Button>
-            </CardHeader>
-            <CardContent>
-              {/* Filtros de alunos */}
-              <div className="mb-4 flex flex-wrap items-center gap-4">
-                <div className="relative w-auto inline-flex max-w-xs">
-                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    type="text"
-                    placeholder="Buscar por nome..."
-                    value={studentFilter}
-                    onChange={(e) => setStudentFilter(e.target.value)}
-                    className="pl-8"
-                  />
+          {/* Classes Tab */}
+          <TabsContent value="classes">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <div>
+                  <CardTitle>Classes</CardTitle>
+                  <CardDescription>Gerenciar classes e alunos</CardDescription>
                 </div>
-                <Select
-                  value={selectedClassForStudents}
-                  onValueChange={setSelectedClassForStudents}
-                >
-                  <SelectTrigger className="w-[180px]">
-                    <SelectValue placeholder="Filtrar por classe" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todas as classes</SelectItem>
-                    {classes.map((classObj) => (
-                      <SelectItem key={classObj.id} value={classObj.id.toString()}>
-                        {classObj.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <div className="flex items-center gap-2">
-                  <Switch
-                    id="inactive-students"
-                    checked={showInactiveStudents}
-                    onCheckedChange={setShowInactiveStudents}
-                  />
-                  <Label htmlFor="inactive-students">Mostrar Inativos</Label>
-                </div>
-              </div>
-
-              {/* Query para buscar todos os alunos */}
-              {(() => {
-                // Usar useQuery aqui dentro para buscar todos os alunos
-                const { 
-                  data: allStudents = [], 
-                  isLoading: allStudentsLoading,
-                } = useQuery<(Student & { className?: string })[]>({
-                  queryKey: ['/api/students'],
-                  enabled: selectedTab === "students",
-                });
-                
-                // Filtrar alunos
-                const filteredStudents = allStudents.filter(student => {
-                  const nameMatches = student.name.toLowerCase().includes(studentFilter.toLowerCase());
-                  const classMatches = selectedClassForStudents === 'all' || student.classId.toString() === selectedClassForStudents;
-                  
-                  // Encontrar a classe do aluno
-                  const studentClass = classes.find(c => c.id === student.classId);
-                  
-                  // Verificar se a classe está ativa
-                  const isClassActive = studentClass?.active || false;
-                  
-                  // Status efetivo do aluno (inativo se a classe for inativa)
-                  const effectiveStatus = isClassActive ? student.active : false;
-                  
-                  // Condição para mostrar com base no status efetivo
-                  const statusMatches = showInactiveStudents ? !effectiveStatus : effectiveStatus;
-                  
-                  return nameMatches && classMatches && statusMatches;
-                });
-
-                return (
-                  <>
-                    {allStudentsLoading ? (
-                      <div className="text-center py-4">Carregando alunos...</div>
-                    ) : filteredStudents.length > 0 ? (
-                      <ScrollArea className="h-[400px]">
-                        <div className="border border-gray-200 rounded-md overflow-hidden">
-                          <Table>
-                            <TableHeader>
-                              <TableRow>
-                                <TableHead>Nome</TableHead>
-                                <TableHead>Classe</TableHead>
-                                <TableHead>Status</TableHead>
-                                <TableHead className="text-right">Ações</TableHead>
-                              </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                              {filteredStudents.map((student) => {
-                                // Encontrar a classe do aluno para exibir o nome
-                                const studentClass = classes.find(c => c.id === student.classId);
-                                
-                                // Verificar se a classe está ativa
-                                const isClassActive = studentClass?.active || false;
-                                
-                                // Status efetivo do aluno (inativo se a classe for inativa)
-                                const effectiveStatus = isClassActive ? student.active : false;
-                                
-                                return (
-                                  <TableRow key={student.id} className={!effectiveStatus ? "opacity-60" : ""}>
-                                    <TableCell className="font-medium">{student.name}</TableCell>
-                                    <TableCell>
-                                      {studentClass?.name || student.className || 'Classe não encontrada'}
-                                    </TableCell>
-                                    <TableCell>
-                                      <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                                        effectiveStatus ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
-                                      }`}>
-                                        {effectiveStatus ? "Ativo" : "Inativo"}
-                                      </span>
-                                    </TableCell>
-                                    <TableCell className="text-right space-x-1">
-                                      <Button 
-                                        variant="ghost" 
-                                        size="sm"
-                                        onClick={() => handleEditStudent(student)}
-                                      >
-                                        <Pencil className="h-4 w-4" />
-                                      </Button>
-                                      <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        onClick={() => toggleStudentStatus(student)}
-                                      >
-                                        {effectiveStatus ? (
-                                          <MinusCircle className="h-4 w-4 text-red-500" />
-                                        ) : (
-                                          <Check className="h-4 w-4 text-green-500" />
-                                        )}
-                                      </Button>
-                                    </TableCell>
-                                  </TableRow>
-                                );
-                              })}
-                            </TableBody>
-                          </Table>
-                        </div>
-                      </ScrollArea>
-                    ) : (
-                      <div className="p-6 text-center">
-                        <Users className="h-12 w-12 mx-auto mb-4 text-gray-400" />
-                        <h3 className="text-lg font-medium mb-1">Nenhum aluno encontrado</h3>
-                        <p className="text-sm text-muted-foreground">
-                          {studentFilter || selectedClassForStudents !== 'all' 
-                            ? 'Tente ajustar os filtros para ver mais resultados' 
-                            : 'Nenhum aluno foi cadastrado no sistema ainda'}
-                        </p>
-                      </div>
-                    )}
-                  </>
-                );
-              })()}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Records Tab */}
-        <TabsContent value="records">
-          <Card>
-            <CardHeader className="pb-2">
-              <div>
-                <CardTitle>Registros</CardTitle>
-                <CardDescription>Visualizar registros de frequência e atividades missionárias</CardDescription>
-              </div>
-            </CardHeader>
-            <CardContent>
-              {/* Filters now appear above the tabs */}
-              <div className="flex flex-wrap gap-2 mb-4">
-                <div className="flex-1 min-w-[200px]">
-                  <div className="text-sm font-semibold mb-1 text-gray-500">Classe</div>
-                  <Select
-                    value={selectedClassForReports?.toString() || "all_classes"}
-                    onValueChange={(value) => setSelectedClassForReports(value !== "all_classes" ? parseInt(value) : null)}
+                <div className="space-x-2">
+                  <Button onClick={() => setIsAddClassOpen(true)}>
+                    <Plus className="h-4 w-4 mr-1" />
+                    Adicionar Classe
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    onClick={() => setIsAssignTeacherOpen(true)}
+                    disabled={classes.length === 0 || teachers.length === 0}
                   >
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Filtrar por Classe" />
+                    <UserPlus className="h-4 w-4 mr-1" />
+                    Atribuir Professor
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {/* Filtro de classes */}
+                <div className="mb-4 flex items-center gap-4">
+                  <div className="relative w-auto inline-flex max-w-xs">
+                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Filtrar classes..."
+                      className="pl-8"
+                      value={classFilter || ''}
+                      onChange={(e) => setClassFilter(e.target.value)}
+                    />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Switch
+                      id="inactive-classes"
+                      checked={showInactiveClasses}
+                      onCheckedChange={setShowInactiveClasses}
+                    />
+                    <Label htmlFor="inactive-classes">Mostrar Inativos</Label>
+                  </div>
+                </div>
+
+                {classesLoading ? (
+                  <div className="text-center py-4">Carregando classes...</div>
+                ) : classes.filter(classObj => {
+                    // Filtro por nome
+                    const nameMatch = !classFilter || 
+                      classObj.name.toLowerCase().includes(classFilter.toLowerCase());
+                    
+                    // Filtro por status
+                    const statusMatch = showInactiveClasses ? !classObj.active : classObj.active;
+                    
+                    return nameMatch && statusMatch;
+                  }).length === 0 ? (
+                  <div className="p-6 text-center">
+                    <School className="h-12 w-12 mx-auto mb-4 text-gray-400" />
+                    <h3 className="text-lg font-medium mb-1">Nenhuma classe encontrada</h3>
+                    <p className="text-sm text-muted-foreground">
+                      {classFilter 
+                        ? 'Tente ajustar os filtros para ver mais resultados' 
+                        : 'Nenhuma classe foi cadastrada no sistema ainda'}
+                    </p>
+                  </div>
+                ) : (
+                  <ScrollArea className="h-[400px]">
+                    <div className="border border-gray-200 rounded-md overflow-hidden">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Nome da Classe</TableHead>
+                            <TableHead>Professor(es)</TableHead>
+                            <TableHead>Qtd Alunos</TableHead>
+                            <TableHead>Status</TableHead>
+                            <TableHead className="text-right">Ações</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {classes
+                            .filter(classObj => {
+                              // Filtro por nome
+                              const nameMatch = !classFilter || 
+                                classObj.name.toLowerCase().includes(classFilter.toLowerCase());
+                              
+                              // Filtro por status
+                              const statusMatch = showInactiveClasses ? !classObj.active : classObj.active;
+                              
+                              return nameMatch && statusMatch;
+                            })
+                            .map((classObj) => {
+                            // Usar o resultado da query de professores por classe no lugar de classIds
+                            const classTeachers: {id: number, name: string}[] = 
+                              teachersByClass.data && 
+                              teachersByClass.data[classObj.id] ? 
+                              teachersByClass.data[classObj.id] : [];
+                            
+                            return (
+                              <TableRow 
+                                key={classObj.id} 
+                                className={cn(
+                                  !classObj.active ? "opacity-60" : "",
+                                  selectedClassId === classObj.id ? "bg-muted" : ""
+                                )}
+                                onClick={() => setSelectedClassId(classObj.id)}
+                              >
+                                <TableCell className="font-medium">{classObj.name}</TableCell>
+                                <TableCell>
+                                  {teachersLoading ? (
+                                    <div className="h-4 w-12 animate-pulse bg-muted rounded"></div>
+                                  ) : classTeachers.length > 0 ? (
+                                    <div className="space-y-1">
+                                      {classTeachers.map((t: {id: number, name: string}) => (
+                                        <div key={t.id} className="flex items-center">
+                                          <span>{t.name}</span>
+                                          <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            className="h-6 w-6 p-0 ml-2"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              handleRemoveTeacherFromClass(t.id, classObj.id);
+                                            }}
+                                          >
+                                            <Trash2 className="h-4 w-4 text-red-500" />
+                                          </Button>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  ) : (
+                                    <span className="text-muted-foreground">Nenhum</span>
+                                  )}
+                                </TableCell>
+                                <TableCell>
+                                  {/* Contador de alunos */}
+                                  {classStudentCounts.isLoading ? (
+                                    <div className="h-4 w-8 animate-pulse bg-muted rounded"></div>
+                                  ) : (
+                                    classStudentCounts.data?.[classObj.id] || 0
+                                  )}
+                                </TableCell>
+                                <TableCell>
+                                  <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                    classObj.active ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
+                                  }`}>
+                                    {classObj.active ? "Ativa" : "Inativa"}
+                                  </span>
+                                </TableCell>
+                                <TableCell className="text-right space-x-1">
+                                  <Button 
+                                    variant="ghost" 
+                                    size="sm"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleEditClass(classObj);
+                                    }}
+                                  >
+                                    <Pencil className="h-4 w-4" />
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      toggleClassStatus(classObj);
+                                    }}
+                                  >
+                                    {classObj.active ? (
+                                      <MinusCircle className="h-4 w-4 text-red-500" />
+                                    ) : (
+                                      <Check className="h-4 w-4 text-green-500" />
+                                    )}
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      goToClassStudents(classObj.id);
+                                    }}
+                                  >
+                                    <Users className="h-4 w-4 text-blue-500" />
+                                  </Button>
+                                </TableCell>
+                              </TableRow>
+                            );
+                          })}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </ScrollArea>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Students Tab */}
+          <TabsContent value="students">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <div>
+                  <CardTitle>Alunos</CardTitle>
+                  <CardDescription>Gerenciar todos os alunos cadastrados</CardDescription>
+                </div>
+                <Button 
+                  onClick={() => setIsAddStudentOpen(true)}
+                  disabled={classes.length === 0}
+                >
+                  <Plus className="h-4 w-4 mr-1" />
+                  Adicionar Aluno
+                </Button>
+              </CardHeader>
+              <CardContent>
+                {/* Filtros de alunos */}
+                <div className="mb-4 flex flex-wrap items-center gap-4">
+                  <div className="relative w-auto inline-flex max-w-xs">
+                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      type="text"
+                      placeholder="Buscar por nome..."
+                      value={studentFilter}
+                      onChange={(e) => setStudentFilter(e.target.value)}
+                      className="pl-8"
+                    />
+                  </div>
+                  <Select
+                    value={selectedClassForStudents}
+                    onValueChange={setSelectedClassForStudents}
+                  >
+                    <SelectTrigger className="w-[180px]">
+                      <SelectValue placeholder="Filtrar por classe" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all_classes">Todas as Classes</SelectItem>
-                      {classes.filter(c => c.active).map((classObj) => (
+                      <SelectItem value="all">Todas as classes</SelectItem>
+                      {classes.map((classObj) => (
                         <SelectItem key={classObj.id} value={classObj.id.toString()}>
                           {classObj.name}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
-                </div>
-                
-                <div className="flex-1 min-w-[180px]">
-                  <div className="text-sm font-semibold mb-1 text-gray-500">Data</div>
-                  <Select
-                    value={selectedDateForReports || "all_dates"}
-                    onValueChange={(value) => {
-                      setSelectedDateForReports(value !== "all_dates" ? value : null);
-                      // Reset trimester when a specific date is selected
-                      if (value !== "all_dates") {
-                        setSelectedTrimester(null);
-                      }
-                    }}
-                  >
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Filtrar por Data" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all_dates">Todas as Datas</SelectItem>
-                      {availableDates.map((date) => (
-                        <SelectItem key={date} value={date}>
-                          {formatBrazilianDate(date)}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                <div className="flex-1 min-w-[180px]">
-                  <div className="text-sm font-semibold mb-1 text-gray-500">Trimestre</div>
-                  <Select
-                    value={selectedTrimester?.toString() || "all_trimesters"}
-                    onValueChange={(value) => {
-                      setSelectedTrimester(value !== "all_trimesters" ? parseInt(value) : null);
-                      // Reset specific date when a trimester is selected
-                      if (value !== "all_trimesters") {
-                        setSelectedDateForReports(null);
-                      }
-                    }}
-                  >
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Filtrar por Trimestre" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all_trimesters">Todos os Trimestres</SelectItem>
-                      <SelectItem value="1">1º Trimestre</SelectItem>
-                      <SelectItem value="2">2º Trimestre</SelectItem>
-                      <SelectItem value="3">3º Trimestre</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              
-              <Tabs defaultValue="attendance" className="w-full">
-                <TabsList className="grid grid-cols-2 w-full max-w-md mb-4">
-                  <TabsTrigger value="attendance">
-                    <User className="h-4 w-4 mr-1 inline" />
-                    <span>Registros de Presença</span>
-                  </TabsTrigger>
-                  <TabsTrigger value="activities">
-                    <BarChart className="h-4 w-4 mr-1 inline" />
-                    <span>Atividades Missionárias</span>
-                  </TabsTrigger>
-                </TabsList>
-
-                {/* Attendance Tab */}
-                <TabsContent value="attendance">
-                  <div className="pb-4">
-                    <h3 className="text-lg font-medium">
-                      Registros de Presença
-                    </h3>
-                    <div className="text-sm text-muted-foreground flex flex-wrap gap-2">
-                      <span>
-                        {selectedClassForReports 
-                          ? `Classe: ${classes.find(c => c.id === selectedClassForReports)?.name || ''}` 
-                          : 'Todas as Classes'}
-                      </span>
-                      {selectedDateForReports && <span>| Data: {formatBrazilianDate(selectedDateForReports)}</span>}
-                      {selectedTrimester && <span>| Trimestre: {selectedTrimester}º Trimestre</span>}
-                    </div>
-                  </div>
-                  
-                  {/* Condição de carregamento */}
-                  {attendanceLoading && (
-                    <div className="text-center py-4">Carregando registros de presença...</div>
-                  )}
-                  
-                  {/* Condição de nenhum registro */}
-                  {!attendanceLoading && attendanceRecords.length === 0 && (
-                    <div className="text-center py-4">Nenhum registro de presença encontrado.</div>
-                  )}
-                  
-                  {/* Visualização por trimestre sem registros */}
-                  {!attendanceLoading && attendanceRecords.length > 0 && selectedTrimester && getAttendanceByClassAndTrimester().length === 0 && (
-                    <div className="text-center py-4">
-                      Nenhum registro de presença encontrado para o trimestre selecionado.
-                    </div>
-                  )}
-                  
-                  {/* Visualização por trimestre com registros */}
-                  {!attendanceLoading && attendanceRecords.length > 0 && selectedTrimester && getAttendanceByClassAndTrimester().length > 0 && (
-                    <ScrollArea className="h-[400px]">
-                      <div className="border border-gray-200 rounded-md overflow-hidden">
-                        <Table>
-                          <TableHeader>
-                            <TableRow>
-                              <TableHead>Classe</TableHead>
-                              <TableHead className="text-center">Quantidade Presença</TableHead>
-                              <TableHead className="text-center">Quantidade Ausência</TableHead>
-                              <TableHead className="text-center">Visitantes</TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {getAttendanceByClassAndTrimester().map((summary) => (
-                              <TableRow 
-                                key={summary.classId} 
-                                className={summary.classId === 'total' ? 'bg-muted font-medium' : ''}
-                              >
-                                <TableCell className="font-medium">{summary.className}</TableCell>
-                                <TableCell className="text-center">{summary.presentCount}</TableCell>
-                                <TableCell className="text-center">{summary.absentCount}</TableCell>
-                                <TableCell className="text-center">{summary.visitorCount}</TableCell>
-                              </TableRow>
-                            ))}
-                          </TableBody>
-                        </Table>
-                      </div>
-                    </ScrollArea>
-                  )}
-                  
-                  {/* Visualização padrão (sem trimestre selecionado) */}
-                  {!attendanceLoading && attendanceRecords.length > 0 && !selectedTrimester && (
-                    <AttendanceDetailsList 
-                      attendanceRecords={attendanceRecords}
-                      missionaryActivities={missionaryActivities}
-                      classes={classes}
-                      selectedClassForReports={selectedClassForReports}
-                      selectedDateForReports={selectedDateForReports}
+                  <div className="flex items-center gap-2">
+                    <Switch
+                      id="inactive-students"
+                      checked={showInactiveStudents}
+                      onCheckedChange={setShowInactiveStudents}
                     />
-                  )}
-                </TabsContent>
-                
-                {/* Missionary Activities Tab */}
-                <TabsContent value="activities">
-                  <div className="pb-4">
-                    <h3 className="text-lg font-medium">
-                      Atividades Missionárias
-                    </h3>
-                    <div className="text-sm text-muted-foreground flex flex-wrap gap-2">
-                      <span>
-                        {selectedClassForReports
-                          ? `Classe: ${classes.find(c => c.id === selectedClassForReports)?.name || ''}`
-                          : 'Todas as Classes'}
-                      </span>
-                      {selectedDateForReports && <span>| Data: {formatBrazilianDate(selectedDateForReports)}</span>}
-                      {selectedTrimester && <span>| Trimestre: {selectedTrimester}º Trimestre</span>}
-                    </div>
+                    <Label htmlFor="inactive-students">Mostrar Inativos</Label>
+                  </div>
+                </div>
+
+                {/* Query para buscar todos os alunos */}
+                {(() => {
+                  // Usar useQuery aqui dentro para buscar todos os alunos
+                  const { 
+                    data: allStudents = [], 
+                    isLoading: allStudentsLoading,
+                  } = useQuery<(Student & { className?: string })[]>({
+                    queryKey: ['/api/students'],
+                    enabled: selectedTab === "students",
+                  });
+                  
+                  // Filtrar alunos
+                  const filteredStudents = allStudents.filter(student => {
+                    const nameMatches = student.name.toLowerCase().includes(studentFilter.toLowerCase());
+                    const classMatches = selectedClassForStudents === 'all' || student.classId.toString() === selectedClassForStudents;
+                    
+                    // Encontrar a classe do aluno
+                    const studentClass = classes.find(c => c.id === student.classId);
+                    
+                    // Verificar se a classe está ativa
+                    const isClassActive = studentClass?.active || false;
+                    
+                    // Status efetivo do aluno (inativo se a classe for inativa)
+                    const effectiveStatus = isClassActive ? student.active : false;
+                    
+                    // Condição para mostrar com base no status efetivo
+                    const statusMatches = showInactiveStudents ? !effectiveStatus : effectiveStatus;
+                    
+                    return nameMatches && classMatches && statusMatches;
+                  });
+
+                  return (
+                    <>
+                      {allStudentsLoading ? (
+                        <div className="text-center py-4">Carregando alunos...</div>
+                      ) : filteredStudents.length > 0 ? (
+                        <ScrollArea className="h-[400px]">
+                          <div className="border border-gray-200 rounded-md overflow-hidden">
+                            <Table>
+                              <TableHeader>
+                                <TableRow>
+                                  <TableHead>Nome</TableHead>
+                                  <TableHead>Classe</TableHead>
+                                  <TableHead>Status</TableHead>
+                                  <TableHead className="text-right">Ações</TableHead>
+                                </TableRow>
+                              </TableHeader>
+                              <TableBody>
+                                {filteredStudents.map((student) => {
+                                  // Encontrar a classe do aluno para exibir o nome
+                                  const studentClass = classes.find(c => c.id === student.classId);
+                                  
+                                  // Verificar se a classe está ativa
+                                  const isClassActive = studentClass?.active || false;
+                                  
+                                  // Status efetivo do aluno (inativo se a classe for inativa)
+                                  const effectiveStatus = isClassActive ? student.active : false;
+                                  
+                                  return (
+                                    <TableRow key={student.id} className={!effectiveStatus ? "opacity-60" : ""}>
+                                      <TableCell className="font-medium">{student.name}</TableCell>
+                                      <TableCell>
+                                        {studentClass?.name || student.className || 'Classe não encontrada'}
+                                      </TableCell>
+                                      <TableCell>
+                                        <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                          effectiveStatus ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
+                                        }`}>
+                                          {effectiveStatus ? "Ativo" : "Inativo"}
+                                        </span>
+                                      </TableCell>
+                                      <TableCell className="text-right space-x-1">
+                                        <Button 
+                                          variant="ghost" 
+                                          size="sm"
+                                          onClick={() => handleEditStudent(student)}
+                                        >
+                                          <Pencil className="h-4 w-4" />
+                                        </Button>
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          onClick={() => toggleStudentStatus(student)}
+                                        >
+                                          {effectiveStatus ? (
+                                            <MinusCircle className="h-4 w-4 text-red-500" />
+                                          ) : (
+                                            <Check className="h-4 w-4 text-green-500" />
+                                          )}
+                                        </Button>
+                                      </TableCell>
+                                    </TableRow>
+                                  );
+                                })}
+                              </TableBody>
+                            </Table>
+                          </div>
+                        </ScrollArea>
+                      ) : (
+                        <div className="p-6 text-center">
+                          <Users className="h-12 w-12 mx-auto mb-4 text-gray-400" />
+                          <h3 className="text-lg font-medium mb-1">Nenhum aluno encontrado</h3>
+                          <p className="text-sm text-muted-foreground">
+                            {studentFilter || selectedClassForStudents !== 'all' 
+                              ? 'Tente ajustar os filtros para ver mais resultados' 
+                              : 'Nenhum aluno foi cadastrado no sistema ainda'}
+                          </p>
+                        </div>
+                      )}
+                    </>
+                  );
+                })()}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Records Tab */}
+          <TabsContent value="records">
+            <Card>
+              <CardHeader className="pb-2">
+                <div>
+                  <CardTitle>Registros</CardTitle>
+                  <CardDescription>Visualizar registros de frequência e atividades missionárias</CardDescription>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {/* Filters now appear above the tabs */}
+                <div className="flex flex-wrap gap-2 mb-4">
+                  <div className="flex-1 min-w-[200px]">
+                    <div className="text-sm font-semibold mb-1 text-gray-500">Classe</div>
+                    <Select
+                      value={selectedClassForReports?.toString() || "all_classes"}
+                      onValueChange={(value) => setSelectedClassForReports(value !== "all_classes" ? parseInt(value) : null)}
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Filtrar por Classe" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all_classes">Todas as Classes</SelectItem>
+                        {classes.filter(c => c.active).map((classObj) => (
+                          <SelectItem key={classObj.id} value={classObj.id.toString()}>
+                            {classObj.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                   
-                  {activitiesLoading ? (
-                    <div className="text-center py-4">Carregando registros de atividades...</div>
-                  ) : missionaryActivities.length === 0 ? (
-                    <div className="text-center py-4">Nenhum registro de atividade missionária encontrado.</div>
-                  ) : selectedTrimester ? (
-                    /* Nova visualização em grid com uma coluna para cada classe quando filtrado por trimestre */
-                    <MissionaryTable data={getActivitiesGridData()} />
-                  ) : (
-                    /* Visualização normal quando não filtrado por trimestre */
-                    <ScrollArea className="h-[400px]">
-                      <div className="border border-gray-200 rounded-md overflow-hidden">
-                        <Table>
-                          <TableHeader>
-                            <TableRow>
-                              <TableHead>Data</TableHead>
-                              <TableHead>Classe</TableHead>
-                              <TableHead className="text-center">Lit. Distribuídas</TableHead>
-                              <TableHead className="text-center">Contatos Missionários</TableHead>
-                              <TableHead className="text-center">Est. Bíblicos Ministrados</TableHead>
-                              <TableHead className="text-center">Visitas</TableHead>
-                              <TableHead className="text-center">Auxiliadas</TableHead>
-                              <TableHead className="text-center">Trazidas à Igreja</TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {missionaryActivities
-                              .filter(activity => {
-                                let matchesFilters = true;
-                                
-                                // Verificar se a classe existe e está ativa
-                                const classObj = classes.find(c => c.id === activity.classId);
-                                const isClassActive = classObj && classObj.active;
-                                
-                                if (!isClassActive) return false;
-                                
-                                if (selectedClassForReports) {
-                                  matchesFilters = matchesFilters && activity.classId === selectedClassForReports;
-                                }
-                                if (selectedDateForReports) {
-                                  matchesFilters = matchesFilters && activity.date === selectedDateForReports;
-                                }
-                                return matchesFilters;
-                              })
-                              .map((activity) => (
-                                <TableRow key={activity.id}>
-                                  <TableCell>{formatBrazilianDate(activity.date)}</TableCell>
-                                  <TableCell>{classes.find(c => c.id === activity.classId)?.name}</TableCell>
-                                  <TableCell className="text-center">{activity.literaturasDistribuidas || 0}</TableCell>
-                                  <TableCell className="text-center">{activity.qtdContatosMissionarios || 0}</TableCell>
-                                  <TableCell className="text-center">{activity.estudosBiblicos || 0}</TableCell>
-                                  <TableCell className="text-center">{activity.visitasMissionarias || 0}</TableCell>
-                                  <TableCell className="text-center">{activity.pessoasAuxiliadas || 0}</TableCell>
-                                  <TableCell className="text-center">{activity.pessoasTrazidasIgreja || 0}</TableCell>
+                  <div className="flex-1 min-w-[180px]">
+                    <div className="text-sm font-semibold mb-1 text-gray-500">Data</div>
+                    <Select
+                      value={selectedDateForReports || "all_dates"}
+                      onValueChange={(value) => {
+                        setSelectedDateForReports(value !== "all_dates" ? value : null);
+                        // Reset trimester when a specific date is selected
+                        if (value !== "all_dates") {
+                          setSelectedTrimester(null);
+                        }
+                      }}
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Filtrar por Data" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all_dates">Todas as Datas</SelectItem>
+                        {availableDates.map((date) => (
+                          <SelectItem key={date} value={date}>
+                            {formatBrazilianDate(date)}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div className="flex-1 min-w-[180px]">
+                    <div className="text-sm font-semibold mb-1 text-gray-500">Trimestre</div>
+                    <Select
+                      value={selectedTrimester?.toString() || "all_trimesters"}
+                      onValueChange={(value) => {
+                        setSelectedTrimester(value !== "all_trimesters" ? parseInt(value) : null);
+                        // Reset specific date when a trimester is selected
+                        if (value !== "all_trimesters") {
+                          setSelectedDateForReports(null);
+                        }
+                      }}
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Filtrar por Trimestre" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all_trimesters">Todos os Trimestres</SelectItem>
+                        <SelectItem value="1">1º Trimestre</SelectItem>
+                        <SelectItem value="2">2º Trimestre</SelectItem>
+                        <SelectItem value="3">3º Trimestre</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                
+                <Tabs defaultValue="attendance" className="w-full">
+                  <TabsList className="grid grid-cols-2 w-full max-w-md mb-4">
+                    <TabsTrigger value="attendance">
+                      <User className="h-4 w-4 mr-1 inline" />
+                      <span>Registros de Presença</span>
+                    </TabsTrigger>
+                    <TabsTrigger value="activities">
+                      <BarChart className="h-4 w-4 mr-1 inline" />
+                      <span>Atividades Missionárias</span>
+                    </TabsTrigger>
+                  </TabsList>
+
+                  {/* Attendance Tab */}
+                  <TabsContent value="attendance">
+                    <div className="pb-4">
+                      <h3 className="text-lg font-medium">
+                        Registros de Presença
+                      </h3>
+                      <div className="text-sm text-muted-foreground flex flex-wrap gap-2">
+                        <span>
+                          {selectedClassForReports 
+                            ? `Classe: ${classes.find(c => c.id === selectedClassForReports)?.name || ''}` 
+                            : 'Todas as Classes'}
+                        </span>
+                        {selectedDateForReports && <span>| Data: {formatBrazilianDate(selectedDateForReports)}</span>}
+                        {selectedTrimester && <span>| Trimestre: {selectedTrimester}º Trimestre</span>}
+                      </div>
+                    </div>
+                    
+                    {/* Condição de carregamento */}
+                    {attendanceLoading && (
+                      <div className="text-center py-4">Carregando registros de presença...</div>
+                    )}
+                    
+                    {/* Condição de nenhum registro */}
+                    {!attendanceLoading && attendanceRecords.length === 0 && (
+                      <div className="text-center py-4">Nenhum registro de presença encontrado.</div>
+                    )}
+                    
+                    {/* Visualização por trimestre sem registros */}
+                    {!attendanceLoading && attendanceRecords.length > 0 && selectedTrimester && getAttendanceByClassAndTrimester().length === 0 && (
+                      <div className="text-center py-4">
+                        Nenhum registro de presença encontrado para o trimestre selecionado.
+                      </div>
+                    )}
+                    
+                    {/* Visualização por trimestre com registros */}
+                    {!attendanceLoading && attendanceRecords.length > 0 && selectedTrimester && getAttendanceByClassAndTrimester().length > 0 && (
+                      <ScrollArea className="h-[400px]">
+                        <div className="border border-gray-200 rounded-md overflow-hidden">
+                          <Table>
+                            <TableHeader>
+                              <TableRow>
+                                <TableHead>Classe</TableHead>
+                                <TableHead className="text-center">Quantidade Presença</TableHead>
+                                <TableHead className="text-center">Quantidade Ausência</TableHead>
+                                <TableHead className="text-center">Visitantes</TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {getAttendanceByClassAndTrimester().map((summary) => (
+                                <TableRow 
+                                  key={summary.classId} 
+                                  className={summary.classId === 'total' ? 'bg-muted font-medium' : ''}
+                                >
+                                  <TableCell className="font-medium">{summary.className}</TableCell>
+                                  <TableCell className="text-center">{summary.presentCount}</TableCell>
+                                  <TableCell className="text-center">{summary.absentCount}</TableCell>
+                                  <TableCell className="text-center">{summary.visitorCount}</TableCell>
                                 </TableRow>
                               ))}
-                          </TableBody>
-                        </Table>
+                            </TableBody>
+                          </Table>
+                        </div>
+                      </ScrollArea>
+                    )}
+                    
+                    {/* Visualização padrão (sem trimestre selecionado) */}
+                    {!attendanceLoading && attendanceRecords.length > 0 && !selectedTrimester && (
+                      <AttendanceDetailsList 
+                        attendanceRecords={attendanceRecords}
+                        missionaryActivities={missionaryActivities}
+                        classes={classes}
+                        selectedClassForReports={selectedClassForReports}
+                        selectedDateForReports={selectedDateForReports}
+                      />
+                    )}
+                  </TabsContent>
+                  
+                  {/* Missionary Activities Tab */}
+                  <TabsContent value="activities">
+                    <div className="pb-4">
+                      <h3 className="text-lg font-medium">
+                        Atividades Missionárias
+                      </h3>
+                      <div className="text-sm text-muted-foreground flex flex-wrap gap-2">
+                        <span>
+                          {selectedClassForReports
+                            ? `Classe: ${classes.find(c => c.id === selectedClassForReports)?.name || ''}`
+                            : 'Todas as Classes'}
+                        </span>
+                        {selectedDateForReports && <span>| Data: {formatBrazilianDate(selectedDateForReports)}</span>}
+                        {selectedTrimester && <span>| Trimestre: {selectedTrimester}º Trimestre</span>}
                       </div>
-                    </ScrollArea>
-                  )}
-                </TabsContent>
-              </Tabs>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+                    </div>
+                    
+                    {activitiesLoading ? (
+                      <div className="text-center py-4">Carregando registros de atividades...</div>
+                    ) : missionaryActivities.length === 0 ? (
+                      <div className="text-center py-4">Nenhum registro de atividade missionária encontrado.</div>
+                    ) : selectedTrimester ? (
+                      /* Nova visualização em grid com uma coluna para cada classe quando filtrado por trimestre */
+                      <MissionaryTable data={getActivitiesGridData()} />
+                    ) : (
+                      /* Visualização normal quando não filtrado por trimestre */
+                      <ScrollArea className="h-[400px]">
+                        <div className="border border-gray-200 rounded-md overflow-hidden">
+                          <Table>
+                            <TableHeader>
+                              <TableRow>
+                                <TableHead>Data</TableHead>
+                                <TableHead>Classe</TableHead>
+                                <TableHead className="text-center">Lit. Distribuídas</TableHead>
+                                <TableHead className="text-center">Contatos Missionários</TableHead>
+                                <TableHead className="text-center">Est. Bíblicos Ministrados</TableHead>
+                                <TableHead className="text-center">Visitas</TableHead>
+                                <TableHead className="text-center">Auxiliadas</TableHead>
+                                <TableHead className="text-center">Trazidas à Igreja</TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {missionaryActivities
+                                .filter(activity => {
+                                  let matchesFilters = true;
+                                  
+                                  // Verificar se a classe existe e está ativa
+                                  const classObj = classes.find(c => c.id === activity.classId);
+                                  const isClassActive = classObj && classObj.active;
+                                  
+                                  if (!isClassActive) return false;
+                                  
+                                  if (selectedClassForReports) {
+                                    matchesFilters = matchesFilters && activity.classId === selectedClassForReports;
+                                  }
+                                  if (selectedDateForReports) {
+                                    matchesFilters = matchesFilters && activity.date === selectedDateForReports;
+                                  }
+                                  return matchesFilters;
+                                })
+                                .map((activity) => (
+                                  <TableRow key={activity.id}>
+                                    <TableCell>{formatBrazilianDate(activity.date)}</TableCell>
+                                    <TableCell>{classes.find(c => c.id === activity.classId)?.name}</TableCell>
+                                    <TableCell className="text-center">{activity.literaturasDistribuidas || 0}</TableCell>
+                                    <TableCell className="text-center">{activity.qtdContatosMissionarios || 0}</TableCell>
+                                    <TableCell className="text-center">{activity.estudosBiblicos || 0}</TableCell>
+                                    <TableCell className="text-center">{activity.visitasMissionarias || 0}</TableCell>
+                                    <TableCell className="text-center">{activity.pessoasAuxiliadas || 0}</TableCell>
+                                    <TableCell className="text-center">{activity.pessoasTrazidasIgreja || 0}</TableCell>
+                                  </TableRow>
+                                ))}
+                            </TableBody>
+                          </Table>
+                        </div>
+                      </ScrollArea>
+                    )}
+                  </TabsContent>
+                </Tabs>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
 
-      {/* Modais para professores */}
-      <Dialog open={isEditTeacherOpen} onOpenChange={setIsEditTeacherOpen}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>Editar Professor</DialogTitle>
-            <DialogDescription>
-              Atualize as informações do professor abaixo.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="editTeacherName" className="text-right">
-                Nome
-              </Label>
-              <Input
-                id="editTeacherName"
-                value={editTeacherData.name}
-                onChange={(e) => setEditTeacherData({...editTeacherData, name: e.target.value})}
-                className="col-span-3"
-              />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="editTeacherCPF" className="text-right">
-                CPF
-              </Label>
-              <Input
-                id="editTeacherCPF"
-                value={editTeacherData.cpf}
-                onChange={(e) => setEditTeacherData({...editTeacherData, cpf: e.target.value})}
-                className="col-span-3"
-              />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="editTeacherPassword" className="text-right">
-                Nova Senha
-              </Label>
-              <Input
-                id="editTeacherPassword"
-                type="password"
-                value={editTeacherData.password}
-                onChange={(e) => setEditTeacherData({...editTeacherData, password: e.target.value})}
-                className="col-span-3"
-                placeholder="Deixe em branco para manter a atual"
-              />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="editTeacherIsAdmin" className="text-right">
-                Administrador
-              </Label>
-              <div className="flex items-center space-x-2 col-span-3">
-                <Switch
-                  id="editTeacherIsAdmin"
-                  checked={editTeacherData.isAdmin}
-                  onCheckedChange={(checked) => setEditTeacherData({...editTeacherData, isAdmin: checked})}
-                />
-                <Label htmlFor="editTeacherIsAdmin">
-                  {editTeacherData.isAdmin ? "Sim" : "Não"}
+        {/* Modais para professores */}
+        <Dialog open={isEditTeacherOpen} onOpenChange={setIsEditTeacherOpen}>
+          <DialogContent className="sm:max-w-[425px]">
+            <DialogHeader>
+              <DialogTitle>Editar Professor</DialogTitle>
+              <DialogDescription>
+                Atualize as informações do professor abaixo.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="editTeacherName" className="text-right">
+                  Nome
                 </Label>
+                <Input
+                  id="editTeacherName"
+                  value={editTeacherData.name}
+                  onChange={(e) => setEditTeacherData({...editTeacherData, name: e.target.value})}
+                  className="col-span-3"
+                />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="editTeacherCPF" className="text-right">
+                  CPF
+                </Label>
+                <Input
+                  id="editTeacherCPF"
+                  value={editTeacherData.cpf}
+                  onChange={(e) => setEditTeacherData({...editTeacherData, cpf: e.target.value})}
+                  className="col-span-3"
+                />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="editTeacherPassword" className="text-right">
+                  Nova Senha
+                </Label>
+                <Input
+                  id="editTeacherPassword"
+                  type="password"
+                  value={editTeacherData.password}
+                  onChange={(e) => setEditTeacherData({...editTeacherData, password: e.target.value})}
+                  className="col-span-3"
+                  placeholder="Deixe em branco para manter a atual"
+                />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="editTeacherIsAdmin" className="text-right">
+                  Administrador
+                </Label>
+                <div className="flex items-center space-x-2 col-span-3">
+                  <Switch
+                    id="editTeacherIsAdmin"
+                    checked={editTeacherData.isAdmin}
+                    onCheckedChange={(checked) => setEditTeacherData({...editTeacherData, isAdmin: checked})}
+                  />
+                  <Label htmlFor="editTeacherIsAdmin">
+                    {editTeacherData.isAdmin ? "Sim" : "Não"}
+                  </Label>
+                </div>
               </div>
             </div>
-          </div>
-          <DialogFooter>
-            <Button
-              type="submit"
-              onClick={() => {
-                if (teacherToEdit) {
-                  const updateData: Partial<Teacher> = {
-                    name: editTeacherData.name,
-                    cpf: editTeacherData.cpf,
-                    isAdmin: editTeacherData.isAdmin,
-                  };
-                  
-                  if (editTeacherData.password) {
-                    updateData.password = editTeacherData.password;
+            <DialogFooter>
+              <Button
+                type="submit"
+                onClick={() => {
+                  if (teacherToEdit) {
+                    const updateData: Partial<Teacher> = {
+                      name: editTeacherData.name,
+                      cpf: editTeacherData.cpf,
+                      isAdmin: editTeacherData.isAdmin,
+                    };
+                    
+                    if (editTeacherData.password) {
+                      updateData.password = editTeacherData.password;
+                    }
+                    
+                    editTeacherMutation.mutate({
+                      id: teacherToEdit.id,
+                      updateData
+                    });
                   }
-                  
-                  editTeacherMutation.mutate({
-                    id: teacherToEdit.id,
-                    updateData
-                  });
-                }
-              }}
-              disabled={editTeacherMutation.isPending || !editTeacherData.name || !editTeacherData.cpf}
-            >
-              {editTeacherMutation.isPending ? "Salvando..." : "Salvar"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <AlertDialog open={isToggleTeacherOpen} onOpenChange={setIsToggleTeacherOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>
-              {teacherToToggle?.active ? "Desativar Professor" : "Ativar Professor"}
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              {teacherToToggle?.active 
-                ? `Tem certeza que deseja desativar o professor "${teacherToToggle?.name}"?`
-                : `Tem certeza que deseja ativar o professor "${teacherToToggle?.name}"?`
-              }
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => {
-                if (teacherToToggle) {
-                  toggleTeacherStatusMutation.mutate({
-                    id: teacherToToggle.id,
-                    active: !teacherToToggle.active
-                  });
-                }
-              }}
-            >
-              {teacherToToggle?.active ? "Desativar" : "Ativar"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      {/* Modais para classes */}
-      <Dialog open={isEditClassOpen} onOpenChange={setIsEditClassOpen}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>Editar Classe</DialogTitle>
-            <DialogDescription>
-              Atualize o nome da classe abaixo.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="editClassName" className="text-right">
-                Nome
-              </Label>
-              <Input
-                id="editClassName"
-                value={editClassName}
-                onChange={(e) => setEditClassName(e.target.value)}
-                className="col-span-3"
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button
-              type="submit"
-              onClick={() => {
-                if (classToEdit) {
-                  editClassMutation.mutate({
-                    id: classToEdit.id,
-                    name: editClassName
-                  });
-                }
-              }}
-              disabled={editClassMutation.isPending || !editClassName.trim()}
-            >
-              {editClassMutation.isPending ? "Salvando..." : "Salvar"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <AlertDialog open={isToggleClassOpen} onOpenChange={setIsToggleClassOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>
-              {classToToggle?.active ? "Desativar Classe" : "Ativar Classe"}
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              {classToToggle?.active 
-                ? `Tem certeza que deseja desativar a classe "${classToToggle?.name}"?`
-                : `Tem certeza que deseja ativar a classe "${classToToggle?.name}"?`
-              }
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => {
-                if (classToToggle) {
-                  toggleClassStatusMutation.mutate({
-                    id: classToToggle.id,
-                    active: !classToToggle.active
-                  });
-                }
-              }}
-            >
-              {classToToggle?.active ? "Desativar" : "Ativar"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      {/* Modais para alunos */}
-      <Dialog open={isEditStudentOpen} onOpenChange={setIsEditStudentOpen}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>Editar Aluno</DialogTitle>
-            <DialogDescription>
-              Atualize o nome do aluno abaixo.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="editStudentName" className="text-right">
-                Nome
-              </Label>
-              <Input
-                id="editStudentName"
-                value={editStudentName}
-                onChange={(e) => setEditStudentName(e.target.value)}
-                className="col-span-3"
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button
-              type="submit"
-              onClick={() => {
-                if (studentToEdit) {
-                  editStudentMutation.mutate({
-                    id: studentToEdit.id,
-                    name: editStudentName
-                  });
-                }
-              }}
-              disabled={editStudentMutation.isPending || !editStudentName.trim()}
-            >
-              {editStudentMutation.isPending ? "Salvando..." : "Salvar"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <AlertDialog open={isToggleStudentOpen} onOpenChange={setIsToggleStudentOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>
-              {studentToToggle?.active ? "Desativar Aluno" : "Ativar Aluno"}
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              {studentToToggle?.active 
-                ? `Tem certeza que deseja desativar o aluno "${studentToToggle?.name}"? Alunos desativados não aparecerão nas listas de chamada.`
-                : `Tem certeza que deseja ativar o aluno "${studentToToggle?.name}"? Alunos ativos aparecerão nas listas de chamada.`
-              }
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => {
-                if (studentToToggle) {
-                  toggleStudentStatusMutation.mutate({
-                    id: studentToToggle.id,
-                    active: !studentToToggle.active
-                  });
-                }
-              }}
-            >
-              {studentToToggle?.active ? "Desativar" : "Ativar"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      {/* Modal para adicionar aluno */}
-      <Dialog open={isAddStudentOpen} onOpenChange={setIsAddStudentOpen}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>Adicionar Aluno</DialogTitle>
-            <DialogDescription>
-              Preencha as informações abaixo para adicionar um novo aluno.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="newStudentName" className="text-right">
-                Nome
-              </Label>
-              <Input
-                id="newStudentName"
-                value={newStudentName}
-                onChange={(e) => setNewStudentName(e.target.value)}
-                className="col-span-3"
-              />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="newStudentClass" className="text-right">
-                Classe
-              </Label>
-              <Select
-                value={selectedClassId?.toString() || undefined}
-                onValueChange={(value) => setSelectedClassId(parseInt(value))}
+                }}
+                disabled={editTeacherMutation.isPending || !editTeacherData.name || !editTeacherData.cpf}
               >
-                <SelectTrigger className="col-span-3">
-                  <SelectValue placeholder="Selecione uma classe" />
-                </SelectTrigger>
-                <SelectContent>
-                  {classes.filter(c => c.active).map((classObj) => (
-                    <SelectItem key={classObj.id} value={classObj.id.toString()}>
-                      {classObj.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button
-              type="submit"
-              onClick={() => {
-                if (selectedClassId) {
-                  createStudentMutation.mutate({
-                    name: newStudentName,
-                    classId: selectedClassId
-                  });
+                {editTeacherMutation.isPending ? "Salvando..." : "Salvar"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        <AlertDialog open={isToggleTeacherOpen} onOpenChange={setIsToggleTeacherOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>
+                {teacherToToggle?.active ? "Desativar Professor" : "Ativar Professor"}
+              </AlertDialogTitle>
+              <AlertDialogDescription>
+                {teacherToToggle?.active 
+                  ? `Tem certeza que deseja desativar o professor "${teacherToToggle?.name}"?`
+                  : `Tem certeza que deseja ativar o professor "${teacherToToggle?.name}"?`
                 }
-              }}
-              disabled={
-                createStudentMutation.isPending || 
-                !newStudentName.trim() || 
-                !selectedClassId
-              }
-            >
-              {createStudentMutation.isPending ? "Adicionando..." : "Adicionar"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() => {
+                  if (teacherToToggle) {
+                    toggleTeacherStatusMutation.mutate({
+                      id: teacherToToggle.id,
+                      active: !teacherToToggle.active
+                    });
+                  }
+                }}
+              >
+                {teacherToToggle?.active ? "Desativar" : "Ativar"}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
 
-      {/* Modal para adicionar classe */}
-      <Dialog open={isAddClassOpen} onOpenChange={setIsAddClassOpen}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>Adicionar Classe</DialogTitle>
-            <DialogDescription>
-              Digite o nome da nova classe abaixo.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="newClassName" className="text-right">
-                Nome
-              </Label>
-              <Input
-                id="newClassName"
-                value={newClassName}
-                onChange={(e) => setNewClassName(e.target.value)}
-                className="col-span-3"
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button
-              type="submit"
-              onClick={() => {
-                createClassMutation.mutate(newClassName);
-              }}
-              disabled={createClassMutation.isPending || !newClassName.trim()}
-            >
-              {createClassMutation.isPending ? "Adicionando..." : "Adicionar"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Modal para adicionar professor */}
-      <Dialog open={isAddTeacherOpen} onOpenChange={setIsAddTeacherOpen}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>Adicionar Professor</DialogTitle>
-            <DialogDescription>
-              Preencha as informações abaixo para adicionar um novo professor.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="newTeacherName" className="text-right">
-                Nome
-              </Label>
-              <Input
-                id="newTeacherName"
-                value={newTeacherData.name}
-                onChange={(e) => setNewTeacherData({...newTeacherData, name: e.target.value})}
-                className="col-span-3"
-              />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="newTeacherCPF" className="text-right">
-                CPF
-              </Label>
-              <Input
-                id="newTeacherCPF"
-                value={newTeacherData.cpf}
-                onChange={(e) => setNewTeacherData({...newTeacherData, cpf: e.target.value})}
-                className="col-span-3"
-              />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="newTeacherPassword" className="text-right">
-                Senha
-              </Label>
-              <Input
-                id="newTeacherPassword"
-                type="password"
-                value={newTeacherData.password}
-                onChange={(e) => setNewTeacherData({...newTeacherData, password: e.target.value})}
-                className="col-span-3"
-              />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="newTeacherIsAdmin" className="text-right">
-                Administrador
-              </Label>
-              <div className="flex items-center space-x-2 col-span-3">
-                <Switch
-                  id="newTeacherIsAdmin"
-                  checked={newTeacherData.isAdmin}
-                  onCheckedChange={(checked) => setNewTeacherData({...newTeacherData, isAdmin: checked})}
-                />
-                <Label htmlFor="newTeacherIsAdmin">
-                  {newTeacherData.isAdmin ? "Sim" : "Não"}
+        {/* Modais para classes */}
+        <Dialog open={isEditClassOpen} onOpenChange={setIsEditClassOpen}>
+          <DialogContent className="sm:max-w-[425px]">
+            <DialogHeader>
+              <DialogTitle>Editar Classe</DialogTitle>
+              <DialogDescription>
+                Atualize o nome da classe abaixo.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="editClassName" className="text-right">
+                  Nome
                 </Label>
+                <Input
+                  id="editClassName"
+                  value={editClassName}
+                  onChange={(e) => setEditClassName(e.target.value)}
+                  className="col-span-3"
+                />
               </div>
             </div>
-          </div>
-          <DialogFooter>
-            <Button
-              type="submit"
-              onClick={() => {
-                createTeacherMutation.mutate(newTeacherData);
-              }}
-              disabled={
-                createTeacherMutation.isPending || 
-                !newTeacherData.name.trim() || 
-                !newTeacherData.cpf.trim() || 
-                !newTeacherData.password
-              }
-            >
-              {createTeacherMutation.isPending ? "Adicionando..." : "Adicionar"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Modal para atribuir professor a uma classe */}
-      <Dialog open={isAssignTeacherOpen} onOpenChange={setIsAssignTeacherOpen}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>Atribuir Professor a uma Classe</DialogTitle>
-            <DialogDescription>
-              Selecione o professor e a classe para fazer a atribuição.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="assignTeacher" className="text-right">
-                Professor
-              </Label>
-              <Select
-                value={selectedTeacherForAssignment?.toString() || undefined}
-                onValueChange={(value) => setSelectedTeacherForAssignment(parseInt(value))}
+            <DialogFooter>
+              <Button
+                type="submit"
+                onClick={() => {
+                  if (classToEdit) {
+                    editClassMutation.mutate({
+                      id: classToEdit.id,
+                      name: editClassName
+                    });
+                  }
+                }}
+                disabled={editClassMutation.isPending || !editClassName.trim()}
               >
-                <SelectTrigger className="col-span-3">
-                  <SelectValue placeholder="Selecione um professor" />
-                </SelectTrigger>
-                <SelectContent>
-                  {teachers.filter(t => t.active).map((teacher) => (
-                    <SelectItem key={teacher.id} value={teacher.id.toString()}>
-                      {teacher.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="assignClass" className="text-right">
-                Classe
-              </Label>
-              <Select
-                value={selectedClassForAssignment?.toString() || undefined}
-                onValueChange={(value) => setSelectedClassForAssignment(parseInt(value))}
-              >
-                <SelectTrigger className="col-span-3">
-                  <SelectValue placeholder="Selecione uma classe" />
-                </SelectTrigger>
-                <SelectContent>
-                  {classes.filter(c => c.active).map((classObj) => (
-                    <SelectItem key={classObj.id} value={classObj.id.toString()}>
-                      {classObj.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button
-              type="submit"
-              onClick={() => {
-                if (selectedTeacherForAssignment && selectedClassForAssignment) {
-                  assignTeacherClassMutation.mutate({
-                    teacherId: selectedTeacherForAssignment,
-                    classId: selectedClassForAssignment
-                  });
-                }
-              }}
-              disabled={
-                assignTeacherClassMutation.isPending || 
-                !selectedTeacherForAssignment || 
-                !selectedClassForAssignment
-              }
-            >
-              {assignTeacherClassMutation.isPending ? "Atribuindo..." : "Atribuir"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+                {editClassMutation.isPending ? "Salvando..." : "Salvar"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
-      {/* Modal para remover professor da classe */}
-      <AlertDialog open={isRemoveTeacherFromClassOpen} onOpenChange={setIsRemoveTeacherFromClassOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>
-              Remover Professor da Classe
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              Tem certeza que deseja remover o professor "{teacherToRemove?.name}" 
-              da classe "{classFromRemove?.name}"?
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => {
-                if (teacherToRemove && classFromRemove) {
-                  removeTeacherFromClassMutation.mutate({
-                    teacherId: teacherToRemove.id,
-                    classId: classFromRemove.id
-                  });
+        <AlertDialog open={isToggleClassOpen} onOpenChange={setIsToggleClassOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>
+                {classToToggle?.active ? "Desativar Classe" : "Ativar Classe"}
+              </AlertDialogTitle>
+              <AlertDialogDescription>
+                {classToToggle?.active 
+                  ? `Tem certeza que deseja desativar a classe "${classToToggle?.name}"?`
+                  : `Tem certeza que deseja ativar a classe "${classToToggle?.name}"?`
                 }
-              }}
-            >
-              Remover
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() => {
+                  if (classToToggle) {
+                    toggleClassStatusMutation.mutate({
+                      id: classToToggle.id,
+                      active: !classToToggle.active
+                    });
+                  }
+                }}
+              >
+                {classToToggle?.active ? "Desativar" : "Ativar"}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        {/* Modais para alunos */}
+        <Dialog open={isEditStudentOpen} onOpenChange={setIsEditStudentOpen}>
+          <DialogContent className="sm:max-w-[425px]">
+            <DialogHeader>
+              <DialogTitle>Editar Aluno</DialogTitle>
+              <DialogDescription>
+                Atualize o nome do aluno abaixo.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="editStudentName" className="text-right">
+                  Nome
+                </Label>
+                <Input
+                  id="editStudentName"
+                  value={editStudentName}
+                  onChange={(e) => setEditStudentName(e.target.value)}
+                  className="col-span-3"
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button
+                type="submit"
+                onClick={() => {
+                  if (studentToEdit) {
+                    editStudentMutation.mutate({
+                      id: studentToEdit.id,
+                      name: editStudentName
+                    });
+                  }
+                }}
+                disabled={editStudentMutation.isPending || !editStudentName.trim()}
+              >
+                {editStudentMutation.isPending ? "Salvando..." : "Salvar"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        <AlertDialog open={isToggleStudentOpen} onOpenChange={setIsToggleStudentOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>
+                {studentToToggle?.active ? "Desativar Aluno" : "Ativar Aluno"}
+              </AlertDialogTitle>
+              <AlertDialogDescription>
+                {studentToToggle?.active 
+                  ? `Tem certeza que deseja desativar o aluno "${studentToToggle?.name}"? Alunos desativados não aparecerão nas listas de chamada.`
+                  : `Tem certeza que deseja ativar o aluno "${studentToToggle?.name}"? Alunos ativos aparecerão nas listas de chamada.`
+                }
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() => {
+                  if (studentToToggle) {
+                    toggleStudentStatusMutation.mutate({
+                      id: studentToToggle.id,
+                      active: !studentToToggle.active
+                    });
+                  }
+                }}
+              >
+                {studentToToggle?.active ? "Desativar" : "Ativar"}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        {/* Modal para adicionar aluno */}
+        <Dialog open={isAddStudentOpen} onOpenChange={setIsAddStudentOpen}>
+          <DialogContent className="sm:max-w-[425px]">
+            <DialogHeader>
+              <DialogTitle>Adicionar Aluno</DialogTitle>
+              <DialogDescription>
+                Preencha as informações abaixo para adicionar um novo aluno.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="newStudentName" className="text-right">
+                  Nome
+                </Label>
+                <Input
+                  id="newStudentName"
+                  value={newStudentName}
+                  onChange={(e) => setNewStudentName(e.target.value)}
+                  className="col-span-3"
+                />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="newStudentClass" className="text-right">
+                  Classe
+                </Label>
+                <Select
+                  value={selectedClassId?.toString() || undefined}
+                  onValueChange={(value) => setSelectedClassId(parseInt(value))}
+                >
+                  <SelectTrigger className="col-span-3">
+                    <SelectValue placeholder="Selecione uma classe" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {classes.filter(c => c.active).map((classObj) => (
+                      <SelectItem key={classObj.id} value={classObj.id.toString()}>
+                        {classObj.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button
+                type="submit"
+                onClick={() => {
+                  if (selectedClassId) {
+                    createStudentMutation.mutate({
+                      name: newStudentName,
+                      classId: selectedClassId
+                    });
+                  }
+                }}
+                disabled={
+                  createStudentMutation.isPending || 
+                  !newStudentName.trim() || 
+                  !selectedClassId
+                }
+              >
+                {createStudentMutation.isPending ? "Adicionando..." : "Adicionar"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Modal para adicionar classe */}
+        <Dialog open={isAddClassOpen} onOpenChange={setIsAddClassOpen}>
+          <DialogContent className="sm:max-w-[425px]">
+            <DialogHeader>
+              <DialogTitle>Adicionar Classe</DialogTitle>
+              <DialogDescription>
+                Digite o nome da nova classe abaixo.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="newClassName" className="text-right">
+                  Nome
+                </Label>
+                <Input
+                  id="newClassName"
+                  value={newClassName}
+                  onChange={(e) => setNewClassName(e.target.value)}
+                  className="col-span-3"
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button
+                type="submit"
+                onClick={() => {
+                  createClassMutation.mutate(newClassName);
+                }}
+                disabled={createClassMutation.isPending || !newClassName.trim()}
+              >
+                {createClassMutation.isPending ? "Adicionando..." : "Adicionar"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Modal para adicionar professor */}
+        <Dialog open={isAddTeacherOpen} onOpenChange={setIsAddTeacherOpen}>
+          <DialogContent className="sm:max-w-[425px]">
+            <DialogHeader>
+              <DialogTitle>Adicionar Professor</DialogTitle>
+              <DialogDescription>
+                Preencha as informações abaixo para adicionar um novo professor.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="newTeacherName" className="text-right">
+                  Nome
+                </Label>
+                <Input
+                  id="newTeacherName"
+                  value={newTeacherData.name}
+                  onChange={(e) => setNewTeacherData({...newTeacherData, name: e.target.value})}
+                  className="col-span-3"
+                />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="newTeacherCPF" className="text-right">
+                  CPF
+                </Label>
+                <Input
+                  id="newTeacherCPF"
+                  value={newTeacherData.cpf}
+                  onChange={(e) => setNewTeacherData({...newTeacherData, cpf: e.target.value})}
+                  className="col-span-3"
+                />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="newTeacherPassword" className="text-right">
+                  Senha
+                </Label>
+                <Input
+                  id="newTeacherPassword"
+                  type="password"
+                  value={newTeacherData.password}
+                  onChange={(e) => setNewTeacherData({...newTeacherData, password: e.target.value})}
+                  className="col-span-3"
+                />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="newTeacherIsAdmin" className="text-right">
+                  Administrador
+                </Label>
+                <div className="flex items-center space-x-2 col-span-3">
+                  <Switch
+                    id="newTeacherIsAdmin"
+                    checked={newTeacherData.isAdmin}
+                    onCheckedChange={(checked) => setNewTeacherData({...newTeacherData, isAdmin: checked})}
+                  />
+                  <Label htmlFor="newTeacherIsAdmin">
+                    {newTeacherData.isAdmin ? "Sim" : "Não"}
+                  </Label>
+                </div>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button
+                type="submit"
+                onClick={() => {
+                  createTeacherMutation.mutate(newTeacherData);
+                }}
+                disabled={
+                  createTeacherMutation.isPending || 
+                  !newTeacherData.name.trim() || 
+                  !newTeacherData.cpf.trim() || 
+                  !newTeacherData.password
+                }
+              >
+                {createTeacherMutation.isPending ? "Adicionando..." : "Adicionar"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Modal para atribuir professor a uma classe */}
+        <Dialog open={isAssignTeacherOpen} onOpenChange={setIsAssignTeacherOpen}>
+          <DialogContent className="sm:max-w-[425px]">
+            <DialogHeader>
+              <DialogTitle>Atribuir Professor a uma Classe</DialogTitle>
+              <DialogDescription>
+                Selecione o professor e a classe para fazer a atribuição.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="assignTeacher" className="text-right">
+                  Professor
+                </Label>
+                <Select
+                  value={selectedTeacherForAssignment?.toString() || undefined}
+                  onValueChange={(value) => setSelectedTeacherForAssignment(parseInt(value))}
+                >
+                  <SelectTrigger className="col-span-3">
+                    <SelectValue placeholder="Selecione um professor" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {teachers.filter(t => t.active).map((teacher) => (
+                      <SelectItem key={teacher.id} value={teacher.id.toString()}>
+                        {teacher.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="assignClass" className="text-right">
+                  Classe
+                </Label>
+                <Select
+                  value={selectedClassForAssignment?.toString() || undefined}
+                  onValueChange={(value) => setSelectedClassForAssignment(parseInt(value))}
+                >
+                  <SelectTrigger className="col-span-3">
+                    <SelectValue placeholder="Selecione uma classe" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {classes.filter(c => c.active).map((classObj) => (
+                      <SelectItem key={classObj.id} value={classObj.id.toString()}>
+                        {classObj.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button
+                type="submit"
+                onClick={() => {
+                  if (selectedTeacherForAssignment && selectedClassForAssignment) {
+                    assignTeacherClassMutation.mutate({
+                      teacherId: selectedTeacherForAssignment,
+                      classId: selectedClassForAssignment
+                    });
+                  }
+                }}
+                disabled={
+                  assignTeacherClassMutation.isPending || 
+                  !selectedTeacherForAssignment || 
+                  !selectedClassForAssignment
+                }
+              >
+                {assignTeacherClassMutation.isPending ? "Atribuindo..." : "Atribuir"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Modal para remover professor da classe */}
+        <AlertDialog open={isRemoveTeacherFromClassOpen} onOpenChange={setIsRemoveTeacherFromClassOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>
+                Remover Professor da Classe
+              </AlertDialogTitle>
+              <AlertDialogDescription>
+                Tem certeza que deseja remover o professor "{teacherToRemove?.name}" 
+                da classe "{classFromRemove?.name}"?
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() => {
+                  if (teacherToRemove && classFromRemove) {
+                    removeTeacherFromClassMutation.mutate({
+                      teacherId: teacherToRemove.id,
+                      classId: classFromRemove.id
+                    });
+                  }
+                }}
+              >
+                Remover
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </main>
     </div>
   );
 }
