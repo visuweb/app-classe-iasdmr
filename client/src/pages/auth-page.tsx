@@ -476,7 +476,7 @@ const AuthPage = () => {
         <div className="flex flex-col items-center mb-6">
           <div className="flex items-center space-x-2 mb-2">
             <School className="h-8 w-8 text-primary-500" />
-            <h1 className="text-2xl font-bold text-gray-900">CLASSE ALUNOS</h1>
+            <h1 className="text-2xl font-bold text-gray-900">CLASSE DIGITAL</h1>
           </div>
         </div>
         
@@ -504,7 +504,15 @@ const AuthPage = () => {
                     <FormItem>
                       <FormLabel>CPF</FormLabel>
                       <FormControl>
-                        <Input placeholder="Digite seu CPF" {...field} />
+                        <Input 
+                          placeholder="Digite seu CPF" 
+                          {...field} 
+                          onInput={(e) => {
+                            const target = e.target as HTMLInputElement;
+                            target.value = target.value.replace(/[^a-zA-Z0-9]/g, '');
+                            field.onChange(target.value);
+                          }}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -635,7 +643,9 @@ const AuthPage = () => {
                             placeholder="Digite seu CPF" 
                             {...field} 
                             onChange={(e) => {
-                              field.onChange(e);
+                              const target = e.target as HTMLInputElement;
+                              target.value = target.value.replace(/[^a-zA-Z0-9]/g, '');
+                              field.onChange(target.value);
                               setCpfFieldTouched(true);
                               setCpfValidationMessage('');
                             }}

@@ -1808,7 +1808,10 @@ export default function AdminHome() {
                 <Input
                   id="editTeacherCPF"
                   value={editTeacherData.cpf}
-                  onChange={(e) => setEditTeacherData({...editTeacherData, cpf: e.target.value})}
+                  onChange={(e) => {
+                    const value = e.target.value.replace(/[^a-zA-Z0-9]/g, '');
+                    setEditTeacherData({...editTeacherData, cpf: value});
+                  }}
                   className="col-span-3"
                 />
               </div>
@@ -2174,7 +2177,10 @@ export default function AdminHome() {
                 <Input
                   id="newTeacherCPF"
                   value={newTeacherData.cpf}
-                  onChange={(e) => setNewTeacherData({...newTeacherData, cpf: e.target.value})}
+                  onChange={(e) => {
+                    const value = e.target.value.replace(/[^a-zA-Z0-9]/g, '');
+                    setNewTeacherData({...newTeacherData, cpf: value});
+                  }}
                   className="col-span-3"
                 />
               </div>

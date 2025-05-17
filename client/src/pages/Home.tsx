@@ -97,7 +97,7 @@ const Home: React.FC = () => {
         )}
         
         <div className="mt-12 text-center text-xs text-gray-400">
-          <p>CLASSE ALUNOS v1.0</p>
+          <p>Classe Digital v1.0</p>
         </div>
       </main>
     </div>

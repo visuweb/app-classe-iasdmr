@@ -45,7 +45,7 @@ const MobileMenu: React.FC = () => {
         <SheetHeader className="text-left">
           <SheetTitle className="flex items-center gap-2">
             <School className="h-5 w-5 text-blue-600" />
-            <span>SABAPP</span>
+            <span>Classe Digital</span>
           </SheetTitle>
         </SheetHeader>
         
@@ -152,7 +152,7 @@ const Header: React.FC = () => {
             <Link href="/">
               <div className="flex items-center cursor-pointer">
                 <School className="h-5 w-5 text-white mr-2" />
-                <h1 className="text-lg font-semibold text-white">SABAPP</h1>
+                <h1 className="text-lg font-semibold text-white">Classe Digital</h1>
               </div>
             </Link>
             <div className="w-8" aria-hidden="true"></div>
@@ -165,7 +165,7 @@ const Header: React.FC = () => {
                 "hover:opacity-90 transition-opacity"
               )}>
                 <School className="h-6 w-6 text-white mr-2" />
-                <h1 className="text-xl font-semibold text-white">SABAPP</h1>
+                <h1 className="text-xl font-semibold text-white">Classe Digital</h1>
               </div>
             </Link>
             
